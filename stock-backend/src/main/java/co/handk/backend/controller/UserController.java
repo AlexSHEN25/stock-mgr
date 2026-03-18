@@ -4,6 +4,7 @@ import co.handk.backend.entity.User;
 import co.handk.backend.service.UserService;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.vo.LoginVO;
+import co.handk.common.model.vo.LogoutVO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -17,19 +18,15 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-
     @PostMapping("/login")
-    public LoginVO login(@RequestBody LoginDTO dto, HttpServletRequest request) {
-        String ip = request.getRemoteAddr();
-        return userService.login(dto, ip);
+    public LoginVO login(@RequestBody LoginDTO dto) {
+        return userService.login(dto);
     }
 
     @PostMapping("/logout")
-    public Boolean logout(HttpServletRequest request){
-        String token = request.getHeader("Authorization").replace("Bearer ","");
-        return userService.logout(token);
+    public LogoutVO logout(HttpServletRequest request){
+        return userService.logout();
     }
-
 
     // 新增
     @PostMapping

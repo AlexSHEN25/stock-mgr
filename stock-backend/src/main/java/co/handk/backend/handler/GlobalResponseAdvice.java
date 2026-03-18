@@ -13,6 +13,8 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
+import java.util.Objects;
+
 @RestControllerAdvice
 public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
 
@@ -40,12 +42,10 @@ public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
      */
     @Override
     public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType mediaType, Class converterType, ServerHttpRequest request, ServerHttpResponse response) {
-
         // null 返回
-        if (body == null) {
+        if (Objects.isNull(body)) {
             return Result.success(null);
         }
-
         // String 类型特殊处理
         if (body instanceof String || converterType == StringHttpMessageConverter.class) {
             try {
@@ -54,12 +54,10 @@ public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
                 throw new RuntimeException(e);
             }
         }
-
         // 已经是 Result
         if (body instanceof Result) {
             return body;
         }
-
         return Result.success(body);
     }
 }

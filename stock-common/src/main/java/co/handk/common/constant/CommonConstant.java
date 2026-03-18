@@ -2,5 +2,8 @@ package co.handk.common.constant;
 
 public interface CommonConstant {
 
-    int LOGIN_EXPIRE_DAYS = 7;
+     long EXPIRE_TIME = 30L;
+
+     long UPDATE_EXPIRE_TIME = 5L;
+
 }
