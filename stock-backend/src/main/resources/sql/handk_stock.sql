@@ -187,7 +187,7 @@ create TABLE `t_stock_order`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_no` (`order_no`),
     KEY `idx_type` (`type`),
-    KEY `idx_status` (`status`),
+    KEY `idx_state` (`state`),
     KEY `idx_warehouse` (`warehouse_id`)
 )
 ENGINE=InnoDB
