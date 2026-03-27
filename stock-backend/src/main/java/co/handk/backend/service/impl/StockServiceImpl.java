@@ -15,6 +15,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +26,53 @@ import java.util.stream.Collectors;
 public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements StockService {
 
     private final StockMapper stockMapper;
+
+    @Override
+    public Boolean create(Stock stock) {
+        if (stock == null) {
+            throw new RuntimeException("请求参数不能为空");
+        }
+        stock.setId(null);
+        return this.save(stock);
+    }
+
+    @Override
+    public Stock get(Long id) {
+        Stock stock = this.getById(id);
+        if (stock == null) {
+            throw new RuntimeException("库存不存在");
+        }
+        return stock;
+    }
+
+    @Override
+    public Boolean update(Stock stock) {
+        if (stock == null || Objects.isNull(stock.getId())) {
+            throw new RuntimeException("库存ID不能为空");
+        }
+        if (this.getById(stock.getId()) == null) {
+            throw new RuntimeException("库存不存在");
+        }
+        return this.updateById(stock);
+    }
+
+    @Override
+    public Boolean delete(Long id) {
+        if (Objects.isNull(id)) {
+            throw new RuntimeException("库存ID不能为空");
+        }
+        if (this.getById(id) == null) {
+            throw new RuntimeException("库存不存在");
+        }
+        return this.removeById(id);
+    }
+
+    @Override
+    public List<Stock> listAll() {
+        LambdaQueryWrapper<Stock> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Stock::getDeleted, 0).orderByDesc(Stock::getUpdateTime);
+        return stockMapper.selectList(wrapper);
+    }
 
     @Override
     public PageResult<StockPageVO> pageQuery(StockPageQueryDTO dto) {

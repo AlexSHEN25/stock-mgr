@@ -2,6 +2,8 @@ package co.handk.backend.controller;
 
 import co.handk.backend.entity.User;
 import co.handk.backend.service.UserService;
+import co.handk.common.model.PageQuery;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
@@ -56,5 +58,11 @@ public class UserController {
     @GetMapping("/list")
     public List<User> list() {
         return userService.list();
+    }
+
+    // 分页查询
+    @GetMapping("/page")
+    public PageResult<User> page(PageQuery query) {
+        return userService.pageQuery(query);
     }
 }

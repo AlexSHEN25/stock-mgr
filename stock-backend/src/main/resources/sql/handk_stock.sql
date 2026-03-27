@@ -192,7 +192,7 @@ create TABLE `t_stock_order`
 )
 ENGINE=InnoDB
 DEFAULT CHARSET=utf8mb4
-COMMENT='库存业务单';
+COLLATE = utf8mb4_unicode_ci COMMENT='库存业务单';
 
 DROP TABLE IF EXISTS `t_stock_order_item`;
 create TABLE `t_stock_order_item`

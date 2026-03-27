@@ -7,11 +7,15 @@ import co.handk.backend.service.UserService;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.RedisKey;
+import co.handk.common.model.PageQuery;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
 import co.handk.common.util.PasswordUtil;
 import co.handk.common.util.TokenUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,5 +86,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 3. 删除 userKey
         stringRedisUtil.delete(userKey);
         return LogoutVO.success(userId);
+    }
+
+    @Override
+    public PageResult<User> pageQuery(PageQuery query) {
+        Page<User> page = new Page<>(query.getPageNum(), query.getPageSize());
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getDeleted, 0).orderByDesc(User::getUpdateTime);
+        Page<User> resultPage = userMapper.selectPage(page, wrapper);
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
     }
 }

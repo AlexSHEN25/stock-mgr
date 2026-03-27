@@ -7,7 +7,7 @@ public class User extends BaseEntity {
 
     private String username;
 
-    private Integer groupId;
+    private Long deptId;
 
     private String password;
 
