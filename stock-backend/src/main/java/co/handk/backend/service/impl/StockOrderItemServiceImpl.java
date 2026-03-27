@@ -1,6 +1,7 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.StockOrderItem;
+import co.handk.common.model.dto.StockOrderItemDTO;
 import co.handk.backend.mapper.StockOrderItemMapper;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.common.model.PageQuery;
@@ -10,9 +11,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.BeanUtils;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +22,9 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     private final StockOrderItemMapper stockOrderItemMapper;
 
     @Override
-    public Boolean create(StockOrderItem entity) {
-        if (entity == null) {
-            throw new RuntimeException("请求参数不能为空");
-        }
+    public Boolean create(StockOrderItemDTO dto) {
+        StockOrderItem entity = new StockOrderItem();
+        BeanUtils.copyProperties(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -39,21 +39,17 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     }
 
     @Override
-    public Boolean update(StockOrderItem entity) {
-        if (entity == null || Objects.isNull(entity.getId())) {
-            throw new RuntimeException("ID不能为空");
-        }
-        if (this.getById(entity.getId()) == null) {
+    public Boolean update(StockOrderItemDTO dto) {
+        if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
+        StockOrderItem entity = new StockOrderItem();
+        BeanUtils.copyProperties(dto, entity);
         return this.updateById(entity);
     }
 
     @Override
     public Boolean delete(Long id) {
-        if (Objects.isNull(id)) {
-            throw new RuntimeException("ID不能为空");
-        }
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }

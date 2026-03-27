@@ -1,25 +1,29 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.CustomerLevel;
+import co.handk.common.model.dto.CustomerLevelDTO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 @Service
+@Validated
 public interface CustomerLevelService extends IService<CustomerLevel> {
 
-    Boolean create(CustomerLevel entity);
+    Boolean create(@NotNull CustomerLevelDTO dto);
 
-    CustomerLevel get(Long id);
+    CustomerLevel get(@NotNull Long id);
 
-    Boolean update(CustomerLevel entity);
+    Boolean update(@NotNull CustomerLevelDTO dto);
 
-    Boolean delete(Long id);
+    Boolean delete(@NotNull Long id);
 
     List<CustomerLevel> listAll();
 
-    PageResult<CustomerLevel> pageQuery(PageQuery query);
+    PageResult<CustomerLevel> pageQuery(@NotNull PageQuery query);
 }

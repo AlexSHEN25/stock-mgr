@@ -1,25 +1,29 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.StockOrder;
+import co.handk.common.model.dto.StockOrderDTO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 @Service
+@Validated
 public interface StockOrderService extends IService<StockOrder> {
 
-    Boolean create(StockOrder entity);
+    Boolean create(@NotNull StockOrderDTO dto);
 
-    StockOrder get(Long id);
+    StockOrder get(@NotNull Long id);
 
-    Boolean update(StockOrder entity);
+    Boolean update(@NotNull StockOrderDTO dto);
 
-    Boolean delete(Long id);
+    Boolean delete(@NotNull Long id);
 
     List<StockOrder> listAll();
 
-    PageResult<StockOrder> pageQuery(PageQuery query);
+    PageResult<StockOrder> pageQuery(@NotNull PageQuery query);
 }

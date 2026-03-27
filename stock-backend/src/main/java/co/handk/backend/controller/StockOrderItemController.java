@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.StockOrderItem;
+import co.handk.common.model.dto.StockOrderItemDTO;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/stockOrderItem")
 public class StockOrderItemController {
 
@@ -17,22 +22,22 @@ public class StockOrderItemController {
     private StockOrderItemService stockOrderItemService;
 
     @PostMapping
-    public Boolean create(@RequestBody StockOrderItem entity) {
-        return stockOrderItemService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid StockOrderItemDTO dto) {
+        return stockOrderItemService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public StockOrderItem get(@PathVariable Long id) {
+    public StockOrderItem get(@PathVariable @NotNull Long id) {
         return stockOrderItemService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody StockOrderItem entity) {
-        return stockOrderItemService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid StockOrderItemDTO dto) {
+        return stockOrderItemService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return stockOrderItemService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class StockOrderItemController {
     }
 
     @GetMapping("/page")
-    public PageResult<StockOrderItem> page(PageQuery query) {
+    public PageResult<StockOrderItem> page(@Valid PageQuery query) {
         return stockOrderItemService.pageQuery(query);
     }
 }

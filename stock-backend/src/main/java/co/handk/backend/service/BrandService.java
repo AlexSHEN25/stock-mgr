@@ -1,25 +1,29 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.Brand;
+import co.handk.common.model.dto.BrandDTO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 @Service
+@Validated
 public interface BrandService extends IService<Brand> {
 
-    Boolean create(Brand entity);
+    Boolean create(@NotNull BrandDTO dto);
 
-    Brand get(Long id);
+    Brand get(@NotNull Long id);
 
-    Boolean update(Brand entity);
+    Boolean update(@NotNull BrandDTO dto);
 
-    Boolean delete(Long id);
+    Boolean delete(@NotNull Long id);
 
     List<Brand> listAll();
 
-    PageResult<Brand> pageQuery(PageQuery query);
+    PageResult<Brand> pageQuery(@NotNull PageQuery query);
 }

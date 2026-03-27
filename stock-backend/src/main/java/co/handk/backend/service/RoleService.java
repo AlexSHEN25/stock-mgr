@@ -1,25 +1,29 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.Role;
+import co.handk.common.model.dto.RoleDTO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 @Service
+@Validated
 public interface RoleService extends IService<Role> {
 
-    Boolean create(Role entity);
+    Boolean create(@NotNull RoleDTO dto);
 
-    Role get(Long id);
+    Role get(@NotNull Long id);
 
-    Boolean update(Role entity);
+    Boolean update(@NotNull RoleDTO dto);
 
-    Boolean delete(Long id);
+    Boolean delete(@NotNull Long id);
 
     List<Role> listAll();
 
-    PageResult<Role> pageQuery(PageQuery query);
+    PageResult<Role> pageQuery(@NotNull PageQuery query);
 }

@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Warehouse;
+import co.handk.common.model.dto.WarehouseDTO;
 import co.handk.backend.service.WarehouseService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/warehouse")
 public class WarehouseController {
 
@@ -17,22 +22,22 @@ public class WarehouseController {
     private WarehouseService warehouseService;
 
     @PostMapping
-    public Boolean create(@RequestBody Warehouse entity) {
-        return warehouseService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid WarehouseDTO dto) {
+        return warehouseService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public Warehouse get(@PathVariable Long id) {
+    public Warehouse get(@PathVariable @NotNull Long id) {
         return warehouseService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody Warehouse entity) {
-        return warehouseService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid WarehouseDTO dto) {
+        return warehouseService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return warehouseService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/page")
-    public PageResult<Warehouse> page(PageQuery query) {
+    public PageResult<Warehouse> page(@Valid PageQuery query) {
         return warehouseService.pageQuery(query);
     }
 }

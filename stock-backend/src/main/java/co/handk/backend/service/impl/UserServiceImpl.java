@@ -36,9 +36,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public LoginVO login(LoginDTO dto) {
         String username = dto.getUsername();
         String rawPassword = dto.getPassword();
-        if (StringUtils.isBlank(username) || StringUtils.isBlank(rawPassword)) {
-            throw new RuntimeException("用户名或密码不能为空");
-        }
         User user = userMapper.selectByUsername(username);
         if (user == null) {
             throw new RuntimeException("用户不存在");

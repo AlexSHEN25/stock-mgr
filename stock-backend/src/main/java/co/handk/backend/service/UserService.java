@@ -8,13 +8,16 @@ import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.NotNull;
 
 @Service
+@Validated
 public interface UserService extends IService<User> {
 
-    LoginVO login(LoginDTO dto);
+    LoginVO login(@NotNull LoginDTO dto);
 
     LogoutVO logout();
 
-    PageResult<User> pageQuery(PageQuery query);
+    PageResult<User> pageQuery(@NotNull PageQuery query);
 }

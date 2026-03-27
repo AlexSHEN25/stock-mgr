@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.RolePermission;
+import co.handk.common.model.dto.RolePermissionDTO;
 import co.handk.backend.service.RolePermissionService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/rolePermission")
 public class RolePermissionController {
 
@@ -17,22 +22,22 @@ public class RolePermissionController {
     private RolePermissionService rolePermissionService;
 
     @PostMapping
-    public Boolean create(@RequestBody RolePermission entity) {
-        return rolePermissionService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid RolePermissionDTO dto) {
+        return rolePermissionService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public RolePermission get(@PathVariable Long id) {
+    public RolePermission get(@PathVariable @NotNull Long id) {
         return rolePermissionService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody RolePermission entity) {
-        return rolePermissionService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid RolePermissionDTO dto) {
+        return rolePermissionService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return rolePermissionService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class RolePermissionController {
     }
 
     @GetMapping("/page")
-    public PageResult<RolePermission> page(PageQuery query) {
+    public PageResult<RolePermission> page(@Valid PageQuery query) {
         return rolePermissionService.pageQuery(query);
     }
 }

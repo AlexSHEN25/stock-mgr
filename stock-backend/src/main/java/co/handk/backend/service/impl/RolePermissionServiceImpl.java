@@ -1,6 +1,7 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.RolePermission;
+import co.handk.common.model.dto.RolePermissionDTO;
 import co.handk.backend.mapper.RolePermissionMapper;
 import co.handk.backend.service.RolePermissionService;
 import co.handk.common.model.PageQuery;
@@ -10,9 +11,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.BeanUtils;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +22,9 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     private final RolePermissionMapper rolePermissionMapper;
 
     @Override
-    public Boolean create(RolePermission entity) {
-        if (entity == null) {
-            throw new RuntimeException("请求参数不能为空");
-        }
+    public Boolean create(RolePermissionDTO dto) {
+        RolePermission entity = new RolePermission();
+        BeanUtils.copyProperties(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -39,21 +39,17 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     }
 
     @Override
-    public Boolean update(RolePermission entity) {
-        if (entity == null || Objects.isNull(entity.getId())) {
-            throw new RuntimeException("ID不能为空");
-        }
-        if (this.getById(entity.getId()) == null) {
+    public Boolean update(RolePermissionDTO dto) {
+        if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
+        RolePermission entity = new RolePermission();
+        BeanUtils.copyProperties(dto, entity);
         return this.updateById(entity);
     }
 
     @Override
     public Boolean delete(Long id) {
-        if (Objects.isNull(id)) {
-            throw new RuntimeException("ID不能为空");
-        }
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }

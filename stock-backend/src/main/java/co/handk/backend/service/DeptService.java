@@ -1,25 +1,29 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.Dept;
+import co.handk.common.model.dto.DeptDTO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
 @Service
+@Validated
 public interface DeptService extends IService<Dept> {
 
-    Boolean create(Dept entity);
+    Boolean create(@NotNull DeptDTO dto);
 
-    Dept get(Long id);
+    Dept get(@NotNull Long id);
 
-    Boolean update(Dept entity);
+    Boolean update(@NotNull DeptDTO dto);
 
-    Boolean delete(Long id);
+    Boolean delete(@NotNull Long id);
 
     List<Dept> listAll();
 
-    PageResult<Dept> pageQuery(PageQuery query);
+    PageResult<Dept> pageQuery(@NotNull PageQuery query);
 }

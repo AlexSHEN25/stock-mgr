@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Brand;
+import co.handk.common.model.dto.BrandDTO;
 import co.handk.backend.service.BrandService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/brand")
 public class BrandController {
 
@@ -17,22 +22,22 @@ public class BrandController {
     private BrandService brandService;
 
     @PostMapping
-    public Boolean create(@RequestBody Brand entity) {
-        return brandService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid BrandDTO dto) {
+        return brandService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public Brand get(@PathVariable Long id) {
+    public Brand get(@PathVariable @NotNull Long id) {
         return brandService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody Brand entity) {
-        return brandService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid BrandDTO dto) {
+        return brandService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return brandService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class BrandController {
     }
 
     @GetMapping("/page")
-    public PageResult<Brand> page(PageQuery query) {
+    public PageResult<Brand> page(@Valid PageQuery query) {
         return brandService.pageQuery(query);
     }
 }

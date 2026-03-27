@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Dept;
+import co.handk.common.model.dto.DeptDTO;
 import co.handk.backend.service.DeptService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/dept")
 public class DeptController {
 
@@ -17,22 +22,22 @@ public class DeptController {
     private DeptService deptService;
 
     @PostMapping
-    public Boolean create(@RequestBody Dept entity) {
-        return deptService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid DeptDTO dto) {
+        return deptService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public Dept get(@PathVariable Long id) {
+    public Dept get(@PathVariable @NotNull Long id) {
         return deptService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody Dept entity) {
-        return deptService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid DeptDTO dto) {
+        return deptService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return deptService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class DeptController {
     }
 
     @GetMapping("/page")
-    public PageResult<Dept> page(PageQuery query) {
+    public PageResult<Dept> page(@Valid PageQuery query) {
         return deptService.pageQuery(query);
     }
 }

@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Series;
+import co.handk.common.model.dto.SeriesDTO;
 import co.handk.backend.service.SeriesService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/series")
 public class SeriesController {
 
@@ -17,22 +22,22 @@ public class SeriesController {
     private SeriesService seriesService;
 
     @PostMapping
-    public Boolean create(@RequestBody Series entity) {
-        return seriesService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid SeriesDTO dto) {
+        return seriesService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public Series get(@PathVariable Long id) {
+    public Series get(@PathVariable @NotNull Long id) {
         return seriesService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody Series entity) {
-        return seriesService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid SeriesDTO dto) {
+        return seriesService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return seriesService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class SeriesController {
     }
 
     @GetMapping("/page")
-    public PageResult<Series> page(PageQuery query) {
+    public PageResult<Series> page(@Valid PageQuery query) {
         return seriesService.pageQuery(query);
     }
 }

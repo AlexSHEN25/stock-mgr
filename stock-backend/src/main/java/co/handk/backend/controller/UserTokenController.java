@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.UserToken;
+import co.handk.common.model.dto.UserTokenDTO;
 import co.handk.backend.service.UserTokenService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/userToken")
 public class UserTokenController {
 
@@ -17,22 +22,22 @@ public class UserTokenController {
     private UserTokenService userTokenService;
 
     @PostMapping
-    public Boolean create(@RequestBody UserToken entity) {
-        return userTokenService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid UserTokenDTO dto) {
+        return userTokenService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public UserToken get(@PathVariable Long id) {
+    public UserToken get(@PathVariable @NotNull Long id) {
         return userTokenService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody UserToken entity) {
-        return userTokenService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid UserTokenDTO dto) {
+        return userTokenService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return userTokenService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class UserTokenController {
     }
 
     @GetMapping("/page")
-    public PageResult<UserToken> page(PageQuery query) {
+    public PageResult<UserToken> page(@Valid PageQuery query) {
         return userTokenService.pageQuery(query);
     }
 }

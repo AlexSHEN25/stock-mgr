@@ -4,6 +4,7 @@ import co.handk.backend.entity.Stock;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.service.StockService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.StockDTO;
 import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -15,7 +16,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -28,12 +28,11 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     private final StockMapper stockMapper;
 
     @Override
-    public Boolean create(Stock stock) {
-        if (stock == null) {
-            throw new RuntimeException("请求参数不能为空");
-        }
-        stock.setId(null);
-        return this.save(stock);
+    public Boolean create(StockDTO dto) {
+        Stock entity = new Stock();
+        BeanUtils.copyProperties(dto, entity);
+        entity.setId(null);
+        return this.save(entity);
     }
 
     @Override
@@ -46,21 +45,17 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     }
 
     @Override
-    public Boolean update(Stock stock) {
-        if (stock == null || Objects.isNull(stock.getId())) {
-            throw new RuntimeException("库存ID不能为空");
-        }
-        if (this.getById(stock.getId()) == null) {
+    public Boolean update(StockDTO dto) {
+        if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("库存不存在");
         }
-        return this.updateById(stock);
+        Stock entity = new Stock();
+        BeanUtils.copyProperties(dto, entity);
+        return this.updateById(entity);
     }
 
     @Override
     public Boolean delete(Long id) {
-        if (Objects.isNull(id)) {
-            throw new RuntimeException("库存ID不能为空");
-        }
         if (this.getById(id) == null) {
             throw new RuntimeException("库存不存在");
         }

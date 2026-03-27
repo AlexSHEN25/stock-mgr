@@ -2,18 +2,23 @@ package co.handk.backend.controller;
 
 import co.handk.backend.service.StockService;
 import co.handk.backend.entity.Stock;
+import co.handk.common.model.dto.StockDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * 库存接口
  */
 @RestController
+@Validated
 @RequestMapping("/stock")
 public class StockController {
 
@@ -24,15 +29,15 @@ public class StockController {
      * 新增库存
      */
     @PostMapping
-    public Boolean create(@RequestBody Stock stock) {
-        return stockService.create(stock);
+    public Boolean create(@RequestBody @NotNull @Valid StockDTO dto) {
+        return stockService.create(dto);
     }
 
     /**
      * 根据ID查询库存
      */
     @GetMapping("/{id}")
-    public Stock get(@PathVariable Long id) {
+    public Stock get(@PathVariable @NotNull Long id) {
         return stockService.get(id);
     }
 
@@ -40,15 +45,15 @@ public class StockController {
      * 修改库存
      */
     @PutMapping
-    public Boolean update(@RequestBody Stock stock) {
-        return stockService.update(stock);
+    public Boolean update(@RequestBody @NotNull @Valid StockDTO dto) {
+        return stockService.update(dto);
     }
 
     /**
      * 删除库存
      */
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return stockService.delete(id);
     }
 
@@ -66,7 +71,7 @@ public class StockController {
      * GET /stock/page?pageNum=1&pageSize=10&goodsName=苹果&sku=A001&warehouseId=1&status=1
      */
     @GetMapping("/page")
-    public PageResult<StockPageVO> page(StockPageQueryDTO dto) {
+    public PageResult<StockPageVO> page(@Valid StockPageQueryDTO dto) {
         return stockService.pageQuery(dto);
     }
 }

@@ -1,15 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.GoodsType;
+import co.handk.common.model.dto.GoodsTypeDTO;
 import co.handk.backend.service.GoodsTypeService;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
+@Validated
 @RequestMapping("/goodsType")
 public class GoodsTypeController {
 
@@ -17,22 +22,22 @@ public class GoodsTypeController {
     private GoodsTypeService goodsTypeService;
 
     @PostMapping
-    public Boolean create(@RequestBody GoodsType entity) {
-        return goodsTypeService.create(entity);
+    public Boolean create(@RequestBody @NotNull @Valid GoodsTypeDTO dto) {
+        return goodsTypeService.create(dto);
     }
 
     @GetMapping("/{id}")
-    public GoodsType get(@PathVariable Long id) {
+    public GoodsType get(@PathVariable @NotNull Long id) {
         return goodsTypeService.get(id);
     }
 
     @PutMapping
-    public Boolean update(@RequestBody GoodsType entity) {
-        return goodsTypeService.update(entity);
+    public Boolean update(@RequestBody @NotNull @Valid GoodsTypeDTO dto) {
+        return goodsTypeService.update(dto);
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable Long id) {
+    public Boolean delete(@PathVariable @NotNull Long id) {
         return goodsTypeService.delete(id);
     }
 
@@ -42,7 +47,7 @@ public class GoodsTypeController {
     }
 
     @GetMapping("/page")
-    public PageResult<GoodsType> page(PageQuery query) {
+    public PageResult<GoodsType> page(@Valid PageQuery query) {
         return goodsTypeService.pageQuery(query);
     }
 }
