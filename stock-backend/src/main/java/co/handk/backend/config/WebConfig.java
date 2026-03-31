@@ -16,11 +16,53 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
 
         registry.addInterceptor(loginInterceptor)
-                .addPathPatterns("/**")
+                .addPathPatterns(
+                        "/brand/**",
+                        "/series/**",
+                        "/maker/**",
+                        "/goodsType/**",
+                        "/goods/**",
+                        "/warehouse/**",
+                        "/customerLevel/**",
+                        "/customer/**",
+                        "/dept/**",
+                        "/stock/**",
+                        "/stockRecord/**",
+                        "/stockOrder/**",
+                        "/stockOrderItem/**",
+                        "/priceRecord/**",
+                        "/requestForm/**",
+                        "/requestItem/**",
+                        "/message/**",
+                        "/user/**",
+                        "/role/**",
+                        "/permission/**",
+                        "/userRole/**",
+                        "/rolePermission/**",
+                        "/userToken/**",
+                        "/config/**",
+                        "/operateLog/**"
+                )
                 .excludePathPatterns(
                         "/user/login",
-                        "/stock/page",
-                        "/error"
+                        "/error",
+                        "/",
+                        "/home",
+                        "/index.html",
+                        "/favicon.ico",
+                        "/**/*.css",
+                        "/**/*.js",
+                        "/**/*.map",
+                        "/**/*.png",
+                        "/**/*.jpg",
+                        "/**/*.jpeg",
+                        "/**/*.gif",
+                        "/**/*.svg",
+                        "/**/*.woff",
+                        "/**/*.woff2",
+                        "/**/*.ttf",
+                        "/assets/**",
+                        "/icons/**"
                 );
     }
 }

@@ -1,5 +1,6 @@
 package co.handk.backend.handler;
 
+import co.handk.backend.exception.LoginException;
 import co.handk.common.enums.ResultCode;
 import co.handk.common.model.Result;
 import jakarta.validation.ConstraintViolationException;
@@ -32,6 +33,12 @@ public class GlobalExceptionHandler {
     public Result<?> handleException(Exception e) {
         // TODD 实际项目这里应该写日志
         e.printStackTrace();
+        if (e instanceof LoginException) {
+            String message = e.getMessage();
+            if ("未登录".equals(message) || "登录已过期".equals(message) || "账号已在其他设备登录".equals(message)) {
+                return Result.fail(ResultCode.LOGIN_TIME_OUT.getCode(), ResultCode.LOGIN_TIME_OUT.getMessage());
+            }
+        }
         return Result.fail(ResultCode.ERROR.getCode(), e.getMessage());
     }
 }

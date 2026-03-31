@@ -7,7 +7,8 @@ public enum ResultCode {
 
     SUCCESS(200, "success"),
     ERROR(500, "server error"),
-    VALIDATE_ERROR(400, "param error");
+    VALIDATE_ERROR(400, "param error"),
+    LOGIN_TIME_OUT(401, "login timeout");
 
     private final Integer code;
     private final String message;

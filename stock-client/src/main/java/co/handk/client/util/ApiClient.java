@@ -1,6 +1,7 @@
 package co.handk.client.util;
 
 import co.handk.client.model.Session;
+import org.json.JSONObject;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -9,6 +10,11 @@ import java.net.URL;
 public class ApiClient {
 
     private static final String BASE_URL = "http://localhost:8080";
+    private static Runnable loginTimeoutHandler;
+
+    public static void setLoginTimeoutHandler(Runnable handler) {
+        loginTimeoutHandler = handler;
+    }
 
     public static String post(String path, String json) throws Exception {
         URL url = new URL(BASE_URL + path);
@@ -32,9 +38,11 @@ public class ApiClient {
     }
 
     private static String read(HttpURLConnection conn) throws Exception {
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream())
-        );
+        InputStream is = conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream();
+        if (is == null) {
+            throw new IOException("empty response");
+        }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder result = new StringBuilder();
         String line;
 
@@ -42,6 +50,18 @@ public class ApiClient {
             result.append(line);
         }
 
-        return result.toString();
+        String body = result.toString();
+        try {
+            JSONObject json = new JSONObject(body);
+            if (json.optInt("code") == 401) {
+                Session.clear();
+                if (loginTimeoutHandler != null) {
+                    loginTimeoutHandler.run();
+                }
+            }
+        } catch (Exception ignored) {
+            // 非标准JSON响应，忽略统一登录态处理
+        }
+        return body;
     }
 }
