@@ -302,7 +302,9 @@ create TABLE t_warehouse
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP,
     PRIMARY KEY (id)
-);
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT = '仓库表';
 
 
 DROP TABLE IF EXISTS `t_goods`;
