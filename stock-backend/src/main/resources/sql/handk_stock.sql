@@ -364,7 +364,7 @@ create TABLE `t_price_record`
      KEY idx_price_update_time (price_update_time)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT = '商品表';
+  COLLATE = utf8mb4_unicode_ci COMMENT = '价格记录表';
 
 
 DROP TABLE IF EXISTS `t_brand`;

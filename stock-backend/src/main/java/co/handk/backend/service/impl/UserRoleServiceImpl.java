@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.UserRole;
 import co.handk.common.model.dto.UserRoleDTO;
+import co.handk.common.model.vo.UserRoleVO;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.UserRoleService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
     }
 
     @Override
-    public List<UserRole> listAll() {
+    public List<UserRoleVO> listAll() {
         LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserRole::getDeleted, 0).orderByDesc(UserRole::getUpdateTime);
-        return userRoleMapper.selectList(wrapper);
+        return     userRoleMapper.selectList(wrapper).stream().map(entity -> {
+            UserRoleVO vo = new UserRoleVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<UserRole> pageQuery(PageQuery query) {
+    public PageResult<UserRoleVO> pageQuery(PageQuery query) {
         Page<UserRole> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserRole::getDeleted, 0).orderByDesc(UserRole::getUpdateTime);
-        Page<UserRole> resultPage = userRoleMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<UserRole> resultPage =     userRoleMapper.selectPage(page, wrapper);
+        List<UserRoleVO> records = resultPage.getRecords().stream().map(entity -> {
+            UserRoleVO vo = new UserRoleVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.Brand;
 import co.handk.common.model.dto.BrandDTO;
+import co.handk.common.model.vo.BrandVO;
 import co.handk.backend.mapper.BrandMapper;
 import co.handk.backend.service.BrandService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class BrandServiceImpl extends ServiceImpl<BrandMapper, Brand> implements
     }
 
     @Override
-    public List<Brand> listAll() {
+    public List<BrandVO> listAll() {
         LambdaQueryWrapper<Brand> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Brand::getDeleted, 0).orderByDesc(Brand::getUpdateTime);
-        return brandMapper.selectList(wrapper);
+        return     brandMapper.selectList(wrapper).stream().map(entity -> {
+            BrandVO vo = new BrandVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<Brand> pageQuery(PageQuery query) {
+    public PageResult<BrandVO> pageQuery(PageQuery query) {
         Page<Brand> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Brand> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Brand::getDeleted, 0).orderByDesc(Brand::getUpdateTime);
-        Page<Brand> resultPage = brandMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<Brand> resultPage =     brandMapper.selectPage(page, wrapper);
+        List<BrandVO> records = resultPage.getRecords().stream().map(entity -> {
+            BrandVO vo = new BrandVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

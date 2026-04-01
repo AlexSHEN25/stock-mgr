@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.RequestForm;
+import co.handk.common.model.vo.RequestFormVO;
 import co.handk.common.model.dto.RequestFormDTO;
 import co.handk.backend.service.RequestFormService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class RequestFormController {
     }
 
     @GetMapping("/{id}")
-    public RequestForm get(@PathVariable @NotNull Long id) {
+    public RequestFormVO get(@PathVariable @NotNull Long id) {
         return requestFormService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class RequestFormController {
     }
 
     @GetMapping("/list")
-    public List<RequestForm> list() {
+    public List<RequestFormVO> list() {
         return requestFormService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<RequestForm> page(@Valid PageQuery query) {
+    public PageResult<RequestFormVO> page(@Valid PageQuery query) {
         return requestFormService.pageQuery(query);
     }
 }

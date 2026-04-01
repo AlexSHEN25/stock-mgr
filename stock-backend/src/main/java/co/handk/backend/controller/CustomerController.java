@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Customer;
+import co.handk.common.model.vo.CustomerVO;
 import co.handk.common.model.dto.CustomerDTO;
 import co.handk.backend.service.CustomerService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    public Customer get(@PathVariable @NotNull Long id) {
+    public CustomerVO get(@PathVariable @NotNull Long id) {
         return customerService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class CustomerController {
     }
 
     @GetMapping("/list")
-    public List<Customer> list() {
+    public List<CustomerVO> list() {
         return customerService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Customer> page(@Valid PageQuery query) {
+    public PageResult<CustomerVO> page(@Valid PageQuery query) {
         return customerService.pageQuery(query);
     }
 }

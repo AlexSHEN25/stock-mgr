@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.RequestItem;
+import co.handk.common.model.vo.RequestItemVO;
 import co.handk.common.model.dto.RequestItemDTO;
 import co.handk.backend.service.RequestItemService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class RequestItemController {
     }
 
     @GetMapping("/{id}")
-    public RequestItem get(@PathVariable @NotNull Long id) {
+    public RequestItemVO get(@PathVariable @NotNull Long id) {
         return requestItemService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class RequestItemController {
     }
 
     @GetMapping("/list")
-    public List<RequestItem> list() {
+    public List<RequestItemVO> list() {
         return requestItemService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<RequestItem> page(@Valid PageQuery query) {
+    public PageResult<RequestItemVO> page(@Valid PageQuery query) {
         return requestItemService.pageQuery(query);
     }
 }

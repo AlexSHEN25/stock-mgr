@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.UserRole;
 import co.handk.common.model.dto.UserRoleDTO;
+import co.handk.common.model.vo.UserRoleVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface UserRoleService extends IService<UserRole> {
 
     Boolean create(@NotNull UserRoleDTO dto);
 
-    UserRole get(@NotNull Long id);
+    UserRoleVO get(@NotNull Long id);
 
     Boolean update(@NotNull UserRoleDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<UserRoleVO> listAll();
 
-    List<UserRole> listAll();
-
-    PageResult<UserRole> pageQuery(@NotNull PageQuery query);
+    PageResult<UserRoleVO> pageQuery(@NotNull PageQuery query);
 }

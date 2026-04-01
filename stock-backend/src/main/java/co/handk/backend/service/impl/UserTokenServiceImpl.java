@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.UserToken;
 import co.handk.common.model.dto.UserTokenDTO;
+import co.handk.common.model.vo.UserTokenVO;
 import co.handk.backend.mapper.UserTokenMapper;
 import co.handk.backend.service.UserTokenService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class UserTokenServiceImpl extends ServiceImpl<UserTokenMapper, UserToken
     }
 
     @Override
-    public List<UserToken> listAll() {
+    public List<UserTokenVO> listAll() {
         LambdaQueryWrapper<UserToken> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserToken::getDeleted, 0).orderByDesc(UserToken::getUpdateTime);
-        return userTokenMapper.selectList(wrapper);
+        return     userTokenMapper.selectList(wrapper).stream().map(entity -> {
+            UserTokenVO vo = new UserTokenVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<UserToken> pageQuery(PageQuery query) {
+    public PageResult<UserTokenVO> pageQuery(PageQuery query) {
         Page<UserToken> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<UserToken> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserToken::getDeleted, 0).orderByDesc(UserToken::getUpdateTime);
-        Page<UserToken> resultPage = userTokenMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<UserToken> resultPage =     userTokenMapper.selectPage(page, wrapper);
+        List<UserTokenVO> records = resultPage.getRecords().stream().map(entity -> {
+            UserTokenVO vo = new UserTokenVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

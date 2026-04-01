@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.PriceRecord;
 import co.handk.common.model.dto.PriceRecordDTO;
+import co.handk.common.model.vo.PriceRecordVO;
 import co.handk.backend.mapper.PriceRecordMapper;
 import co.handk.backend.service.PriceRecordService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
     }
 
     @Override
-    public List<PriceRecord> listAll() {
+    public List<PriceRecordVO> listAll() {
         LambdaQueryWrapper<PriceRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PriceRecord::getDeleted, 0).orderByDesc(PriceRecord::getUpdateTime);
-        return priceRecordMapper.selectList(wrapper);
+        return     priceRecordMapper.selectList(wrapper).stream().map(entity -> {
+            PriceRecordVO vo = new PriceRecordVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<PriceRecord> pageQuery(PageQuery query) {
+    public PageResult<PriceRecordVO> pageQuery(PageQuery query) {
         Page<PriceRecord> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<PriceRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PriceRecord::getDeleted, 0).orderByDesc(PriceRecord::getUpdateTime);
-        Page<PriceRecord> resultPage = priceRecordMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<PriceRecord> resultPage =     priceRecordMapper.selectPage(page, wrapper);
+        List<PriceRecordVO> records = resultPage.getRecords().stream().map(entity -> {
+            PriceRecordVO vo = new PriceRecordVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

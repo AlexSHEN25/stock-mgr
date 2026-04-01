@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Warehouse;
+import co.handk.common.model.vo.WarehouseVO;
 import co.handk.common.model.dto.WarehouseDTO;
 import co.handk.backend.service.WarehouseService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/{id}")
-    public Warehouse get(@PathVariable @NotNull Long id) {
+    public WarehouseVO get(@PathVariable @NotNull Long id) {
         return warehouseService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class WarehouseController {
     }
 
     @GetMapping("/list")
-    public List<Warehouse> list() {
+    public List<WarehouseVO> list() {
         return warehouseService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Warehouse> page(@Valid PageQuery query) {
+    public PageResult<WarehouseVO> page(@Valid PageQuery query) {
         return warehouseService.pageQuery(query);
     }
 }

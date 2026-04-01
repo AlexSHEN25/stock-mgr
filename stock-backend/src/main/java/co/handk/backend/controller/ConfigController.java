@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Config;
+import co.handk.common.model.vo.ConfigVO;
 import co.handk.common.model.dto.ConfigDTO;
 import co.handk.backend.service.ConfigService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class ConfigController {
     }
 
     @GetMapping("/{id}")
-    public Config get(@PathVariable @NotNull Long id) {
+    public ConfigVO get(@PathVariable @NotNull Long id) {
         return configService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class ConfigController {
     }
 
     @GetMapping("/list")
-    public List<Config> list() {
+    public List<ConfigVO> list() {
         return configService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Config> page(@Valid PageQuery query) {
+    public PageResult<ConfigVO> page(@Valid PageQuery query) {
         return configService.pageQuery(query);
     }
 }

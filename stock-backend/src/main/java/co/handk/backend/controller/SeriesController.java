@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Series;
+import co.handk.common.model.vo.SeriesVO;
 import co.handk.common.model.dto.SeriesDTO;
 import co.handk.backend.service.SeriesService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class SeriesController {
     }
 
     @GetMapping("/{id}")
-    public Series get(@PathVariable @NotNull Long id) {
+    public SeriesVO get(@PathVariable @NotNull Long id) {
         return seriesService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class SeriesController {
     }
 
     @GetMapping("/list")
-    public List<Series> list() {
+    public List<SeriesVO> list() {
         return seriesService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Series> page(@Valid PageQuery query) {
+    public PageResult<SeriesVO> page(@Valid PageQuery query) {
         return seriesService.pageQuery(query);
     }
 }

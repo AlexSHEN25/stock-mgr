@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Maker;
+import co.handk.common.model.vo.MakerVO;
 import co.handk.common.model.dto.MakerDTO;
 import co.handk.backend.service.MakerService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class MakerController {
     }
 
     @GetMapping("/{id}")
-    public Maker get(@PathVariable @NotNull Long id) {
+    public MakerVO get(@PathVariable @NotNull Long id) {
         return makerService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class MakerController {
     }
 
     @GetMapping("/list")
-    public List<Maker> list() {
+    public List<MakerVO> list() {
         return makerService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Maker> page(@Valid PageQuery query) {
+    public PageResult<MakerVO> page(@Valid PageQuery query) {
         return makerService.pageQuery(query);
     }
 }

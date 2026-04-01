@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.StockOrderItem;
 import co.handk.common.model.dto.StockOrderItemDTO;
+import co.handk.common.model.vo.StockOrderItemVO;
 import co.handk.backend.mapper.StockOrderItemMapper;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     }
 
     @Override
-    public List<StockOrderItem> listAll() {
+    public List<StockOrderItemVO> listAll() {
         LambdaQueryWrapper<StockOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockOrderItem::getDeleted, 0).orderByDesc(StockOrderItem::getUpdateTime);
-        return stockOrderItemMapper.selectList(wrapper);
+        return     stockOrderItemMapper.selectList(wrapper).stream().map(entity -> {
+            StockOrderItemVO vo = new StockOrderItemVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<StockOrderItem> pageQuery(PageQuery query) {
+    public PageResult<StockOrderItemVO> pageQuery(PageQuery query) {
         Page<StockOrderItem> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<StockOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockOrderItem::getDeleted, 0).orderByDesc(StockOrderItem::getUpdateTime);
-        Page<StockOrderItem> resultPage = stockOrderItemMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<StockOrderItem> resultPage =     stockOrderItemMapper.selectPage(page, wrapper);
+        List<StockOrderItemVO> records = resultPage.getRecords().stream().map(entity -> {
+            StockOrderItemVO vo = new StockOrderItemVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

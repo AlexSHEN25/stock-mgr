@@ -1,7 +1,9 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.Stock;
+import co.handk.backend.entity.StockRecord;
 import co.handk.backend.mapper.StockMapper;
+import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.StockService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.StockDTO;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements StockService {
 
     private final StockMapper stockMapper;
+    private final StockRecordMapper stockRecordMapper;
 
     @Override
     public Boolean create(StockDTO dto) {
@@ -102,5 +105,33 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         // 5. 返回统一分页结果
         return PageResult.build(resultPage.getTotal(), dto.getPageNum(), dto.getPageSize(), records);
 
+    }
+
+    @Override
+    public Boolean undo(Long stockRecordId) {
+        StockRecord record = stockRecordMapper.selectById(stockRecordId);
+        if (record == null) {
+            throw new RuntimeException("库存流水不存在");
+        }
+        Stock stock = this.getById(record.getStockId());
+        if (stock == null) {
+            throw new RuntimeException("库存不存在");
+        }
+        stock.setCurrentQty(record.getBeforeQty());
+        return this.updateById(stock);
+    }
+
+    @Override
+    public Boolean redo(Long stockRecordId) {
+        StockRecord record = stockRecordMapper.selectById(stockRecordId);
+        if (record == null) {
+            throw new RuntimeException("库存流水不存在");
+        }
+        Stock stock = this.getById(record.getStockId());
+        if (stock == null) {
+            throw new RuntimeException("库存不存在");
+        }
+        stock.setCurrentQty(record.getAfterQty());
+        return this.updateById(stock);
     }
 }

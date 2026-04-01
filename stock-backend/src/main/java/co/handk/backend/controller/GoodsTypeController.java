@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.GoodsType;
+import co.handk.common.model.vo.GoodsTypeVO;
 import co.handk.common.model.dto.GoodsTypeDTO;
 import co.handk.backend.service.GoodsTypeService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class GoodsTypeController {
     }
 
     @GetMapping("/{id}")
-    public GoodsType get(@PathVariable @NotNull Long id) {
+    public GoodsTypeVO get(@PathVariable @NotNull Long id) {
         return goodsTypeService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class GoodsTypeController {
     }
 
     @GetMapping("/list")
-    public List<GoodsType> list() {
+    public List<GoodsTypeVO> list() {
         return goodsTypeService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<GoodsType> page(@Valid PageQuery query) {
+    public PageResult<GoodsTypeVO> page(@Valid PageQuery query) {
         return goodsTypeService.pageQuery(query);
     }
 }

@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.CustomerLevel;
+import co.handk.common.model.vo.CustomerLevelVO;
 import co.handk.common.model.dto.CustomerLevelDTO;
 import co.handk.backend.service.CustomerLevelService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class CustomerLevelController {
     }
 
     @GetMapping("/{id}")
-    public CustomerLevel get(@PathVariable @NotNull Long id) {
+    public CustomerLevelVO get(@PathVariable @NotNull Long id) {
         return customerLevelService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class CustomerLevelController {
     }
 
     @GetMapping("/list")
-    public List<CustomerLevel> list() {
+    public List<CustomerLevelVO> list() {
         return customerLevelService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<CustomerLevel> page(@Valid PageQuery query) {
+    public PageResult<CustomerLevelVO> page(@Valid PageQuery query) {
         return customerLevelService.pageQuery(query);
     }
 }

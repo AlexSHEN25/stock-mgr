@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.Config;
 import co.handk.common.model.dto.ConfigDTO;
+import co.handk.common.model.vo.ConfigVO;
 import co.handk.backend.mapper.ConfigMapper;
 import co.handk.backend.service.ConfigService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class ConfigServiceImpl extends ServiceImpl<ConfigMapper, Config> impleme
     }
 
     @Override
-    public List<Config> listAll() {
+    public List<ConfigVO> listAll() {
         LambdaQueryWrapper<Config> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Config::getDeleted, 0).orderByDesc(Config::getUpdateTime);
-        return configMapper.selectList(wrapper);
+        return     configMapper.selectList(wrapper).stream().map(entity -> {
+            ConfigVO vo = new ConfigVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<Config> pageQuery(PageQuery query) {
+    public PageResult<ConfigVO> pageQuery(PageQuery query) {
         Page<Config> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Config> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Config::getDeleted, 0).orderByDesc(Config::getUpdateTime);
-        Page<Config> resultPage = configMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<Config> resultPage =     configMapper.selectPage(page, wrapper);
+        List<ConfigVO> records = resultPage.getRecords().stream().map(entity -> {
+            ConfigVO vo = new ConfigVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.CustomerLevel;
 import co.handk.common.model.dto.CustomerLevelDTO;
+import co.handk.common.model.vo.CustomerLevelVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface CustomerLevelService extends IService<CustomerLevel> {
 
     Boolean create(@NotNull CustomerLevelDTO dto);
 
-    CustomerLevel get(@NotNull Long id);
+    CustomerLevelVO get(@NotNull Long id);
 
     Boolean update(@NotNull CustomerLevelDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<CustomerLevelVO> listAll();
 
-    List<CustomerLevel> listAll();
-
-    PageResult<CustomerLevel> pageQuery(@NotNull PageQuery query);
+    PageResult<CustomerLevelVO> pageQuery(@NotNull PageQuery query);
 }

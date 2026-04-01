@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.OperateLog;
 import co.handk.common.model.dto.OperateLogDTO;
+import co.handk.common.model.vo.OperateLogVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface OperateLogService extends IService<OperateLog> {
 
     Boolean create(@NotNull OperateLogDTO dto);
 
-    OperateLog get(@NotNull Long id);
+    OperateLogVO get(@NotNull Long id);
 
     Boolean update(@NotNull OperateLogDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<OperateLogVO> listAll();
 
-    List<OperateLog> listAll();
-
-    PageResult<OperateLog> pageQuery(@NotNull PageQuery query);
+    PageResult<OperateLogVO> pageQuery(@NotNull PageQuery query);
 }

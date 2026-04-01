@@ -48,4 +48,14 @@ public interface StockService  extends IService<Stock> {
      * 分页查询库存
      */
     PageResult<StockPageVO> pageQuery(@NotNull StockPageQueryDTO dto);
+
+    /**
+     * 撤销：按库存流水回滚库存数量为变更前
+     */
+    Boolean undo(@NotNull Long stockRecordId);
+
+    /**
+     * 重做：按库存流水恢复库存数量为变更后
+     */
+    Boolean redo(@NotNull Long stockRecordId);
 }

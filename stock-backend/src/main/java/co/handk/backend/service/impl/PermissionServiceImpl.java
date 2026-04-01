@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.Permission;
 import co.handk.common.model.dto.PermissionDTO;
+import co.handk.common.model.vo.PermissionVO;
 import co.handk.backend.mapper.PermissionMapper;
 import co.handk.backend.service.PermissionService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
     }
 
     @Override
-    public List<Permission> listAll() {
+    public List<PermissionVO> listAll() {
         LambdaQueryWrapper<Permission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Permission::getDeleted, 0).orderByDesc(Permission::getUpdateTime);
-        return permissionMapper.selectList(wrapper);
+        return     permissionMapper.selectList(wrapper).stream().map(entity -> {
+            PermissionVO vo = new PermissionVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<Permission> pageQuery(PageQuery query) {
+    public PageResult<PermissionVO> pageQuery(PageQuery query) {
         Page<Permission> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Permission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Permission::getDeleted, 0).orderByDesc(Permission::getUpdateTime);
-        Page<Permission> resultPage = permissionMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<Permission> resultPage =     permissionMapper.selectPage(page, wrapper);
+        List<PermissionVO> records = resultPage.getRecords().stream().map(entity -> {
+            PermissionVO vo = new PermissionVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

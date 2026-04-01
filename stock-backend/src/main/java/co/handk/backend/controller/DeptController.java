@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Dept;
+import co.handk.common.model.vo.DeptVO;
 import co.handk.common.model.dto.DeptDTO;
 import co.handk.backend.service.DeptService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class DeptController {
     }
 
     @GetMapping("/{id}")
-    public Dept get(@PathVariable @NotNull Long id) {
+    public DeptVO get(@PathVariable @NotNull Long id) {
         return deptService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class DeptController {
     }
 
     @GetMapping("/list")
-    public List<Dept> list() {
+    public List<DeptVO> list() {
         return deptService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Dept> page(@Valid PageQuery query) {
+    public PageResult<DeptVO> page(@Valid PageQuery query) {
         return deptService.pageQuery(query);
     }
 }

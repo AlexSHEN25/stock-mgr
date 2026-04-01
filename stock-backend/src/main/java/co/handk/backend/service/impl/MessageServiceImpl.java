@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.Message;
 import co.handk.common.model.dto.MessageDTO;
+import co.handk.common.model.vo.MessageVO;
 import co.handk.backend.mapper.MessageMapper;
 import co.handk.backend.service.MessageService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     }
 
     @Override
-    public List<Message> listAll() {
+    public List<MessageVO> listAll() {
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Message::getDeleted, 0).orderByDesc(Message::getUpdateTime);
-        return messageMapper.selectList(wrapper);
+        return     messageMapper.selectList(wrapper).stream().map(entity -> {
+            MessageVO vo = new MessageVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<Message> pageQuery(PageQuery query) {
+    public PageResult<MessageVO> pageQuery(PageQuery query) {
         Page<Message> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Message::getDeleted, 0).orderByDesc(Message::getUpdateTime);
-        Page<Message> resultPage = messageMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<Message> resultPage =     messageMapper.selectPage(page, wrapper);
+        List<MessageVO> records = resultPage.getRecords().stream().map(entity -> {
+            MessageVO vo = new MessageVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

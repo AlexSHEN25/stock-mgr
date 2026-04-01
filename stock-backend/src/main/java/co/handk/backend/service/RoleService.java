@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.Role;
 import co.handk.common.model.dto.RoleDTO;
+import co.handk.common.model.vo.RoleVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface RoleService extends IService<Role> {
 
     Boolean create(@NotNull RoleDTO dto);
 
-    Role get(@NotNull Long id);
+    RoleVO get(@NotNull Long id);
 
     Boolean update(@NotNull RoleDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<RoleVO> listAll();
 
-    List<Role> listAll();
-
-    PageResult<Role> pageQuery(@NotNull PageQuery query);
+    PageResult<RoleVO> pageQuery(@NotNull PageQuery query);
 }

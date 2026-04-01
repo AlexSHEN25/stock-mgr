@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.RolePermission;
+import co.handk.common.model.vo.RolePermissionVO;
 import co.handk.common.model.dto.RolePermissionDTO;
 import co.handk.backend.service.RolePermissionService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class RolePermissionController {
     }
 
     @GetMapping("/{id}")
-    public RolePermission get(@PathVariable @NotNull Long id) {
+    public RolePermissionVO get(@PathVariable @NotNull Long id) {
         return rolePermissionService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class RolePermissionController {
     }
 
     @GetMapping("/list")
-    public List<RolePermission> list() {
+    public List<RolePermissionVO> list() {
         return rolePermissionService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<RolePermission> page(@Valid PageQuery query) {
+    public PageResult<RolePermissionVO> page(@Valid PageQuery query) {
         return rolePermissionService.pageQuery(query);
     }
 }

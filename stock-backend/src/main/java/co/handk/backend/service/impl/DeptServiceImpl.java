@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.Dept;
 import co.handk.common.model.dto.DeptDTO;
+import co.handk.common.model.vo.DeptVO;
 import co.handk.backend.mapper.DeptMapper;
 import co.handk.backend.service.DeptService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
     }
 
     @Override
-    public List<Dept> listAll() {
+    public List<DeptVO> listAll() {
         LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Dept::getDeleted, 0).orderByDesc(Dept::getUpdateTime);
-        return deptMapper.selectList(wrapper);
+        return     deptMapper.selectList(wrapper).stream().map(entity -> {
+            DeptVO vo = new DeptVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<Dept> pageQuery(PageQuery query) {
+    public PageResult<DeptVO> pageQuery(PageQuery query) {
         Page<Dept> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Dept::getDeleted, 0).orderByDesc(Dept::getUpdateTime);
-        Page<Dept> resultPage = deptMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<Dept> resultPage =     deptMapper.selectPage(page, wrapper);
+        List<DeptVO> records = resultPage.getRecords().stream().map(entity -> {
+            DeptVO vo = new DeptVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

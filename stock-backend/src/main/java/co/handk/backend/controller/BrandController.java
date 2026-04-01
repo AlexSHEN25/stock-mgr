@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Brand;
+import co.handk.common.model.vo.BrandVO;
 import co.handk.common.model.dto.BrandDTO;
 import co.handk.backend.service.BrandService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class BrandController {
     }
 
     @GetMapping("/{id}")
-    public Brand get(@PathVariable @NotNull Long id) {
+    public BrandVO get(@PathVariable @NotNull Long id) {
         return brandService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class BrandController {
     }
 
     @GetMapping("/list")
-    public List<Brand> list() {
+    public List<BrandVO> list() {
         return brandService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Brand> page(@Valid PageQuery query) {
+    public PageResult<BrandVO> page(@Valid PageQuery query) {
         return brandService.pageQuery(query);
     }
 }

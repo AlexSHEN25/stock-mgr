@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.UserToken;
 import co.handk.common.model.dto.UserTokenDTO;
+import co.handk.common.model.vo.UserTokenVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface UserTokenService extends IService<UserToken> {
 
     Boolean create(@NotNull UserTokenDTO dto);
 
-    UserToken get(@NotNull Long id);
+    UserTokenVO get(@NotNull Long id);
 
     Boolean update(@NotNull UserTokenDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<UserTokenVO> listAll();
 
-    List<UserToken> listAll();
-
-    PageResult<UserToken> pageQuery(@NotNull PageQuery query);
+    PageResult<UserTokenVO> pageQuery(@NotNull PageQuery query);
 }

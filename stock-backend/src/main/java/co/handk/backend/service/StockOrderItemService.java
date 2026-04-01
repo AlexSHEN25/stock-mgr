@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.StockOrderItem;
 import co.handk.common.model.dto.StockOrderItemDTO;
+import co.handk.common.model.vo.StockOrderItemVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface StockOrderItemService extends IService<StockOrderItem> {
 
     Boolean create(@NotNull StockOrderItemDTO dto);
 
-    StockOrderItem get(@NotNull Long id);
+    StockOrderItemVO get(@NotNull Long id);
 
     Boolean update(@NotNull StockOrderItemDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<StockOrderItemVO> listAll();
 
-    List<StockOrderItem> listAll();
-
-    PageResult<StockOrderItem> pageQuery(@NotNull PageQuery query);
+    PageResult<StockOrderItemVO> pageQuery(@NotNull PageQuery query);
 }

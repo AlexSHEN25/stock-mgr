@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.OperateLog;
+import co.handk.common.model.vo.OperateLogVO;
 import co.handk.common.model.dto.OperateLogDTO;
 import co.handk.backend.service.OperateLogService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class OperateLogController {
     }
 
     @GetMapping("/{id}")
-    public OperateLog get(@PathVariable @NotNull Long id) {
+    public OperateLogVO get(@PathVariable @NotNull Long id) {
         return operateLogService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class OperateLogController {
     }
 
     @GetMapping("/list")
-    public List<OperateLog> list() {
+    public List<OperateLogVO> list() {
         return operateLogService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<OperateLog> page(@Valid PageQuery query) {
+    public PageResult<OperateLogVO> page(@Valid PageQuery query) {
         return operateLogService.pageQuery(query);
     }
 }

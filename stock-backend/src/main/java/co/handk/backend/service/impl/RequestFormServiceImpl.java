@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.RequestForm;
 import co.handk.common.model.dto.RequestFormDTO;
+import co.handk.common.model.vo.RequestFormVO;
 import co.handk.backend.mapper.RequestFormMapper;
 import co.handk.backend.service.RequestFormService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class RequestFormServiceImpl extends ServiceImpl<RequestFormMapper, Reque
     }
 
     @Override
-    public List<RequestForm> listAll() {
+    public List<RequestFormVO> listAll() {
         LambdaQueryWrapper<RequestForm> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RequestForm::getDeleted, 0).orderByDesc(RequestForm::getUpdateTime);
-        return requestFormMapper.selectList(wrapper);
+        return     requestFormMapper.selectList(wrapper).stream().map(entity -> {
+            RequestFormVO vo = new RequestFormVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<RequestForm> pageQuery(PageQuery query) {
+    public PageResult<RequestFormVO> pageQuery(PageQuery query) {
         Page<RequestForm> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RequestForm> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RequestForm::getDeleted, 0).orderByDesc(RequestForm::getUpdateTime);
-        Page<RequestForm> resultPage = requestFormMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<RequestForm> resultPage =     requestFormMapper.selectPage(page, wrapper);
+        List<RequestFormVO> records = resultPage.getRecords().stream().map(entity -> {
+            RequestFormVO vo = new RequestFormVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

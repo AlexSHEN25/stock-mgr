@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.StockOrder;
+import co.handk.common.model.vo.StockOrderVO;
 import co.handk.common.model.dto.StockOrderDTO;
 import co.handk.backend.service.StockOrderService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class StockOrderController {
     }
 
     @GetMapping("/{id}")
-    public StockOrder get(@PathVariable @NotNull Long id) {
+    public StockOrderVO get(@PathVariable @NotNull Long id) {
         return stockOrderService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class StockOrderController {
     }
 
     @GetMapping("/list")
-    public List<StockOrder> list() {
+    public List<StockOrderVO> list() {
         return stockOrderService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<StockOrder> page(@Valid PageQuery query) {
+    public PageResult<StockOrderVO> page(@Valid PageQuery query) {
         return stockOrderService.pageQuery(query);
     }
 }

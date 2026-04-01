@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.PriceRecord;
+import co.handk.common.model.vo.PriceRecordVO;
 import co.handk.common.model.dto.PriceRecordDTO;
 import co.handk.backend.service.PriceRecordService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class PriceRecordController {
     }
 
     @GetMapping("/{id}")
-    public PriceRecord get(@PathVariable @NotNull Long id) {
+    public PriceRecordVO get(@PathVariable @NotNull Long id) {
         return priceRecordService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class PriceRecordController {
     }
 
     @GetMapping("/list")
-    public List<PriceRecord> list() {
+    public List<PriceRecordVO> list() {
         return priceRecordService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<PriceRecord> page(@Valid PageQuery query) {
+    public PageResult<PriceRecordVO> page(@Valid PageQuery query) {
         return priceRecordService.pageQuery(query);
     }
 }

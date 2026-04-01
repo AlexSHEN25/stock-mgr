@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.RequestItem;
 import co.handk.common.model.dto.RequestItemDTO;
+import co.handk.common.model.vo.RequestItemVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface RequestItemService extends IService<RequestItem> {
 
     Boolean create(@NotNull RequestItemDTO dto);
 
-    RequestItem get(@NotNull Long id);
+    RequestItemVO get(@NotNull Long id);
 
     Boolean update(@NotNull RequestItemDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<RequestItemVO> listAll();
 
-    List<RequestItem> listAll();
-
-    PageResult<RequestItem> pageQuery(@NotNull PageQuery query);
+    PageResult<RequestItemVO> pageQuery(@NotNull PageQuery query);
 }

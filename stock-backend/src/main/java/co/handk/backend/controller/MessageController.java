@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Message;
+import co.handk.common.model.vo.MessageVO;
 import co.handk.common.model.dto.MessageDTO;
 import co.handk.backend.service.MessageService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class MessageController {
     }
 
     @GetMapping("/{id}")
-    public Message get(@PathVariable @NotNull Long id) {
+    public MessageVO get(@PathVariable @NotNull Long id) {
         return messageService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class MessageController {
     }
 
     @GetMapping("/list")
-    public List<Message> list() {
+    public List<MessageVO> list() {
         return messageService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Message> page(@Valid PageQuery query) {
+    public PageResult<MessageVO> page(@Valid PageQuery query) {
         return messageService.pageQuery(query);
     }
 }

@@ -74,4 +74,20 @@ public class StockController {
     public PageResult<StockPageVO> page(@Valid StockPageQueryDTO dto) {
         return stockService.pageQuery(dto);
     }
+
+    /**
+     * 撤销操作：根据库存流水ID回滚库存
+     */
+    @PostMapping("/undo/{stockRecordId}")
+    public Boolean undo(@PathVariable @NotNull Long stockRecordId) {
+        return stockService.undo(stockRecordId);
+    }
+
+    /**
+     * 重做操作：根据库存流水ID恢复库存
+     */
+    @PostMapping("/redo/{stockRecordId}")
+    public Boolean redo(@PathVariable @NotNull Long stockRecordId) {
+        return stockService.redo(stockRecordId);
+    }
 }

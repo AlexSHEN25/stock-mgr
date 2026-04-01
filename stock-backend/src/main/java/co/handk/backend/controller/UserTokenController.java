@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.UserToken;
+import co.handk.common.model.vo.UserTokenVO;
 import co.handk.common.model.dto.UserTokenDTO;
 import co.handk.backend.service.UserTokenService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class UserTokenController {
     }
 
     @GetMapping("/{id}")
-    public UserToken get(@PathVariable @NotNull Long id) {
+    public UserTokenVO get(@PathVariable @NotNull Long id) {
         return userTokenService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class UserTokenController {
     }
 
     @GetMapping("/list")
-    public List<UserToken> list() {
+    public List<UserTokenVO> list() {
         return userTokenService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<UserToken> page(@Valid PageQuery query) {
+    public PageResult<UserTokenVO> page(@Valid PageQuery query) {
         return userTokenService.pageQuery(query);
     }
 }

@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.RequestItem;
 import co.handk.common.model.dto.RequestItemDTO;
+import co.handk.common.model.vo.RequestItemVO;
 import co.handk.backend.mapper.RequestItemMapper;
 import co.handk.backend.service.RequestItemService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     }
 
     @Override
-    public List<RequestItem> listAll() {
+    public List<RequestItemVO> listAll() {
         LambdaQueryWrapper<RequestItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RequestItem::getDeleted, 0).orderByDesc(RequestItem::getUpdateTime);
-        return requestItemMapper.selectList(wrapper);
+        return     requestItemMapper.selectList(wrapper).stream().map(entity -> {
+            RequestItemVO vo = new RequestItemVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<RequestItem> pageQuery(PageQuery query) {
+    public PageResult<RequestItemVO> pageQuery(PageQuery query) {
         Page<RequestItem> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RequestItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RequestItem::getDeleted, 0).orderByDesc(RequestItem::getUpdateTime);
-        Page<RequestItem> resultPage = requestItemMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<RequestItem> resultPage =     requestItemMapper.selectPage(page, wrapper);
+        List<RequestItemVO> records = resultPage.getRecords().stream().map(entity -> {
+            RequestItemVO vo = new RequestItemVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

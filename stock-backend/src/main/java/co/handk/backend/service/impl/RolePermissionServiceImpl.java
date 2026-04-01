@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.entity.RolePermission;
 import co.handk.common.model.dto.RolePermissionDTO;
+import co.handk.common.model.vo.RolePermissionVO;
 import co.handk.backend.mapper.RolePermissionMapper;
 import co.handk.backend.service.RolePermissionService;
 import co.handk.common.model.PageQuery;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,18 +59,27 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     }
 
     @Override
-    public List<RolePermission> listAll() {
+    public List<RolePermissionVO> listAll() {
         LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RolePermission::getDeleted, 0).orderByDesc(RolePermission::getUpdateTime);
-        return rolePermissionMapper.selectList(wrapper);
+        return     rolePermissionMapper.selectList(wrapper).stream().map(entity -> {
+            RolePermissionVO vo = new RolePermissionVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     @Override
-    public PageResult<RolePermission> pageQuery(PageQuery query) {
+    public PageResult<RolePermissionVO> pageQuery(PageQuery query) {
         Page<RolePermission> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RolePermission::getDeleted, 0).orderByDesc(RolePermission::getUpdateTime);
-        Page<RolePermission> resultPage = rolePermissionMapper.selectPage(page, wrapper);
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), resultPage.getRecords());
+        Page<RolePermission> resultPage =     rolePermissionMapper.selectPage(page, wrapper);
+        List<RolePermissionVO> records = resultPage.getRecords().stream().map(entity -> {
+            RolePermissionVO vo = new RolePermissionVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }

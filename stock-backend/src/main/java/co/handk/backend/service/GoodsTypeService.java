@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.GoodsType;
 import co.handk.common.model.dto.GoodsTypeDTO;
+import co.handk.common.model.vo.GoodsTypeVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface GoodsTypeService extends IService<GoodsType> {
 
     Boolean create(@NotNull GoodsTypeDTO dto);
 
-    GoodsType get(@NotNull Long id);
+    GoodsTypeVO get(@NotNull Long id);
 
     Boolean update(@NotNull GoodsTypeDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<GoodsTypeVO> listAll();
 
-    List<GoodsType> listAll();
-
-    PageResult<GoodsType> pageQuery(@NotNull PageQuery query);
+    PageResult<GoodsTypeVO> pageQuery(@NotNull PageQuery query);
 }

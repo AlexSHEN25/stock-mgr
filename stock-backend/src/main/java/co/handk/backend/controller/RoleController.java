@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.entity.Role;
+import co.handk.common.model.vo.RoleVO;
 import co.handk.common.model.dto.RoleDTO;
 import co.handk.backend.service.RoleService;
 import co.handk.common.model.PageQuery;
@@ -27,7 +28,7 @@ public class RoleController {
     }
 
     @GetMapping("/{id}")
-    public Role get(@PathVariable @NotNull Long id) {
+    public RoleVO get(@PathVariable @NotNull Long id) {
         return roleService.get(id);
     }
 
@@ -42,12 +43,12 @@ public class RoleController {
     }
 
     @GetMapping("/list")
-    public List<Role> list() {
+    public List<RoleVO> list() {
         return roleService.listAll();
     }
 
     @GetMapping("/page")
-    public PageResult<Role> page(@Valid PageQuery query) {
+    public PageResult<RoleVO> page(@Valid PageQuery query) {
         return roleService.pageQuery(query);
     }
 }

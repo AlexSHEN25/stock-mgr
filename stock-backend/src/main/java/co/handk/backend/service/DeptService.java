@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.Dept;
 import co.handk.common.model.dto.DeptDTO;
+import co.handk.common.model.vo.DeptVO;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -17,13 +18,12 @@ public interface DeptService extends IService<Dept> {
 
     Boolean create(@NotNull DeptDTO dto);
 
-    Dept get(@NotNull Long id);
+    DeptVO get(@NotNull Long id);
 
     Boolean update(@NotNull DeptDTO dto);
 
     Boolean delete(@NotNull Long id);
+    List<DeptVO> listAll();
 
-    List<Dept> listAll();
-
-    PageResult<Dept> pageQuery(@NotNull PageQuery query);
+    PageResult<DeptVO> pageQuery(@NotNull PageQuery query);
 }
