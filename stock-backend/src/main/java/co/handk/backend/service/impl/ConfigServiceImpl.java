@@ -32,12 +32,14 @@ public class ConfigServiceImpl extends ServiceImpl<ConfigMapper, Config> impleme
     }
 
     @Override
-    public Config get(Long id) {
+    public ConfigVO get(Long id) {
         Config entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        ConfigVO vo = new ConfigVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

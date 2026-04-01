@@ -32,12 +32,14 @@ public class WarehouseServiceImpl extends ServiceImpl<WarehouseMapper, Warehouse
     }
 
     @Override
-    public Warehouse get(Long id) {
+    public WarehouseVO get(Long id) {
         Warehouse entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        WarehouseVO vo = new WarehouseVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

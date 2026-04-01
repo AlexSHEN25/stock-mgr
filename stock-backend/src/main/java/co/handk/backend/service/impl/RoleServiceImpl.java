@@ -32,12 +32,14 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     }
 
     @Override
-    public Role get(Long id) {
+    public RoleVO get(Long id) {
         Role entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        RoleVO vo = new RoleVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

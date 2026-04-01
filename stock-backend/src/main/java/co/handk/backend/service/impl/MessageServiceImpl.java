@@ -32,12 +32,14 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     }
 
     @Override
-    public Message get(Long id) {
+    public MessageVO get(Long id) {
         Message entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        MessageVO vo = new MessageVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

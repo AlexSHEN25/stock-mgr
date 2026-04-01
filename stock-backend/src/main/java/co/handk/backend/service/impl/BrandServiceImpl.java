@@ -32,12 +32,14 @@ public class BrandServiceImpl extends ServiceImpl<BrandMapper, Brand> implements
     }
 
     @Override
-    public Brand get(Long id) {
+    public BrandVO get(Long id) {
         Brand entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        BrandVO vo = new BrandVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

@@ -32,12 +32,14 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     }
 
     @Override
-    public RequestItem get(Long id) {
+    public RequestItemVO get(Long id) {
         RequestItem entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        RequestItemVO vo = new RequestItemVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

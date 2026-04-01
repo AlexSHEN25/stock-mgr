@@ -32,12 +32,14 @@ public class UserTokenServiceImpl extends ServiceImpl<UserTokenMapper, UserToken
     }
 
     @Override
-    public UserToken get(Long id) {
+    public UserTokenVO get(Long id) {
         UserToken entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        UserTokenVO vo = new UserTokenVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

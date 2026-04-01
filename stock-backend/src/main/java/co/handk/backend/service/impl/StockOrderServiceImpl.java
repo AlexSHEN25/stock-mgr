@@ -32,12 +32,14 @@ public class StockOrderServiceImpl extends ServiceImpl<StockOrderMapper, StockOr
     }
 
     @Override
-    public StockOrder get(Long id) {
+    public StockOrderVO get(Long id) {
         StockOrder entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        StockOrderVO vo = new StockOrderVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

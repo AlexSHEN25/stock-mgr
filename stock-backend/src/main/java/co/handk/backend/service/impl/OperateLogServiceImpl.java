@@ -32,12 +32,14 @@ public class OperateLogServiceImpl extends ServiceImpl<OperateLogMapper, Operate
     }
 
     @Override
-    public OperateLog get(Long id) {
+    public OperateLogVO get(Long id) {
         OperateLog entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        OperateLogVO vo = new OperateLogVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

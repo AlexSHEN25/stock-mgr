@@ -32,12 +32,14 @@ public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements
     }
 
     @Override
-    public Maker get(Long id) {
+    public MakerVO get(Long id) {
         Maker entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        MakerVO vo = new MakerVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

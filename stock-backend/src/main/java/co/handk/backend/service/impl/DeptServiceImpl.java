@@ -32,12 +32,14 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
     }
 
     @Override
-    public Dept get(Long id) {
+    public DeptVO get(Long id) {
         Dept entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        DeptVO vo = new DeptVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

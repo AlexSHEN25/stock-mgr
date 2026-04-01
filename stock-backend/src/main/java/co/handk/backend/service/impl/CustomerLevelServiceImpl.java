@@ -32,12 +32,14 @@ public class CustomerLevelServiceImpl extends ServiceImpl<CustomerLevelMapper, C
     }
 
     @Override
-    public CustomerLevel get(Long id) {
+    public CustomerLevelVO get(Long id) {
         CustomerLevel entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        CustomerLevelVO vo = new CustomerLevelVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

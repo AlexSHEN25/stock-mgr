@@ -32,12 +32,14 @@ public class RequestFormServiceImpl extends ServiceImpl<RequestFormMapper, Reque
     }
 
     @Override
-    public RequestForm get(Long id) {
+    public RequestFormVO get(Long id) {
         RequestForm entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        RequestFormVO vo = new RequestFormVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

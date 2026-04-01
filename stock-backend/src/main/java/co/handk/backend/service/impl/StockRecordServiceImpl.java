@@ -32,12 +32,14 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     }
 
     @Override
-    public StockRecord get(Long id) {
+    public StockRecordVO get(Long id) {
         StockRecord entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        StockRecordVO vo = new StockRecordVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

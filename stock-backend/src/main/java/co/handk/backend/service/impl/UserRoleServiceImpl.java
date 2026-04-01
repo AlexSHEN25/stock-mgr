@@ -32,12 +32,14 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
     }
 
     @Override
-    public UserRole get(Long id) {
+    public UserRoleVO get(Long id) {
         UserRole entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        UserRoleVO vo = new UserRoleVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

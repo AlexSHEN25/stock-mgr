@@ -32,12 +32,14 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     }
 
     @Override
-    public Customer get(Long id) {
+    public CustomerVO get(Long id) {
         Customer entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        CustomerVO vo = new CustomerVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

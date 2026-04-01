@@ -32,12 +32,14 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
     }
 
     @Override
-    public Permission get(Long id) {
+    public PermissionVO get(Long id) {
         Permission entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        PermissionVO vo = new PermissionVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

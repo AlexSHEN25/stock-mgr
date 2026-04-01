@@ -32,12 +32,14 @@ public class GoodsTypeServiceImpl extends ServiceImpl<GoodsTypeMapper, GoodsType
     }
 
     @Override
-    public GoodsType get(Long id) {
+    public GoodsTypeVO get(Long id) {
         GoodsType entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        GoodsTypeVO vo = new GoodsTypeVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

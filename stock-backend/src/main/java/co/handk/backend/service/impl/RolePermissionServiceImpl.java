@@ -32,12 +32,14 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     }
 
     @Override
-    public RolePermission get(Long id) {
+    public RolePermissionVO get(Long id) {
         RolePermission entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        RolePermissionVO vo = new RolePermissionVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

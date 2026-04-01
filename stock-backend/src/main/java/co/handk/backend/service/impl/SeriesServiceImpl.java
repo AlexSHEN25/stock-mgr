@@ -32,12 +32,14 @@ public class SeriesServiceImpl extends ServiceImpl<SeriesMapper, Series> impleme
     }
 
     @Override
-    public Series get(Long id) {
+    public SeriesVO get(Long id) {
         Series entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        SeriesVO vo = new SeriesVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override

@@ -32,12 +32,14 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
     }
 
     @Override
-    public PriceRecord get(Long id) {
+    public PriceRecordVO get(Long id) {
         PriceRecord entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        return entity;
+        PriceRecordVO vo = new PriceRecordVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override
