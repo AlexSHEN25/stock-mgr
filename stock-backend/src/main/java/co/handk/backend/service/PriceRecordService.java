@@ -1,29 +1,20 @@
 package co.handk.backend.service;
-
 import co.handk.backend.entity.PriceRecord;
-import co.handk.common.model.dto.PriceRecordDTO;
+import co.handk.common.model.dto.create.CreatePriceRecordDTO;
+import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
 import co.handk.common.model.vo.PriceRecordVO;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.PriceRecordQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import jakarta.validation.constraints.NotNull;
-
-import java.util.List;
-
 @Service
 @Validated
 public interface PriceRecordService extends IService<PriceRecord> {
-
-    Boolean create(@NotNull PriceRecordDTO dto);
-
+    Boolean create(@NotNull CreatePriceRecordDTO dto);
     PriceRecordVO get(@NotNull Long id);
-
-    Boolean update(@NotNull PriceRecordDTO dto);
-
+    Boolean update(@NotNull UpdatePriceRecordDTO dto);
     Boolean delete(@NotNull Long id);
-    List<PriceRecordVO> listAll();
-
-    PageResult<PriceRecordVO> pageQuery(@NotNull PageQuery query);
+    PageResult<PriceRecordVO> pageQuery(@NotNull PriceRecordQueryDTO query);
 }

@@ -1,20 +1,19 @@
 package co.handk.backend.controller;
 
-import co.handk.backend.entity.User;
 import co.handk.backend.service.UserService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
-import co.handk.common.model.dto.UserDTO;
+import co.handk.common.model.dto.create.CreateUserDTO;
+import co.handk.common.model.dto.update.UpdateUserDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
+import co.handk.common.model.vo.UserVO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
@@ -38,42 +37,33 @@ public class UserController {
 
     // 新增
     @PostMapping
-    public Boolean save(@RequestBody @NotNull @Valid UserDTO dto) {
-        User entity = new User();
-        BeanUtils.copyProperties(dto, entity);
-        entity.setId(null);
-        return userService.save(entity);
+    public Boolean save(@RequestBody @NotNull @Valid CreateUserDTO dto) {
+        return userService.create(dto);
     }
 
     // 根据ID查询
     @GetMapping("/{id}")
-    public User getById(@PathVariable @NotNull Long id) {
-        return userService.getById(id);
+    public UserVO getById(@PathVariable @NotNull Long id) {
+        return userService.get(id);
     }
 
     // 修改
     @PutMapping
-    public boolean update(@RequestBody @NotNull @Valid UserDTO dto) {
-        User entity = new User();
-        BeanUtils.copyProperties(dto, entity);
-        return userService.updateById(entity);
+    public boolean update(@RequestBody @NotNull @Valid UpdateUserDTO dto) {
+        return userService.update(dto);
     }
 
     // 删除
     @DeleteMapping("/{id}")
     public boolean delete(@PathVariable @NotNull Long id) {
-        return userService.removeById(id);
+        return userService.delete(id);
     }
 
-    // 查询全部
-    @GetMapping("/list")
-    public List<User> list() {
-        return userService.list();
-    }
+    // 条件分页查询
 
     // 分页查询
     @GetMapping("/page")
-    public PageResult<User> page(@Valid PageQuery query) {
+    public PageResult<UserVO> page(@Valid UserQueryDTO query) {
         return userService.pageQuery(query);
     }
 }

@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Role;
-import co.handk.common.model.dto.RoleDTO;
+import co.handk.common.model.dto.create.CreateRoleDTO;
+import co.handk.common.model.dto.update.UpdateRoleDTO;
 import co.handk.common.model.vo.RoleVO;
 import co.handk.backend.mapper.RoleMapper;
 import co.handk.backend.service.RoleService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.RoleQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     private final RoleMapper roleMapper;
 
     @Override
-    public Boolean create(RoleDTO dto) {
+    public Boolean create(CreateRoleDTO dto) {
         Role entity = new Role();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     }
 
     @Override
-    public Boolean update(RoleDTO dto) {
+    public Boolean update(UpdateRoleDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Role entity = new Role();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Role::getId, id).set(Role::getDeleted, 1).update();
     }
 
     @Override
-    public List<RoleVO> listAll() {
-        LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Role::getDeleted, 0).orderByDesc(Role::getUpdateTime);
-        return     roleMapper.selectList(wrapper).stream().map(entity -> {
-            RoleVO vo = new RoleVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<RoleVO> pageQuery(PageQuery query) {
+    public PageResult<RoleVO> pageQuery(RoleQueryDTO query) {
         Page<Role> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Role::getDeleted, 0).orderByDesc(Role::getUpdateTime);

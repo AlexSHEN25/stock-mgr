@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.UserRole;
-import co.handk.common.model.dto.UserRoleDTO;
+import co.handk.common.model.dto.create.CreateUserRoleDTO;
+import co.handk.common.model.dto.update.UpdateUserRoleDTO;
 import co.handk.common.model.vo.UserRoleVO;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.UserRoleService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.UserRoleQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
     private final UserRoleMapper userRoleMapper;
 
     @Override
-    public Boolean create(UserRoleDTO dto) {
+    public Boolean create(CreateUserRoleDTO dto) {
         UserRole entity = new UserRole();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
     }
 
     @Override
-    public Boolean update(UserRoleDTO dto) {
+    public Boolean update(UpdateUserRoleDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         UserRole entity = new UserRole();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(UserRole::getId, id).set(UserRole::getDeleted, 1).update();
     }
 
     @Override
-    public List<UserRoleVO> listAll() {
-        LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserRole::getDeleted, 0).orderByDesc(UserRole::getUpdateTime);
-        return     userRoleMapper.selectList(wrapper).stream().map(entity -> {
-            UserRoleVO vo = new UserRoleVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<UserRoleVO> pageQuery(PageQuery query) {
+    public PageResult<UserRoleVO> pageQuery(UserRoleQueryDTO query) {
         Page<UserRole> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserRole::getDeleted, 0).orderByDesc(UserRole::getUpdateTime);

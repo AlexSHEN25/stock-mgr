@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.RequestItem;
-import co.handk.common.model.dto.RequestItemDTO;
+import co.handk.common.model.dto.create.CreateRequestItemDTO;
+import co.handk.common.model.dto.update.UpdateRequestItemDTO;
 import co.handk.common.model.vo.RequestItemVO;
 import co.handk.backend.mapper.RequestItemMapper;
 import co.handk.backend.service.RequestItemService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.RequestItemQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     private final RequestItemMapper requestItemMapper;
 
     @Override
-    public Boolean create(RequestItemDTO dto) {
+    public Boolean create(CreateRequestItemDTO dto) {
         RequestItem entity = new RequestItem();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     }
 
     @Override
-    public Boolean update(RequestItemDTO dto) {
+    public Boolean update(UpdateRequestItemDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         RequestItem entity = new RequestItem();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(RequestItem::getId, id).set(RequestItem::getDeleted, 1).update();
     }
 
     @Override
-    public List<RequestItemVO> listAll() {
-        LambdaQueryWrapper<RequestItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RequestItem::getDeleted, 0).orderByDesc(RequestItem::getUpdateTime);
-        return     requestItemMapper.selectList(wrapper).stream().map(entity -> {
-            RequestItemVO vo = new RequestItemVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<RequestItemVO> pageQuery(PageQuery query) {
+    public PageResult<RequestItemVO> pageQuery(RequestItemQueryDTO query) {
         Page<RequestItem> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RequestItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RequestItem::getDeleted, 0).orderByDesc(RequestItem::getUpdateTime);

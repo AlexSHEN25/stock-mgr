@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Config;
-import co.handk.common.model.dto.ConfigDTO;
+import co.handk.common.model.dto.create.CreateConfigDTO;
+import co.handk.common.model.dto.update.UpdateConfigDTO;
 import co.handk.common.model.vo.ConfigVO;
 import co.handk.backend.mapper.ConfigMapper;
 import co.handk.backend.service.ConfigService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.ConfigQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class ConfigServiceImpl extends ServiceImpl<ConfigMapper, Config> impleme
     private final ConfigMapper configMapper;
 
     @Override
-    public Boolean create(ConfigDTO dto) {
+    public Boolean create(CreateConfigDTO dto) {
         Config entity = new Config();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class ConfigServiceImpl extends ServiceImpl<ConfigMapper, Config> impleme
     }
 
     @Override
-    public Boolean update(ConfigDTO dto) {
+    public Boolean update(UpdateConfigDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Config entity = new Config();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class ConfigServiceImpl extends ServiceImpl<ConfigMapper, Config> impleme
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Config::getId, id).set(Config::getDeleted, 1).update();
     }
 
     @Override
-    public List<ConfigVO> listAll() {
-        LambdaQueryWrapper<Config> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Config::getDeleted, 0).orderByDesc(Config::getUpdateTime);
-        return     configMapper.selectList(wrapper).stream().map(entity -> {
-            ConfigVO vo = new ConfigVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<ConfigVO> pageQuery(PageQuery query) {
+    public PageResult<ConfigVO> pageQuery(ConfigQueryDTO query) {
         Page<Config> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Config> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Config::getDeleted, 0).orderByDesc(Config::getUpdateTime);

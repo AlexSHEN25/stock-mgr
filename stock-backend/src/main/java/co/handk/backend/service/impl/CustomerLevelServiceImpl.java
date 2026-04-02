@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.CustomerLevel;
-import co.handk.common.model.dto.CustomerLevelDTO;
+import co.handk.common.model.dto.create.CreateCustomerLevelDTO;
+import co.handk.common.model.dto.update.UpdateCustomerLevelDTO;
 import co.handk.common.model.vo.CustomerLevelVO;
 import co.handk.backend.mapper.CustomerLevelMapper;
 import co.handk.backend.service.CustomerLevelService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.CustomerLevelQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class CustomerLevelServiceImpl extends ServiceImpl<CustomerLevelMapper, C
     private final CustomerLevelMapper customerLevelMapper;
 
     @Override
-    public Boolean create(CustomerLevelDTO dto) {
+    public Boolean create(CreateCustomerLevelDTO dto) {
         CustomerLevel entity = new CustomerLevel();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class CustomerLevelServiceImpl extends ServiceImpl<CustomerLevelMapper, C
     }
 
     @Override
-    public Boolean update(CustomerLevelDTO dto) {
+    public Boolean update(UpdateCustomerLevelDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         CustomerLevel entity = new CustomerLevel();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class CustomerLevelServiceImpl extends ServiceImpl<CustomerLevelMapper, C
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(CustomerLevel::getId, id).set(CustomerLevel::getDeleted, 1).update();
     }
 
     @Override
-    public List<CustomerLevelVO> listAll() {
-        LambdaQueryWrapper<CustomerLevel> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CustomerLevel::getDeleted, 0).orderByDesc(CustomerLevel::getUpdateTime);
-        return     customerLevelMapper.selectList(wrapper).stream().map(entity -> {
-            CustomerLevelVO vo = new CustomerLevelVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<CustomerLevelVO> pageQuery(PageQuery query) {
+    public PageResult<CustomerLevelVO> pageQuery(CustomerLevelQueryDTO query) {
         Page<CustomerLevel> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<CustomerLevel> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CustomerLevel::getDeleted, 0).orderByDesc(CustomerLevel::getUpdateTime);

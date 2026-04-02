@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Permission;
-import co.handk.common.model.dto.PermissionDTO;
+import co.handk.common.model.dto.create.CreatePermissionDTO;
+import co.handk.common.model.dto.update.UpdatePermissionDTO;
 import co.handk.common.model.vo.PermissionVO;
 import co.handk.backend.mapper.PermissionMapper;
 import co.handk.backend.service.PermissionService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.PermissionQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
     private final PermissionMapper permissionMapper;
 
     @Override
-    public Boolean create(PermissionDTO dto) {
+    public Boolean create(CreatePermissionDTO dto) {
         Permission entity = new Permission();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
     }
 
     @Override
-    public Boolean update(PermissionDTO dto) {
+    public Boolean update(UpdatePermissionDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Permission entity = new Permission();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Permission::getId, id).set(Permission::getDeleted, 1).update();
     }
 
     @Override
-    public List<PermissionVO> listAll() {
-        LambdaQueryWrapper<Permission> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Permission::getDeleted, 0).orderByDesc(Permission::getUpdateTime);
-        return     permissionMapper.selectList(wrapper).stream().map(entity -> {
-            PermissionVO vo = new PermissionVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<PermissionVO> pageQuery(PageQuery query) {
+    public PageResult<PermissionVO> pageQuery(PermissionQueryDTO query) {
         Page<Permission> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Permission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Permission::getDeleted, 0).orderByDesc(Permission::getUpdateTime);

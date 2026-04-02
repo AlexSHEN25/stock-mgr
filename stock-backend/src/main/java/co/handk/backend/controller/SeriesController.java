@@ -1,54 +1,39 @@
 package co.handk.backend.controller;
-
-import co.handk.backend.entity.Series;
 import co.handk.common.model.vo.SeriesVO;
-import co.handk.common.model.dto.SeriesDTO;
+import co.handk.common.model.dto.create.CreateSeriesDTO;
+import co.handk.common.model.dto.update.UpdateSeriesDTO;
 import co.handk.backend.service.SeriesService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.SeriesQueryDTO;
 import co.handk.common.model.PageResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
-
-import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-
 @RestController
 @Validated
 @RequestMapping("/series")
 public class SeriesController {
-
     @Autowired
     private SeriesService seriesService;
-
     @PostMapping
-    public Boolean create(@RequestBody @NotNull @Valid SeriesDTO dto) {
+    public Boolean create(@RequestBody @NotNull @Valid CreateSeriesDTO dto) {
         return seriesService.create(dto);
     }
-
     @GetMapping("/{id}")
     public SeriesVO get(@PathVariable @NotNull Long id) {
         return seriesService.get(id);
     }
-
     @PutMapping
-    public Boolean update(@RequestBody @NotNull @Valid SeriesDTO dto) {
+    public Boolean update(@RequestBody @NotNull @Valid UpdateSeriesDTO dto) {
         return seriesService.update(dto);
     }
-
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
         return seriesService.delete(id);
     }
-
-    @GetMapping("/list")
-    public List<SeriesVO> list() {
-        return seriesService.listAll();
-    }
-
     @GetMapping("/page")
-    public PageResult<SeriesVO> page(@Valid PageQuery query) {
+    public PageResult<SeriesVO> page(@Valid SeriesQueryDTO query) {
         return seriesService.pageQuery(query);
     }
 }

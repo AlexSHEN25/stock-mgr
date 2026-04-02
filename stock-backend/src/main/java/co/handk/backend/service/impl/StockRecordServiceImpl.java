@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.StockRecord;
-import co.handk.common.model.dto.StockRecordDTO;
+import co.handk.common.model.dto.create.CreateStockRecordDTO;
+import co.handk.common.model.dto.update.UpdateStockRecordDTO;
 import co.handk.common.model.vo.StockRecordVO;
 import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.StockRecordService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.StockRecordQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     private final StockRecordMapper stockRecordMapper;
 
     @Override
-    public Boolean create(StockRecordDTO dto) {
+    public Boolean create(CreateStockRecordDTO dto) {
         StockRecord entity = new StockRecord();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     }
 
     @Override
-    public Boolean update(StockRecordDTO dto) {
+    public Boolean update(UpdateStockRecordDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         StockRecord entity = new StockRecord();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(StockRecord::getId, id).set(StockRecord::getDeleted, 1).update();
     }
 
     @Override
-    public List<StockRecordVO> listAll() {
-        LambdaQueryWrapper<StockRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StockRecord::getDeleted, 0).orderByDesc(StockRecord::getUpdateTime);
-        return     stockRecordMapper.selectList(wrapper).stream().map(entity -> {
-            StockRecordVO vo = new StockRecordVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<StockRecordVO> pageQuery(PageQuery query) {
+    public PageResult<StockRecordVO> pageQuery(StockRecordQueryDTO query) {
         Page<StockRecord> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<StockRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockRecord::getDeleted, 0).orderByDesc(StockRecord::getUpdateTime);

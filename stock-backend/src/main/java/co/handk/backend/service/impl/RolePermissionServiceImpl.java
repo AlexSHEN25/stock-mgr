@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.RolePermission;
-import co.handk.common.model.dto.RolePermissionDTO;
+import co.handk.common.model.dto.create.CreateRolePermissionDTO;
+import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
 import co.handk.common.model.vo.RolePermissionVO;
 import co.handk.backend.mapper.RolePermissionMapper;
 import co.handk.backend.service.RolePermissionService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.RolePermissionQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     private final RolePermissionMapper rolePermissionMapper;
 
     @Override
-    public Boolean create(RolePermissionDTO dto) {
+    public Boolean create(CreateRolePermissionDTO dto) {
         RolePermission entity = new RolePermission();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     }
 
     @Override
-    public Boolean update(RolePermissionDTO dto) {
+    public Boolean update(UpdateRolePermissionDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         RolePermission entity = new RolePermission();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(RolePermission::getId, id).set(RolePermission::getDeleted, 1).update();
     }
 
     @Override
-    public List<RolePermissionVO> listAll() {
-        LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RolePermission::getDeleted, 0).orderByDesc(RolePermission::getUpdateTime);
-        return     rolePermissionMapper.selectList(wrapper).stream().map(entity -> {
-            RolePermissionVO vo = new RolePermissionVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<RolePermissionVO> pageQuery(PageQuery query) {
+    public PageResult<RolePermissionVO> pageQuery(RolePermissionQueryDTO query) {
         Page<RolePermission> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(RolePermission::getDeleted, 0).orderByDesc(RolePermission::getUpdateTime);

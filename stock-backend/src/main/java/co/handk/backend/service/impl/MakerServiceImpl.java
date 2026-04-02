@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Maker;
-import co.handk.common.model.dto.MakerDTO;
+import co.handk.common.model.dto.create.CreateMakerDTO;
+import co.handk.common.model.dto.update.UpdateMakerDTO;
 import co.handk.common.model.vo.MakerVO;
 import co.handk.backend.mapper.MakerMapper;
 import co.handk.backend.service.MakerService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.MakerQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements
     private final MakerMapper makerMapper;
 
     @Override
-    public Boolean create(MakerDTO dto) {
+    public Boolean create(CreateMakerDTO dto) {
         Maker entity = new Maker();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements
     }
 
     @Override
-    public Boolean update(MakerDTO dto) {
+    public Boolean update(UpdateMakerDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Maker entity = new Maker();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Maker::getId, id).set(Maker::getDeleted, 1).update();
     }
 
     @Override
-    public List<MakerVO> listAll() {
-        LambdaQueryWrapper<Maker> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Maker::getDeleted, 0).orderByDesc(Maker::getUpdateTime);
-        return     makerMapper.selectList(wrapper).stream().map(entity -> {
-            MakerVO vo = new MakerVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<MakerVO> pageQuery(PageQuery query) {
+    public PageResult<MakerVO> pageQuery(MakerQueryDTO query) {
         Page<Maker> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Maker> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Maker::getDeleted, 0).orderByDesc(Maker::getUpdateTime);

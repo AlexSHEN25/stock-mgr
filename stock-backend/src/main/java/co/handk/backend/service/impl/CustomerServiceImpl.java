@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Customer;
-import co.handk.common.model.dto.CustomerDTO;
+import co.handk.common.model.dto.create.CreateCustomerDTO;
+import co.handk.common.model.dto.update.UpdateCustomerDTO;
 import co.handk.common.model.vo.CustomerVO;
 import co.handk.backend.mapper.CustomerMapper;
 import co.handk.backend.service.CustomerService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.CustomerQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     private final CustomerMapper customerMapper;
 
     @Override
-    public Boolean create(CustomerDTO dto) {
+    public Boolean create(CreateCustomerDTO dto) {
         Customer entity = new Customer();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     }
 
     @Override
-    public Boolean update(CustomerDTO dto) {
+    public Boolean update(UpdateCustomerDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Customer entity = new Customer();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Customer::getId, id).set(Customer::getDeleted, 1).update();
     }
 
     @Override
-    public List<CustomerVO> listAll() {
-        LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Customer::getDeleted, 0).orderByDesc(Customer::getUpdateTime);
-        return     customerMapper.selectList(wrapper).stream().map(entity -> {
-            CustomerVO vo = new CustomerVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<CustomerVO> pageQuery(PageQuery query) {
+    public PageResult<CustomerVO> pageQuery(CustomerQueryDTO query) {
         Page<Customer> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Customer> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Customer::getDeleted, 0).orderByDesc(Customer::getUpdateTime);

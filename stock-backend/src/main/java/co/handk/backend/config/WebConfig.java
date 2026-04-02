@@ -1,8 +1,11 @@
 package co.handk.backend.config;
 
 import co.handk.backend.interceptor.LoginInterceptor;
+import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.StatusEnum;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -64,5 +67,29 @@ public class WebConfig implements WebMvcConfigurer {
                         "/assets/**",
                         "/icons/**"
                 );
+    }
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        registry.addConverter(String.class, StatusEnum.class, source -> {
+            if (source == null || source.isBlank()) {
+                return null;
+            }
+            try {
+                return StatusEnum.fromValue(Integer.valueOf(source));
+            } catch (NumberFormatException ignore) {
+                return StatusEnum.valueOf(source);
+            }
+        });
+        registry.addConverter(String.class, DeleteEnum.class, source -> {
+            if (source == null || source.isBlank()) {
+                return null;
+            }
+            try {
+                return DeleteEnum.fromValue(Integer.valueOf(source));
+            } catch (NumberFormatException ignore) {
+                return DeleteEnum.valueOf(source);
+            }
+        });
     }
 }

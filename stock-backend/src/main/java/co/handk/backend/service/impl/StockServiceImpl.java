@@ -1,14 +1,18 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockRecord;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.StockService;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.StockDTO;
+import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
+import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -31,29 +35,33 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     private final StockRecordMapper stockRecordMapper;
 
     @Override
-    public Boolean create(StockDTO dto) {
+    public Boolean create(CreateStockDTO dto) {
         Stock entity = new Stock();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
 
     @Override
-    public Stock get(Long id) {
-        Stock stock = this.getById(id);
-        if (stock == null) {
+    public StockVO get(Long id) {
+        Stock entity = this.getById(id);
+        if (entity == null) {
             throw new RuntimeException("库存不存在");
         }
-        return stock;
+        StockVO vo = new StockVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 
     @Override
-    public Boolean update(StockDTO dto) {
+    public Boolean update(UpdateStockDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("库存不存在");
         }
         Stock entity = new Stock();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -62,14 +70,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("库存不存在");
         }
-        return this.removeById(id);
-    }
-
-    @Override
-    public List<Stock> listAll() {
-        LambdaQueryWrapper<Stock> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Stock::getDeleted, 0).orderByDesc(Stock::getUpdateTime);
-        return stockMapper.selectList(wrapper);
+        return this.lambdaUpdate().eq(Stock::getId, id).set(Stock::getDeleted, 1).update();
     }
 
     @Override
@@ -81,7 +82,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         // 2. 构建查询条件
         LambdaQueryWrapper<Stock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getWarehouseId() != null, Stock::getWarehouseId, dto.getWarehouseId())
-                .eq(dto.getStatus() != null, Stock::getStatus, dto.getStatus())
+                .eq(dto.getStatus() != null, Stock::getStatus, dto.getStatus().getCode())
                 .like(StringUtils.isNotBlank(dto.getGoodsName()), Stock::getGoodsName, dto.getGoodsName())
                 .like(StringUtils.isNotBlank(dto.getSku()), Stock::getSku, dto.getSku())
                 .eq(Stock::getDeleted, 0)
@@ -109,20 +110,15 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
 
     @Override
     public Boolean undo(Long stockRecordId) {
-        StockRecord record = stockRecordMapper.selectById(stockRecordId);
-        if (record == null) {
-            throw new RuntimeException("库存流水不存在");
-        }
-        Stock stock = this.getById(record.getStockId());
-        if (stock == null) {
-            throw new RuntimeException("库存不存在");
-        }
-        stock.setCurrentQty(record.getBeforeQty());
-        return this.updateById(stock);
+        return applyStockRecordQty(stockRecordId, true);
     }
 
     @Override
     public Boolean redo(Long stockRecordId) {
+        return applyStockRecordQty(stockRecordId, false);
+    }
+
+    private Boolean applyStockRecordQty(Long stockRecordId, boolean undo) {
         StockRecord record = stockRecordMapper.selectById(stockRecordId);
         if (record == null) {
             throw new RuntimeException("库存流水不存在");
@@ -131,7 +127,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         if (stock == null) {
             throw new RuntimeException("库存不存在");
         }
-        stock.setCurrentQty(record.getAfterQty());
+        stock.setCurrentQty(undo ? record.getBeforeQty() : record.getAfterQty());
         return this.updateById(stock);
     }
 }

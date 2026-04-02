@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Message;
-import co.handk.common.model.dto.MessageDTO;
+import co.handk.common.model.dto.create.CreateMessageDTO;
+import co.handk.common.model.dto.update.UpdateMessageDTO;
 import co.handk.common.model.vo.MessageVO;
 import co.handk.backend.mapper.MessageMapper;
 import co.handk.backend.service.MessageService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.MessageQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     private final MessageMapper messageMapper;
 
     @Override
-    public Boolean create(MessageDTO dto) {
+    public Boolean create(CreateMessageDTO dto) {
         Message entity = new Message();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
     }
 
     @Override
-    public Boolean update(MessageDTO dto) {
+    public Boolean update(UpdateMessageDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Message entity = new Message();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Message::getId, id).set(Message::getDeleted, 1).update();
     }
 
     @Override
-    public List<MessageVO> listAll() {
-        LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Message::getDeleted, 0).orderByDesc(Message::getUpdateTime);
-        return     messageMapper.selectList(wrapper).stream().map(entity -> {
-            MessageVO vo = new MessageVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<MessageVO> pageQuery(PageQuery query) {
+    public PageResult<MessageVO> pageQuery(MessageQueryDTO query) {
         Page<Message> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Message::getDeleted, 0).orderByDesc(Message::getUpdateTime);

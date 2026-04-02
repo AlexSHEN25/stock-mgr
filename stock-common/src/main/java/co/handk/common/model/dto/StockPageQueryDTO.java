@@ -1,5 +1,7 @@
 package co.handk.common.model.dto;
 
+import co.handk.common.enums.StatusEnum;
+
 import co.handk.common.model.PageQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -29,5 +31,5 @@ public class StockPageQueryDTO extends PageQuery {
     /**
      * 状态
      */
-    private Integer status;
+    private StatusEnum status;
 }

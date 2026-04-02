@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -23,6 +24,10 @@ public class LoginInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 放行 CORS 预检请求，避免被误判未登录
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
         // 3. 获取token
         String auth = request.getHeader("Authorization");
         if (StringUtils.isBlank(auth) || !auth.startsWith("Bearer ")) {
@@ -48,10 +53,13 @@ public class LoginInterceptor implements HandlerInterceptor {
             redisUtil.expire(userKey, CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
         }
         // 7. 放入上下文
-        UserContext.setUserId(Long.valueOf(userId));
+        try {
+            UserContext.setUserId(Long.valueOf(userId));
+        } catch (NumberFormatException ex) {
+            throw new LoginException("登录已过期");
+        }
         return true;
     }
-
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {

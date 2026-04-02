@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.StockOrderItem;
-import co.handk.common.model.dto.StockOrderItemDTO;
+import co.handk.common.model.dto.create.CreateStockOrderItemDTO;
+import co.handk.common.model.dto.update.UpdateStockOrderItemDTO;
 import co.handk.common.model.vo.StockOrderItemVO;
 import co.handk.backend.mapper.StockOrderItemMapper;
 import co.handk.backend.service.StockOrderItemService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.StockOrderItemQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     private final StockOrderItemMapper stockOrderItemMapper;
 
     @Override
-    public Boolean create(StockOrderItemDTO dto) {
+    public Boolean create(CreateStockOrderItemDTO dto) {
         StockOrderItem entity = new StockOrderItem();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     }
 
     @Override
-    public Boolean update(StockOrderItemDTO dto) {
+    public Boolean update(UpdateStockOrderItemDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         StockOrderItem entity = new StockOrderItem();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(StockOrderItem::getId, id).set(StockOrderItem::getDeleted, 1).update();
     }
 
     @Override
-    public List<StockOrderItemVO> listAll() {
-        LambdaQueryWrapper<StockOrderItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StockOrderItem::getDeleted, 0).orderByDesc(StockOrderItem::getUpdateTime);
-        return     stockOrderItemMapper.selectList(wrapper).stream().map(entity -> {
-            StockOrderItemVO vo = new StockOrderItemVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<StockOrderItemVO> pageQuery(PageQuery query) {
+    public PageResult<StockOrderItemVO> pageQuery(StockOrderItemQueryDTO query) {
         Page<StockOrderItem> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<StockOrderItem> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockOrderItem::getDeleted, 0).orderByDesc(StockOrderItem::getUpdateTime);

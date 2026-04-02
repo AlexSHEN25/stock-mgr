@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.PriceRecord;
-import co.handk.common.model.dto.PriceRecordDTO;
+import co.handk.common.model.dto.create.CreatePriceRecordDTO;
+import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
 import co.handk.common.model.vo.PriceRecordVO;
 import co.handk.backend.mapper.PriceRecordMapper;
 import co.handk.backend.service.PriceRecordService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.PriceRecordQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
     private final PriceRecordMapper priceRecordMapper;
 
     @Override
-    public Boolean create(PriceRecordDTO dto) {
+    public Boolean create(CreatePriceRecordDTO dto) {
         PriceRecord entity = new PriceRecord();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
     }
 
     @Override
-    public Boolean update(PriceRecordDTO dto) {
+    public Boolean update(UpdatePriceRecordDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         PriceRecord entity = new PriceRecord();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(PriceRecord::getId, id).set(PriceRecord::getDeleted, 1).update();
     }
 
     @Override
-    public List<PriceRecordVO> listAll() {
-        LambdaQueryWrapper<PriceRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PriceRecord::getDeleted, 0).orderByDesc(PriceRecord::getUpdateTime);
-        return     priceRecordMapper.selectList(wrapper).stream().map(entity -> {
-            PriceRecordVO vo = new PriceRecordVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<PriceRecordVO> pageQuery(PageQuery query) {
+    public PageResult<PriceRecordVO> pageQuery(PriceRecordQueryDTO query) {
         Page<PriceRecord> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<PriceRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PriceRecord::getDeleted, 0).orderByDesc(PriceRecord::getUpdateTime);

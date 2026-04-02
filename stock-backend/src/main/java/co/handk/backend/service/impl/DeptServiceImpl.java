@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Dept;
-import co.handk.common.model.dto.DeptDTO;
+import co.handk.common.model.dto.create.CreateDeptDTO;
+import co.handk.common.model.dto.update.UpdateDeptDTO;
 import co.handk.common.model.vo.DeptVO;
 import co.handk.backend.mapper.DeptMapper;
 import co.handk.backend.service.DeptService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.DeptQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
     private final DeptMapper deptMapper;
 
     @Override
-    public Boolean create(DeptDTO dto) {
+    public Boolean create(CreateDeptDTO dto) {
         Dept entity = new Dept();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
     }
 
     @Override
-    public Boolean update(DeptDTO dto) {
+    public Boolean update(UpdateDeptDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Dept entity = new Dept();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Dept::getId, id).set(Dept::getDeleted, 1).update();
     }
 
     @Override
-    public List<DeptVO> listAll() {
-        LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Dept::getDeleted, 0).orderByDesc(Dept::getUpdateTime);
-        return     deptMapper.selectList(wrapper).stream().map(entity -> {
-            DeptVO vo = new DeptVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<DeptVO> pageQuery(PageQuery query) {
+    public PageResult<DeptVO> pageQuery(DeptQueryDTO query) {
         Page<Dept> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Dept::getDeleted, 0).orderByDesc(Dept::getUpdateTime);

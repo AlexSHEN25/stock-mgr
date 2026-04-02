@@ -1,29 +1,20 @@
 package co.handk.backend.service;
-
 import co.handk.backend.entity.Series;
-import co.handk.common.model.dto.SeriesDTO;
+import co.handk.common.model.dto.create.CreateSeriesDTO;
+import co.handk.common.model.dto.update.UpdateSeriesDTO;
 import co.handk.common.model.vo.SeriesVO;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.SeriesQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import jakarta.validation.constraints.NotNull;
-
-import java.util.List;
-
 @Service
 @Validated
 public interface SeriesService extends IService<Series> {
-
-    Boolean create(@NotNull SeriesDTO dto);
-
+    Boolean create(@NotNull CreateSeriesDTO dto);
     SeriesVO get(@NotNull Long id);
-
-    Boolean update(@NotNull SeriesDTO dto);
-
+    Boolean update(@NotNull UpdateSeriesDTO dto);
     Boolean delete(@NotNull Long id);
-    List<SeriesVO> listAll();
-
-    PageResult<SeriesVO> pageQuery(@NotNull PageQuery query);
+    PageResult<SeriesVO> pageQuery(@NotNull SeriesQueryDTO query);
 }

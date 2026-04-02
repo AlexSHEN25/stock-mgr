@@ -11,8 +11,8 @@ public class UserVO {
 
     private String username;
     private Long deptId;
-    private String password;
-    private String salt;
+
+    private String deptName;
     private String email;
     private String phone;
     private String avatar;

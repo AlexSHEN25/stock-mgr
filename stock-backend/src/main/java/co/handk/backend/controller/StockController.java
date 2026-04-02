@@ -1,16 +1,16 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.service.StockService;
-import co.handk.backend.entity.Stock;
-import co.handk.common.model.dto.StockDTO;
+import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
+import co.handk.common.model.vo.StockVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
@@ -29,7 +29,7 @@ public class StockController {
      * 新增库存
      */
     @PostMapping
-    public Boolean create(@RequestBody @NotNull @Valid StockDTO dto) {
+    public Boolean create(@RequestBody @NotNull @Valid CreateStockDTO dto) {
         return stockService.create(dto);
     }
 
@@ -37,7 +37,7 @@ public class StockController {
      * 根据ID查询库存
      */
     @GetMapping("/{id}")
-    public Stock get(@PathVariable @NotNull Long id) {
+    public StockVO get(@PathVariable @NotNull Long id) {
         return stockService.get(id);
     }
 
@@ -45,7 +45,7 @@ public class StockController {
      * 修改库存
      */
     @PutMapping
-    public Boolean update(@RequestBody @NotNull @Valid StockDTO dto) {
+    public Boolean update(@RequestBody @NotNull @Valid UpdateStockDTO dto) {
         return stockService.update(dto);
     }
 
@@ -58,12 +58,8 @@ public class StockController {
     }
 
     /**
-     * 查询全部库存
+     * 条件分页查询库存
      */
-    @GetMapping("/list")
-    public List<Stock> list() {
-        return stockService.listAll();
-    }
 
     /**
      * 分页查询库存

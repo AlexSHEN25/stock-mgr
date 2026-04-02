@@ -1,11 +1,14 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.EnumFieldMapper;
+
 import co.handk.backend.entity.Goods;
-import co.handk.common.model.dto.GoodsDTO;
+import co.handk.common.model.dto.create.CreateGoodsDTO;
+import co.handk.common.model.dto.update.UpdateGoodsDTO;
 import co.handk.common.model.vo.GoodsVO;
 import co.handk.backend.mapper.GoodsMapper;
 import co.handk.backend.service.GoodsService;
-import co.handk.common.model.PageQuery;
+import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,9 +27,10 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
     private final GoodsMapper goodsMapper;
 
     @Override
-    public Boolean create(GoodsDTO dto) {
+    public Boolean create(CreateGoodsDTO dto) {
         Goods entity = new Goods();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         entity.setId(null);
         return this.save(entity);
     }
@@ -43,12 +47,13 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
     }
 
     @Override
-    public Boolean update(GoodsDTO dto) {
+    public Boolean update(UpdateGoodsDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }
         Goods entity = new Goods();
         BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
         return this.updateById(entity);
     }
 
@@ -57,22 +62,11 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.removeById(id);
+        return this.lambdaUpdate().eq(Goods::getId, id).set(Goods::getDeleted, 1).update();
     }
 
     @Override
-    public List<GoodsVO> listAll() {
-        LambdaQueryWrapper<Goods> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Goods::getDeleted, 0).orderByDesc(Goods::getUpdateTime);
-        return     goodsMapper.selectList(wrapper).stream().map(entity -> {
-            GoodsVO vo = new GoodsVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public PageResult<GoodsVO> pageQuery(PageQuery query) {
+    public PageResult<GoodsVO> pageQuery(GoodsQueryDTO query) {
         Page<Goods> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Goods> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Goods::getDeleted, 0).orderByDesc(Goods::getUpdateTime);
