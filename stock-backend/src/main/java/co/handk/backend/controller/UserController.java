@@ -1,5 +1,7 @@
 package co.handk.backend.controller;
 
+import co.handk.api.UserApi;
+
 import co.handk.backend.service.UserService;
 import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
@@ -9,7 +11,6 @@ import co.handk.common.model.dto.update.UpdateUserDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
 import co.handk.common.model.vo.UserVO;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
@@ -20,7 +21,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/user")
-public class UserController {
+public class UserController implements UserApi {
 
     @Autowired
     private UserService userService;
@@ -31,7 +32,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    public LogoutVO logout(HttpServletRequest request){
+    public LogoutVO logout() {
         return userService.logout();
     }
 

@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.RolePermissionApi;
 import co.handk.common.model.vo.RolePermissionVO;
 import co.handk.common.model.dto.create.CreateRolePermissionDTO;
 import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/rolePermission")
-public class RolePermissionController {
+public class RolePermissionController implements RolePermissionApi {
     @Autowired
     private RolePermissionService rolePermissionService;
     @PostMapping

@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.MakerApi;
 import co.handk.common.model.vo.MakerVO;
 import co.handk.common.model.dto.create.CreateMakerDTO;
 import co.handk.common.model.dto.update.UpdateMakerDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/maker")
-public class MakerController {
+public class MakerController implements MakerApi {
     @Autowired
     private MakerService makerService;
     @PostMapping

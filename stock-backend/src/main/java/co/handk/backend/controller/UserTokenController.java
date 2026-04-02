@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.UserTokenApi;
 import co.handk.common.model.vo.UserTokenVO;
 import co.handk.common.model.dto.create.CreateUserTokenDTO;
 import co.handk.common.model.dto.update.UpdateUserTokenDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/userToken")
-public class UserTokenController {
+public class UserTokenController implements UserTokenApi {
     @Autowired
     private UserTokenService userTokenService;
     @PostMapping

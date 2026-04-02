@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.StockOrderApi;
 import co.handk.common.model.vo.StockOrderVO;
 import co.handk.common.model.dto.create.CreateStockOrderDTO;
 import co.handk.common.model.dto.update.UpdateStockOrderDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/stockOrder")
-public class StockOrderController {
+public class StockOrderController implements StockOrderApi {
     @Autowired
     private StockOrderService stockOrderService;
     @PostMapping

@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.GoodsTypeApi;
 import co.handk.common.model.vo.GoodsTypeVO;
 import co.handk.common.model.dto.create.CreateGoodsTypeDTO;
 import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/goodsType")
-public class GoodsTypeController {
+public class GoodsTypeController implements GoodsTypeApi {
     @Autowired
     private GoodsTypeService goodsTypeService;
     @PostMapping

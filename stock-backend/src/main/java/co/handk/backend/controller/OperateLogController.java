@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.OperateLogApi;
 import co.handk.common.model.vo.OperateLogVO;
 import co.handk.common.model.dto.create.CreateOperateLogDTO;
 import co.handk.common.model.dto.update.UpdateOperateLogDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/operateLog")
-public class OperateLogController {
+public class OperateLogController implements OperateLogApi {
     @Autowired
     private OperateLogService operateLogService;
     @PostMapping

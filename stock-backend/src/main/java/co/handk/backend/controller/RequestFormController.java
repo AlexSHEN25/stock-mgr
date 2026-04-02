@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.RequestFormApi;
 import co.handk.common.model.vo.RequestFormVO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/requestForm")
-public class RequestFormController {
+public class RequestFormController implements RequestFormApi {
     @Autowired
     private RequestFormService requestFormService;
     @PostMapping

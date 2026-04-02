@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.CustomerLevelApi;
 import co.handk.common.model.vo.CustomerLevelVO;
 import co.handk.common.model.dto.create.CreateCustomerLevelDTO;
 import co.handk.common.model.dto.update.UpdateCustomerLevelDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/customerLevel")
-public class CustomerLevelController {
+public class CustomerLevelController implements CustomerLevelApi {
     @Autowired
     private CustomerLevelService customerLevelService;
     @PostMapping

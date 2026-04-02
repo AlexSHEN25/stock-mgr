@@ -1,4 +1,6 @@
 package co.handk.backend.controller;
+
+import co.handk.api.PriceRecordApi;
 import co.handk.common.model.vo.PriceRecordVO;
 import co.handk.common.model.dto.create.CreatePriceRecordDTO;
 import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
@@ -13,7 +15,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/priceRecord")
-public class PriceRecordController {
+public class PriceRecordController implements PriceRecordApi {
     @Autowired
     private PriceRecordService priceRecordService;
     @PostMapping
