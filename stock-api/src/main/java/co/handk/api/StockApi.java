@@ -44,10 +44,6 @@ public interface StockApi {
     Boolean delete(@PathVariable @NotNull Long id);
 
     /**
-     * 条件分页查询库存
-     */
-
-    /**
      * 分页查询库存
      * 示例：
      * GET /stock/page?pageNum=1&pageSize=10&goodsName=苹果&sku=A001&warehouseId=1&status=1
