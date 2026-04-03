@@ -1,16 +1,15 @@
 package co.handk.api;
 
-import co.handk.common.model.dto.create.CreateStockDTO;
-import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.StockPageQueryDTO;
+import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.query.StockQueryDTO;
+import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockPageVO;
 import co.handk.common.model.vo.StockVO;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 库存接口
@@ -54,7 +53,7 @@ public interface StockApi {
      * GET /stock/page?pageNum=1&pageSize=10&goodsName=苹果&sku=A001&warehouseId=1&status=1
      */
     @GetMapping("/page")
-    PageResult<StockPageVO> page(@Valid StockPageQueryDTO dto);
+    PageResult<StockPageVO> page(@Valid StockQueryDTO dto);
 
     /**
      * 撤销操作：根据库存流水ID回滚库存

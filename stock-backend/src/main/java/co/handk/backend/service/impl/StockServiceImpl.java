@@ -9,8 +9,8 @@ import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.StockService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
-import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -74,7 +74,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     }
 
     @Override
-    public PageResult<StockPageVO> pageQuery(StockPageQueryDTO dto) {
+    public PageResult<StockPageVO> pageQuery(StockQueryDTO dto) {
 
         // 1. 构建分页对象
         Page<Stock> page = new Page<>(dto.getPageNum(), dto.getPageSize());

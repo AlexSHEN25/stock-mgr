@@ -2,9 +2,9 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.Stock;
 import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -42,7 +42,7 @@ public interface StockService  extends IService<Stock> {
     /**
      * 分页查询库存
      */
-    PageResult<StockPageVO> pageQuery(@NotNull StockPageQueryDTO dto);
+    PageResult<StockPageVO> pageQuery(@NotNull StockQueryDTO dto);
 
     /**
      * 撤销：按库存流水回滚库存数量为变更前

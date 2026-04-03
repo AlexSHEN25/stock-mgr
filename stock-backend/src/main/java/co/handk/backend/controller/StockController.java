@@ -4,9 +4,9 @@ import co.handk.api.StockApi;
 
 import co.handk.backend.service.StockService;
 import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.StockPageQueryDTO;
 import co.handk.common.model.vo.StockPageVO;
 import co.handk.common.model.vo.StockVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,7 +69,7 @@ public class StockController implements StockApi {
      * GET /stock/page?pageNum=1&pageSize=10&goodsName=苹果&sku=A001&warehouseId=1&status=1
      */
     @GetMapping("/page")
-    public PageResult<StockPageVO> page(@Valid StockPageQueryDTO dto) {
+    public PageResult<StockPageVO> page(@Valid StockQueryDTO dto) {
         return stockService.pageQuery(dto);
     }
 
