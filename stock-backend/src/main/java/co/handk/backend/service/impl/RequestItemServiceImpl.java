@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.RequestItem;
@@ -62,14 +66,36 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(RequestItem::getId, id).set(RequestItem::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(RequestItem::getId, id).set(RequestItem::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<RequestItemVO> pageQuery(RequestItemQueryDTO query) {
         Page<RequestItem> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RequestItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RequestItem::getDeleted, 0).orderByDesc(RequestItem::getUpdateTime);
+        wrapper.eq(RequestItem::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getRequestId() != null, RequestItem::getRequestId, query.getRequestId())
+                .eq(query.getGoodsId() != null, RequestItem::getGoodsId, query.getGoodsId())
+                .like(StringUtils.isNotBlank(query.getSku()), RequestItem::getSku, query.getSku())
+                .like(StringUtils.isNotBlank(query.getGoodsName()), RequestItem::getGoodsName, query.getGoodsName())
+                .like(StringUtils.isNotBlank(query.getEnglishName()), RequestItem::getEnglishName, query.getEnglishName())
+                .eq(query.getBrandId() != null, RequestItem::getBrandId, query.getBrandId())
+                .like(StringUtils.isNotBlank(query.getBrandName()), RequestItem::getBrandName, query.getBrandName())
+                .eq(query.getSeriesId() != null, RequestItem::getSeriesId, query.getSeriesId())
+                .like(StringUtils.isNotBlank(query.getSeriesName()), RequestItem::getSeriesName, query.getSeriesName())
+                .eq(query.getTypeId() != null, RequestItem::getTypeId, query.getTypeId())
+                .like(StringUtils.isNotBlank(query.getTypeName()), RequestItem::getTypeName, query.getTypeName())
+                .eq(query.getMakerId() != null, RequestItem::getMakerId, query.getMakerId())
+                .like(StringUtils.isNotBlank(query.getMakerName()), RequestItem::getMakerName, query.getMakerName())
+                .eq(query.getWarehouseId() != null, RequestItem::getWarehouseId, query.getWarehouseId())
+                .eq(query.getPrice() != null, RequestItem::getPrice, query.getPrice())
+                .eq(query.getDiscount() != null, RequestItem::getDiscount, query.getDiscount())
+                .eq(query.getRequestQty() != null, RequestItem::getRequestQty, query.getRequestQty())
+                .eq(query.getApproveQty() != null, RequestItem::getApproveQty, query.getApproveQty())
+                .eq(query.getOutQty() != null, RequestItem::getOutQty, query.getOutQty())
+                .eq(query.getStockRecordId() != null, RequestItem::getStockRecordId, query.getStockRecordId())
+                .like(StringUtils.isNotBlank(query.getRemark()), RequestItem::getRemark, query.getRemark());
+        PageSortUtil.applyTimeSort(wrapper, query, RequestItem::getCreateTime, RequestItem::getUpdateTime);
         Page<RequestItem> resultPage =     requestItemMapper.selectPage(page, wrapper);
         List<RequestItemVO> records = resultPage.getRecords().stream().map(entity -> {
             RequestItemVO vo = new RequestItemVO();

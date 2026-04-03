@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Dept;
@@ -62,14 +66,21 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Dept::getId, id).set(Dept::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Dept::getId, id).set(Dept::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<DeptVO> pageQuery(DeptQueryDTO query) {
         Page<Dept> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Dept::getDeleted, 0).orderByDesc(Dept::getUpdateTime);
+        wrapper.eq(Dept::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getParentId() != null, Dept::getParentId, query.getParentId())
+                .like(StringUtils.isNotBlank(query.getName()), Dept::getName, query.getName())
+                .like(StringUtils.isNotBlank(query.getCode()), Dept::getCode, query.getCode())
+                .eq(query.getLeaderId() != null, Dept::getLeaderId, query.getLeaderId())
+                .eq(query.getSort() != null, Dept::getSort, query.getSort())
+                .eq(query.getStatus() != null, Dept::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, Dept::getCreateTime, Dept::getUpdateTime);
         Page<Dept> resultPage =     deptMapper.selectPage(page, wrapper);
         List<DeptVO> records = resultPage.getRecords().stream().map(entity -> {
             DeptVO vo = new DeptVO();

@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Message;
@@ -62,14 +66,21 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message> impl
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Message::getId, id).set(Message::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Message::getId, id).set(Message::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<MessageVO> pageQuery(MessageQueryDTO query) {
         Page<Message> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Message::getDeleted, 0).orderByDesc(Message::getUpdateTime);
+        wrapper.eq(Message::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getType() != null, Message::getType, query.getType())
+                .eq(query.getUserId() != null, Message::getUserId, query.getUserId())
+                .like(StringUtils.isNotBlank(query.getMessage()), Message::getMessage, query.getMessage())
+                .eq(query.getSourceId() != null, Message::getSourceId, query.getSourceId())
+                .eq(query.getIsRead() != null, Message::getIsRead, query.getIsRead())
+                .eq(query.getState() != null, Message::getState, query.getState());
+        PageSortUtil.applyTimeSort(wrapper, query, Message::getCreateTime, Message::getUpdateTime);
         Page<Message> resultPage =     messageMapper.selectPage(page, wrapper);
         List<MessageVO> records = resultPage.getRecords().stream().map(entity -> {
             MessageVO vo = new MessageVO();

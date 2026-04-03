@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.PriceRecord;
@@ -62,14 +66,25 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(PriceRecord::getId, id).set(PriceRecord::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(PriceRecord::getId, id).set(PriceRecord::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<PriceRecordVO> pageQuery(PriceRecordQueryDTO query) {
         Page<PriceRecord> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<PriceRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PriceRecord::getDeleted, 0).orderByDesc(PriceRecord::getUpdateTime);
+        wrapper.eq(PriceRecord::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getGoodsId() != null, PriceRecord::getGoodsId, query.getGoodsId())
+                .like(StringUtils.isNotBlank(query.getGoodsName()), PriceRecord::getGoodsName, query.getGoodsName())
+                .like(StringUtils.isNotBlank(query.getEnglishName()), PriceRecord::getEnglishName, query.getEnglishName())
+                .like(StringUtils.isNotBlank(query.getSku()), PriceRecord::getSku, query.getSku())
+                .eq(query.getOldPrice() != null, PriceRecord::getOldPrice, query.getOldPrice())
+                .eq(query.getNewPrice() != null, PriceRecord::getNewPrice, query.getNewPrice())
+                .eq(query.getDiscount() != null, PriceRecord::getDiscount, query.getDiscount())
+                .eq(query.getPriceUpdateTime() != null, PriceRecord::getPriceUpdateTime, query.getPriceUpdateTime())
+                .eq(query.getOperatorId() != null, PriceRecord::getOperatorId, query.getOperatorId())
+                .like(StringUtils.isNotBlank(query.getOperatorName()), PriceRecord::getOperatorName, query.getOperatorName());
+        PageSortUtil.applyTimeSort(wrapper, query, PriceRecord::getCreateTime, PriceRecord::getUpdateTime);
         Page<PriceRecord> resultPage =     priceRecordMapper.selectPage(page, wrapper);
         List<PriceRecordVO> records = resultPage.getRecords().stream().map(entity -> {
             PriceRecordVO vo = new PriceRecordVO();

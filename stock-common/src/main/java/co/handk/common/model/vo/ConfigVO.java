@@ -1,14 +1,9 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
 @Data
-public class ConfigVO {
-
-    private Long id;
-
+public class ConfigVO extends BaseVO {
     private String name;
     private String group;
     private String title;
@@ -16,8 +11,4 @@ public class ConfigVO {
     private String type;
     private String value;
     private String content;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

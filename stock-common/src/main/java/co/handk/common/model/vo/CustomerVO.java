@@ -1,14 +1,9 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
 @Data
-public class CustomerVO {
-
-    private Long id;
-
+public class CustomerVO extends BaseVO {
     private String customerCode;
     private String name;
     private String englishName;
@@ -21,8 +16,4 @@ public class CustomerVO {
     private Integer levelId;
     private String remark;
     private Integer status;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

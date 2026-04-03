@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Series;
@@ -62,14 +66,19 @@ public class SeriesServiceImpl extends ServiceImpl<SeriesMapper, Series> impleme
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Series::getId, id).set(Series::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Series::getId, id).set(Series::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<SeriesVO> pageQuery(SeriesQueryDTO query) {
         Page<Series> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Series> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Series::getDeleted, 0).orderByDesc(Series::getUpdateTime);
+        wrapper.eq(Series::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), Series::getName, query.getName())
+                .like(StringUtils.isNotBlank(query.getEnglishName()), Series::getEnglishName, query.getEnglishName())
+                .like(StringUtils.isNotBlank(query.getContent()), Series::getContent, query.getContent())
+                .eq(query.getStatus() != null, Series::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, Series::getCreateTime, Series::getUpdateTime);
         Page<Series> resultPage =     seriesMapper.selectPage(page, wrapper);
         List<SeriesVO> records = resultPage.getRecords().stream().map(entity -> {
             SeriesVO vo = new SeriesVO();

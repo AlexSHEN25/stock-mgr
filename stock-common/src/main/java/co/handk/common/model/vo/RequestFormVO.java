@@ -1,14 +1,11 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
-public class RequestFormVO {
-
-    private Long id;
-
+public class RequestFormVO extends BaseVO {
     private String bizNo;
     private Long userId;
     private String username;
@@ -24,8 +21,4 @@ public class RequestFormVO {
     private String approveName;
     private LocalDateTime approveTime;
     private String approveRemark;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

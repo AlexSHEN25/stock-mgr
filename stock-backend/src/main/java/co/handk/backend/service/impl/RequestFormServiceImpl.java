@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.RequestForm;
@@ -62,14 +66,30 @@ public class RequestFormServiceImpl extends ServiceImpl<RequestFormMapper, Reque
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(RequestForm::getId, id).set(RequestForm::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(RequestForm::getId, id).set(RequestForm::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<RequestFormVO> pageQuery(RequestFormQueryDTO query) {
         Page<RequestForm> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RequestForm> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RequestForm::getDeleted, 0).orderByDesc(RequestForm::getUpdateTime);
+        wrapper.eq(RequestForm::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getBizNo()), RequestForm::getBizNo, query.getBizNo())
+                .eq(query.getUserId() != null, RequestForm::getUserId, query.getUserId())
+                .like(StringUtils.isNotBlank(query.getUsername()), RequestForm::getUsername, query.getUsername())
+                .eq(query.getDeptId() != null, RequestForm::getDeptId, query.getDeptId())
+                .like(StringUtils.isNotBlank(query.getDeptName()), RequestForm::getDeptName, query.getDeptName())
+                .eq(query.getCustomerId() != null, RequestForm::getCustomerId, query.getCustomerId())
+                .like(StringUtils.isNotBlank(query.getCustomerName()), RequestForm::getCustomerName, query.getCustomerName())
+                .eq(query.getWarehouseId() != null, RequestForm::getWarehouseId, query.getWarehouseId())
+                .eq(query.getTotalQty() != null, RequestForm::getTotalQty, query.getTotalQty())
+                .eq(query.getRequestQty() != null, RequestForm::getRequestQty, query.getRequestQty())
+                .eq(query.getState() != null, RequestForm::getState, query.getState())
+                .eq(query.getApproverId() != null, RequestForm::getApproverId, query.getApproverId())
+                .like(StringUtils.isNotBlank(query.getApproveName()), RequestForm::getApproveName, query.getApproveName())
+                .eq(query.getApproveTime() != null, RequestForm::getApproveTime, query.getApproveTime())
+                .like(StringUtils.isNotBlank(query.getApproveRemark()), RequestForm::getApproveRemark, query.getApproveRemark());
+        PageSortUtil.applyTimeSort(wrapper, query, RequestForm::getCreateTime, RequestForm::getUpdateTime);
         Page<RequestForm> resultPage =     requestFormMapper.selectPage(page, wrapper);
         List<RequestFormVO> records = resultPage.getRecords().stream().map(entity -> {
             RequestFormVO vo = new RequestFormVO();

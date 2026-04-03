@@ -1,18 +1,9 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
 @Data
-public class MakerVO {
-
-    private Long id;
-
+public class MakerVO extends BaseVO {
     private String name;
     private Integer status;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

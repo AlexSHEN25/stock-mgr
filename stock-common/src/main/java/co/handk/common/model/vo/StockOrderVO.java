@@ -1,14 +1,11 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
-public class StockOrderVO {
-
-    private Long id;
-
+public class StockOrderVO extends BaseVO {
     private String orderNo;
     private Integer type;
     private Long warehouseId;
@@ -25,8 +22,4 @@ public class StockOrderVO {
     private String approverName;
     private LocalDateTime approveTime;
     private LocalDateTime finishTime;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

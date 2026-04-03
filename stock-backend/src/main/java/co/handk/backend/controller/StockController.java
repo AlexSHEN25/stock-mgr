@@ -66,7 +66,8 @@ public class StockController implements StockApi {
     /**
      * 分页查询库存
      * 示例：
-     * GET /stock/page?pageNum=1&pageSize=10&goodsName=苹果&sku=A001&warehouseId=1&status=1
+     * GET /stock/page?pageNum=1&pageSize=10&goodsName=苹果&sku=A001&warehouseId=1&status=ENABLE
+     * 不传status时查询全部状态数据
      */
     @GetMapping("/page")
     public PageResult<StockPageVO> page(@Valid StockQueryDTO dto) {

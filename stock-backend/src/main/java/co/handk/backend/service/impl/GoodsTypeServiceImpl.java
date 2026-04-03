@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.GoodsType;
@@ -62,14 +66,17 @@ public class GoodsTypeServiceImpl extends ServiceImpl<GoodsTypeMapper, GoodsType
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(GoodsType::getId, id).set(GoodsType::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(GoodsType::getId, id).set(GoodsType::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<GoodsTypeVO> pageQuery(GoodsTypeQueryDTO query) {
         Page<GoodsType> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<GoodsType> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(GoodsType::getDeleted, 0).orderByDesc(GoodsType::getUpdateTime);
+        wrapper.eq(GoodsType::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), GoodsType::getName, query.getName())
+                .eq(query.getStatus() != null, GoodsType::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, GoodsType::getCreateTime, GoodsType::getUpdateTime);
         Page<GoodsType> resultPage =     goodsTypeMapper.selectPage(page, wrapper);
         List<GoodsTypeVO> records = resultPage.getRecords().stream().map(entity -> {
             GoodsTypeVO vo = new GoodsTypeVO();

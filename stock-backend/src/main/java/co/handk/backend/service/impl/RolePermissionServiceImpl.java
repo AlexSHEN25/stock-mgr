@@ -1,5 +1,7 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.RolePermission;
@@ -62,14 +64,17 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(RolePermission::getId, id).set(RolePermission::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(RolePermission::getId, id).set(RolePermission::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<RolePermissionVO> pageQuery(RolePermissionQueryDTO query) {
         Page<RolePermission> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RolePermission::getDeleted, 0).orderByDesc(RolePermission::getUpdateTime);
+        wrapper.eq(RolePermission::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getRoleId() != null, RolePermission::getRoleId, query.getRoleId())
+                .eq(query.getPermissionId() != null, RolePermission::getPermissionId, query.getPermissionId());
+        PageSortUtil.applyTimeSort(wrapper, query, RolePermission::getCreateTime, RolePermission::getUpdateTime);
         Page<RolePermission> resultPage =     rolePermissionMapper.selectPage(page, wrapper);
         List<RolePermissionVO> records = resultPage.getRecords().stream().map(entity -> {
             RolePermissionVO vo = new RolePermissionVO();

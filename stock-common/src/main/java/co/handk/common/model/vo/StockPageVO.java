@@ -9,10 +9,7 @@ import java.time.LocalDateTime;
  * 库存分页返回对象
  */
 @Data
-public class StockPageVO {
-
-    private Long id;
-
+public class StockPageVO extends BaseVO {
     private Long goodsId;
 
     private String goodsName;
@@ -41,8 +38,4 @@ public class StockPageVO {
     private LocalDateTime priceUpdateTime;
 
     private Integer status;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

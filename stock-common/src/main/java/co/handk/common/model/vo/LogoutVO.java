@@ -3,7 +3,7 @@ package co.handk.common.model.vo;
 import lombok.Data;
 
 @Data
-public class LogoutVO {
+public class LogoutVO extends BaseVO {
     private Boolean success;
     private Long userId;
 

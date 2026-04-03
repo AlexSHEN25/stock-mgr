@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Role;
@@ -62,14 +66,19 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Role::getId, id).set(Role::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Role::getId, id).set(Role::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<RoleVO> pageQuery(RoleQueryDTO query) {
         Page<Role> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Role::getDeleted, 0).orderByDesc(Role::getUpdateTime);
+        wrapper.eq(Role::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), Role::getName, query.getName())
+                .like(StringUtils.isNotBlank(query.getCode()), Role::getCode, query.getCode())
+                .like(StringUtils.isNotBlank(query.getRemark()), Role::getRemark, query.getRemark())
+                .eq(query.getStatus() != null, Role::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, Role::getCreateTime, Role::getUpdateTime);
         Page<Role> resultPage =     roleMapper.selectPage(page, wrapper);
         List<RoleVO> records = resultPage.getRecords().stream().map(entity -> {
             RoleVO vo = new RoleVO();

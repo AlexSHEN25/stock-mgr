@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.UserToken;
@@ -62,14 +66,21 @@ public class UserTokenServiceImpl extends ServiceImpl<UserTokenMapper, UserToken
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(UserToken::getId, id).set(UserToken::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(UserToken::getId, id).set(UserToken::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<UserTokenVO> pageQuery(UserTokenQueryDTO query) {
         Page<UserToken> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<UserToken> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserToken::getDeleted, 0).orderByDesc(UserToken::getUpdateTime);
+        wrapper.eq(UserToken::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getToken()), UserToken::getToken, query.getToken())
+                .eq(query.getUserId() != null, UserToken::getUserId, query.getUserId())
+                .eq(query.getLoginTime() != null, UserToken::getLoginTime, query.getLoginTime())
+                .eq(query.getExpireTime() != null, UserToken::getExpireTime, query.getExpireTime())
+                .like(StringUtils.isNotBlank(query.getLoginIp()), UserToken::getLoginIp, query.getLoginIp())
+                .eq(query.getStatus() != null, UserToken::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, UserToken::getCreateTime, UserToken::getUpdateTime);
         Page<UserToken> resultPage =     userTokenMapper.selectPage(page, wrapper);
         List<UserTokenVO> records = resultPage.getRecords().stream().map(entity -> {
             UserTokenVO vo = new UserTokenVO();

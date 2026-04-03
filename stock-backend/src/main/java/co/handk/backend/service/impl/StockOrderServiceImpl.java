@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.StockOrder;
@@ -62,14 +66,31 @@ public class StockOrderServiceImpl extends ServiceImpl<StockOrderMapper, StockOr
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(StockOrder::getId, id).set(StockOrder::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(StockOrder::getId, id).set(StockOrder::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<StockOrderVO> pageQuery(StockOrderQueryDTO query) {
         Page<StockOrder> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<StockOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StockOrder::getDeleted, 0).orderByDesc(StockOrder::getUpdateTime);
+        wrapper.eq(StockOrder::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getOrderNo()), StockOrder::getOrderNo, query.getOrderNo())
+                .eq(query.getType() != null, StockOrder::getType, query.getType())
+                .eq(query.getWarehouseId() != null, StockOrder::getWarehouseId, query.getWarehouseId())
+                .eq(query.getSourceType() != null, StockOrder::getSourceType, query.getSourceType())
+                .eq(query.getSourceId() != null, StockOrder::getSourceId, query.getSourceId())
+                .eq(query.getTotalQty() != null, StockOrder::getTotalQty, query.getTotalQty())
+                .eq(query.getState() != null, StockOrder::getState, query.getState())
+                .eq(query.getRequesterId() != null, StockOrder::getRequesterId, query.getRequesterId())
+                .like(StringUtils.isNotBlank(query.getRequesterName()), StockOrder::getRequesterName, query.getRequesterName())
+                .eq(query.getOperatorId() != null, StockOrder::getOperatorId, query.getOperatorId())
+                .like(StringUtils.isNotBlank(query.getOperatorName()), StockOrder::getOperatorName, query.getOperatorName())
+                .like(StringUtils.isNotBlank(query.getRemark()), StockOrder::getRemark, query.getRemark())
+                .eq(query.getApproverId() != null, StockOrder::getApproverId, query.getApproverId())
+                .like(StringUtils.isNotBlank(query.getApproverName()), StockOrder::getApproverName, query.getApproverName())
+                .eq(query.getApproveTime() != null, StockOrder::getApproveTime, query.getApproveTime())
+                .eq(query.getFinishTime() != null, StockOrder::getFinishTime, query.getFinishTime());
+        PageSortUtil.applyTimeSort(wrapper, query, StockOrder::getCreateTime, StockOrder::getUpdateTime);
         Page<StockOrder> resultPage =     stockOrderMapper.selectPage(page, wrapper);
         List<StockOrderVO> records = resultPage.getRecords().stream().map(entity -> {
             StockOrderVO vo = new StockOrderVO();

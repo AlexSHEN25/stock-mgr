@@ -1,6 +1,7 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.util.EnumFieldMapper;
+import co.handk.backend.util.PageSortUtil;
 
 import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockRecord;
@@ -70,7 +71,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("库存不存在");
         }
-        return this.lambdaUpdate().eq(Stock::getId, id).set(Stock::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Stock::getId, id).set(Stock::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
@@ -82,11 +83,11 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         // 2. 构建查询条件
         LambdaQueryWrapper<Stock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getWarehouseId() != null, Stock::getWarehouseId, dto.getWarehouseId())
-                .eq(dto.getStatus() != null, Stock::getStatus, dto.getStatus().getCode())
+                .eq(dto.getStatus() != null, Stock::getStatus, (dto.getStatus() == null ? null : dto.getStatus().getCode()))
                 .like(StringUtils.isNotBlank(dto.getGoodsName()), Stock::getGoodsName, dto.getGoodsName())
                 .like(StringUtils.isNotBlank(dto.getSku()), Stock::getSku, dto.getSku())
-                .eq(Stock::getDeleted, 0)
-                .orderByDesc(Stock::getUpdateTime);
+                .eq(Stock::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode());
+        PageSortUtil.applyTimeSort(wrapper, dto, Stock::getCreateTime, Stock::getUpdateTime);
 
         // 3. 执行分页查询
         Page<Stock> resultPage = stockMapper.selectPage(page, wrapper);

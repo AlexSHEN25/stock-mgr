@@ -1,5 +1,7 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.context.UserContext;
@@ -11,6 +13,8 @@ import co.handk.backend.service.UserService;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.RedisKey;
+import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
@@ -54,6 +58,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         User entity = new User();
         BeanUtils.copyProperties(dto, entity);
         EnumFieldMapper.mapStatusAndDeleted(dto, entity);
+        String salt = PasswordUtil.generateSalt();
+        entity.setSalt(salt);
+        entity.setPassword(PasswordUtil.encrypt(dto.getPassword(), salt));
         entity.setId(null);
         return this.save(entity);
     }
@@ -84,17 +91,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(User::getId, id).set(User::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(User::getId, id).set(User::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public LoginVO login(LoginDTO dto) {
         String username = dto.getUsername();
-        String rawPassword = dto.getPassword();
-        User user = userMapper.selectByUsername(username);
-        if (user == null) {
+        User user = userMapper.selectByUsername(
+                username,
+                StatusEnum.NOMAL.getCode(),
+                DeleteEnum.UNDELETED.getCode()
+        );
+        if (Objects.isNull(user)) {
             throw new RuntimeException("用户不存在");
         }
+        String rawPassword = dto.getPassword();
         String encryptPwd = PasswordUtil.encrypt(rawPassword, user.getSalt());
         if (!user.getPassword().equals(encryptPwd)) {
             throw new RuntimeException("用户名或密码错误");
@@ -144,7 +155,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public PageResult<UserVO> pageQuery(UserQueryDTO query) {
         Page<User> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getDeleted, 0).orderByDesc(User::getUpdateTime);
+        wrapper.eq(User::getDeleted, DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getUsername()), User::getUsername, query.getUsername())
+                .eq(query.getDeptId() != null, User::getDeptId, query.getDeptId())
+                .like(StringUtils.isNotBlank(query.getEmail()), User::getEmail, query.getEmail())
+                .like(StringUtils.isNotBlank(query.getPhone()), User::getPhone, query.getPhone())
+                .eq(query.getStatus() != null, User::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, User::getCreateTime, User::getUpdateTime);
         Page<User> resultPage = userMapper.selectPage(page, wrapper);
         List<User> users = resultPage.getRecords();
         Map<Long, String> deptNameMap = buildDeptNameMap(users);

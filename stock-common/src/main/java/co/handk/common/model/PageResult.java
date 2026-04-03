@@ -4,6 +4,9 @@ import lombok.Getter;
 
 import java.util.List;
 
+import static co.handk.common.constant.PageQueryConstant.DEFAULT_PAGE_NUM;
+import static co.handk.common.constant.PageQueryConstant.DEFAULT_PAGE_SIZE;
+
 /**
  * 通用分页返回对象
  *
@@ -47,8 +50,9 @@ public class PageResult<T> {
 
     public static <T> PageResult<T> build(Long total, Long pageNum, Long pageSize, List<T> records) {
         long safeTotal = total == null ? 0L : total;
-        long safePageSize = (pageSize == null || pageSize <= 0) ? 0L : pageSize;
-        long pages = safePageSize == 0 ? 0L : (safeTotal + safePageSize - 1) / safePageSize;
-        return new PageResult<>(safeTotal, pageNum, pageSize, pages, records);
+        long safePageNum = (pageNum == null || pageNum <= 0) ? DEFAULT_PAGE_NUM : pageNum;
+        long safePageSize = (pageSize == null || pageSize <= 0) ? DEFAULT_PAGE_SIZE : pageSize;
+        long pages = (safeTotal + safePageSize - 1) / safePageSize;
+        return new PageResult<>(safeTotal, safePageNum, safePageSize, pages, records);
     }
 }

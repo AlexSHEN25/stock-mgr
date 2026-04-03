@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Warehouse;
@@ -62,14 +66,20 @@ public class WarehouseServiceImpl extends ServiceImpl<WarehouseMapper, Warehouse
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Warehouse::getId, id).set(Warehouse::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Warehouse::getId, id).set(Warehouse::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<WarehouseVO> pageQuery(WarehouseQueryDTO query) {
         Page<Warehouse> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Warehouse> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Warehouse::getDeleted, 0).orderByDesc(Warehouse::getUpdateTime);
+        wrapper.eq(Warehouse::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), Warehouse::getName, query.getName())
+                .like(StringUtils.isNotBlank(query.getCode()), Warehouse::getCode, query.getCode())
+                .like(StringUtils.isNotBlank(query.getAddress()), Warehouse::getAddress, query.getAddress())
+                .eq(query.getManagerId() != null, Warehouse::getManagerId, query.getManagerId())
+                .eq(query.getStatus() != null, Warehouse::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, Warehouse::getCreateTime, Warehouse::getUpdateTime);
         Page<Warehouse> resultPage =     warehouseMapper.selectPage(page, wrapper);
         List<WarehouseVO> records = resultPage.getRecords().stream().map(entity -> {
             WarehouseVO vo = new WarehouseVO();

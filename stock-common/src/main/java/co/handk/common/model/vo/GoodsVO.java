@@ -1,15 +1,12 @@
 package co.handk.common.model.vo;
 
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import lombok.Data;
-
 @Data
-public class GoodsVO {
-
-    private Long id;
-
+public class GoodsVO extends BaseVO {
     private String name;
     private String englishName;
     private String sku;
@@ -26,8 +23,4 @@ public class GoodsVO {
     private String description;
     private Integer isHot;
     private Long version;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

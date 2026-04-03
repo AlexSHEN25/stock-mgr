@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Maker;
@@ -62,14 +66,17 @@ public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Maker::getId, id).set(Maker::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Maker::getId, id).set(Maker::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<MakerVO> pageQuery(MakerQueryDTO query) {
         Page<Maker> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Maker> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Maker::getDeleted, 0).orderByDesc(Maker::getUpdateTime);
+        wrapper.eq(Maker::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), Maker::getName, query.getName())
+                .eq(query.getStatus() != null, Maker::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, Maker::getCreateTime, Maker::getUpdateTime);
         Page<Maker> resultPage =     makerMapper.selectPage(page, wrapper);
         List<MakerVO> records = resultPage.getRecords().stream().map(entity -> {
             MakerVO vo = new MakerVO();

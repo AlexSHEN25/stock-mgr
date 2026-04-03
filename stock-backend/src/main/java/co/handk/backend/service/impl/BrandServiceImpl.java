@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Brand;
@@ -62,14 +66,20 @@ public class BrandServiceImpl extends ServiceImpl<BrandMapper, Brand> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Brand::getId, id).set(Brand::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Brand::getId, id).set(Brand::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<BrandVO> pageQuery(BrandQueryDTO query) {
         Page<Brand> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Brand> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Brand::getDeleted, 0).orderByDesc(Brand::getUpdateTime);
+        wrapper.eq(Brand::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), Brand::getName, query.getName())
+                .like(StringUtils.isNotBlank(query.getEnglishName()), Brand::getEnglishName, query.getEnglishName())
+                .like(StringUtils.isNotBlank(query.getImage()), Brand::getImage, query.getImage())
+                .like(StringUtils.isNotBlank(query.getContent()), Brand::getContent, query.getContent())
+                .eq(query.getStatus() != null, Brand::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        PageSortUtil.applyTimeSort(wrapper, query, Brand::getCreateTime, Brand::getUpdateTime);
         Page<Brand> resultPage =     brandMapper.selectPage(page, wrapper);
         List<BrandVO> records = resultPage.getRecords().stream().map(entity -> {
             BrandVO vo = new BrandVO();

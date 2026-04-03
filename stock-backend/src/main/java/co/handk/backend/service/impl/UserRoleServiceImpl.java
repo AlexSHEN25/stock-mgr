@@ -1,5 +1,7 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.UserRole;
@@ -62,14 +64,17 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(UserRole::getId, id).set(UserRole::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(UserRole::getId, id).set(UserRole::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<UserRoleVO> pageQuery(UserRoleQueryDTO query) {
         Page<UserRole> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserRole::getDeleted, 0).orderByDesc(UserRole::getUpdateTime);
+        wrapper.eq(UserRole::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getUserId() != null, UserRole::getUserId, query.getUserId())
+                .eq(query.getRoleId() != null, UserRole::getRoleId, query.getRoleId());
+        PageSortUtil.applyTimeSort(wrapper, query, UserRole::getCreateTime, UserRole::getUpdateTime);
         Page<UserRole> resultPage =     userRoleMapper.selectPage(page, wrapper);
         List<UserRoleVO> records = resultPage.getRecords().stream().map(entity -> {
             UserRoleVO vo = new UserRoleVO();

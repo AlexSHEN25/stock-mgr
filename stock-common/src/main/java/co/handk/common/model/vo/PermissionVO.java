@@ -1,14 +1,9 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
 @Data
-public class PermissionVO {
-
-    private Long id;
-
+public class PermissionVO extends BaseVO {
     private String name;
     private String code;
     private String module;
@@ -19,8 +14,4 @@ public class PermissionVO {
     private String icon;
     private String component;
     private Integer status;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }

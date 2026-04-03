@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.OperateLog;
@@ -62,14 +66,27 @@ public class OperateLogServiceImpl extends ServiceImpl<OperateLogMapper, Operate
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(OperateLog::getId, id).set(OperateLog::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(OperateLog::getId, id).set(OperateLog::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<OperateLogVO> pageQuery(OperateLogQueryDTO query) {
         Page<OperateLog> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<OperateLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(OperateLog::getDeleted, 0).orderByDesc(OperateLog::getUpdateTime);
+        wrapper.eq(OperateLog::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .eq(query.getUserId() != null, OperateLog::getUserId, query.getUserId())
+                .like(StringUtils.isNotBlank(query.getUsername()), OperateLog::getUsername, query.getUsername())
+                .like(StringUtils.isNotBlank(query.getModule()), OperateLog::getModule, query.getModule())
+                .like(StringUtils.isNotBlank(query.getOperation()), OperateLog::getOperation, query.getOperation())
+                .like(StringUtils.isNotBlank(query.getMethod()), OperateLog::getMethod, query.getMethod())
+                .like(StringUtils.isNotBlank(query.getRequestUrl()), OperateLog::getRequestUrl, query.getRequestUrl())
+                .like(StringUtils.isNotBlank(query.getRequestIp()), OperateLog::getRequestIp, query.getRequestIp())
+                .like(StringUtils.isNotBlank(query.getRequestParam()), OperateLog::getRequestParam, query.getRequestParam())
+                .like(StringUtils.isNotBlank(query.getResponseData()), OperateLog::getResponseData, query.getResponseData())
+                .eq(query.getStatus() != null, OperateLog::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()))
+                .like(StringUtils.isNotBlank(query.getErrorMsg()), OperateLog::getErrorMsg, query.getErrorMsg())
+                .eq(query.getCostTime() != null, OperateLog::getCostTime, query.getCostTime());
+        PageSortUtil.applyTimeSort(wrapper, query, OperateLog::getCreateTime, OperateLog::getUpdateTime);
         Page<OperateLog> resultPage =     operateLogMapper.selectPage(page, wrapper);
         List<OperateLogVO> records = resultPage.getRecords().stream().map(entity -> {
             OperateLogVO vo = new OperateLogVO();

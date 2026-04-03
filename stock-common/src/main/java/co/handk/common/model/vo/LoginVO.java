@@ -3,7 +3,7 @@ package co.handk.common.model.vo;
 import lombok.Data;
 
 @Data
-public class LoginVO {
+public class LoginVO extends BaseVO {
 
     private String token;
 

@@ -1,5 +1,9 @@
 package co.handk.backend.service.impl;
 
+import org.apache.commons.lang3.StringUtils;
+
+import co.handk.backend.util.PageSortUtil;
+
 import co.handk.backend.util.EnumFieldMapper;
 
 import co.handk.backend.entity.Config;
@@ -62,14 +66,22 @@ public class ConfigServiceImpl extends ServiceImpl<ConfigMapper, Config> impleme
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Config::getId, id).set(Config::getDeleted, 1).update();
+        return this.lambdaUpdate().eq(Config::getId, id).set(Config::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<ConfigVO> pageQuery(ConfigQueryDTO query) {
         Page<Config> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Config> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Config::getDeleted, 0).orderByDesc(Config::getUpdateTime);
+        wrapper.eq(Config::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .like(StringUtils.isNotBlank(query.getName()), Config::getName, query.getName())
+                .like(StringUtils.isNotBlank(query.getGroup()), Config::getGroup, query.getGroup())
+                .like(StringUtils.isNotBlank(query.getTitle()), Config::getTitle, query.getTitle())
+                .like(StringUtils.isNotBlank(query.getTip()), Config::getTip, query.getTip())
+                .like(StringUtils.isNotBlank(query.getType()), Config::getType, query.getType())
+                .like(StringUtils.isNotBlank(query.getValue()), Config::getValue, query.getValue())
+                .like(StringUtils.isNotBlank(query.getContent()), Config::getContent, query.getContent());
+        PageSortUtil.applyTimeSort(wrapper, query, Config::getCreateTime, Config::getUpdateTime);
         Page<Config> resultPage =     configMapper.selectPage(page, wrapper);
         List<ConfigVO> records = resultPage.getRecords().stream().map(entity -> {
             ConfigVO vo = new ConfigVO();

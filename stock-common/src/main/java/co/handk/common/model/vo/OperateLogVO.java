@@ -1,14 +1,9 @@
 package co.handk.common.model.vo;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
 
 @Data
-public class OperateLogVO {
-
-    private Long id;
-
+public class OperateLogVO extends BaseVO {
     private Long userId;
     private String username;
     private String module;
@@ -21,8 +16,4 @@ public class OperateLogVO {
     private Integer status;
     private String errorMsg;
     private Integer costTime;
-
-    private LocalDateTime createTime;
-
-    private LocalDateTime updateTime;
 }
