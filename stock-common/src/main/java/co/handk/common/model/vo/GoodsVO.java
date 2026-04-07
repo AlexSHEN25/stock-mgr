@@ -16,11 +16,11 @@ public class GoodsVO extends BaseVO {
     private Long makerId;
     private BigDecimal price;
     private BigDecimal discount;
-    private Integer status;
+
     private BigDecimal newPrice;
     private LocalDateTime priceUpdateTime;
     private String images;
     private String description;
     private Integer isHot;
-    private Long version;
+    private Integer status;
 }
