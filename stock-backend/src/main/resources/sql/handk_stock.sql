@@ -149,13 +149,14 @@ create TABLE `t_stock`
     `lock_qty`          INT(10)          NOT NULL DEFAULT 0 COMMENT '已被锁定库存数量',
     `price`             DECIMAL(10, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
     `price_update_time` DATETIME                  DEFAULT NULL COMMENT '价格最后更新时间',
+    `type_id`           INT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
     `status`            TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态',
     `version`           BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '版本控制',
     `deleted`           TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `create_time`       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY uk_stock (goods_id, warehouse_id),
+    UNIQUE KEY uk_stock (goods_id, warehouse_id,type_id),
     KEY idx_sku (sku)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -166,11 +167,12 @@ create TABLE `t_stock_order`
 (
     `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
     `order_no`      VARCHAR(64) NOT NULL COMMENT '库存单号',
-    `type`          TINYINT UNSIGNED NOT NULL COMMENT '单据类型:1 入库 2 出库 3 调整 4 盘点 5 调拨 6 退货',
+    `order_type`    TINYINT UNSIGNED NOT NULL COMMENT '单据类型:1 入库 2 出库 3 调整 4 盘点 5 调拨 6 退货',
     `warehouse_id`  INT UNSIGNED NOT NULL COMMENT '仓库ID',
     `source_type`   TINYINT UNSIGNED NOT NULL COMMENT '来源类型:1订单2退货3请求单4手动',
     `source_id`     BIGINT DEFAULT NULL COMMENT '来源ID',
     `total_qty`     INT(10) NOT NULL DEFAULT 0 COMMENT '总数量',
+    `type_id`       INT UNSIGNED     DEFAULT NULL COMMENT '库存商品分类ID',
     `state`         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据状态:0草稿1审核中2完成3取消',
     `requester_id`  INT UNSIGNED DEFAULT NULL COMMENT '申请人ID',
     `requester_name` VARCHAR(64) DEFAULT NULL COMMENT '申请人',
@@ -186,7 +188,7 @@ create TABLE `t_stock_order`
     `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_order_no` (`order_no`),
-    KEY `idx_type` (`type`),
+    KEY `idx_order_type` (`order_type`),
     KEY `idx_state` (`state`),
     KEY `idx_warehouse` (`warehouse_id`)
 )
@@ -208,10 +210,12 @@ create TABLE `t_stock_order_item`
     `brand_name`     VARCHAR(255) DEFAULT NULL COMMENT '品牌名称',
     `series_id`      INT UNSIGNED DEFAULT NULL COMMENT '系列ID',
     `series_name`    VARCHAR(255) DEFAULT NULL COMMENT '系列名称',
-    `type_id`        INT UNSIGNED DEFAULT NULL COMMENT '分类ID',
-    `type_name`      VARCHAR(255) DEFAULT NULL COMMENT '分类名称',
-    `maker_id`       INT UNSIGNED DEFAULT NULL COMMENT 'メーカーID',
-    `maker_name`     VARCHAR(255) DEFAULT NULL COMMENT 'メーカー名称',
+    `category_id`    INT UNSIGNED DEFAULT NULL COMMENT '商品类型ID',
+    `category_name`  VARCHAR(255) DEFAULT NULL COMMENT '商品类型名称',
+    `type_id`        INT UNSIGNED DEFAULT NULL COMMENT '库存商品分类ID',
+    `type_name`      VARCHAR(255) DEFAULT NULL COMMENT '库存商品分类名称',
+    `maker_id`       INT UNSIGNED DEFAULT NULL COMMENT '厂家ID',
+    `maker_name`     VARCHAR(255) DEFAULT NULL COMMENT '厂家名称',
 
     `before_qty`  INT NOT NULL COMMENT '变更前库存',
     `change_qty`  INT NOT NULL COMMENT '变化数量',
@@ -226,7 +230,7 @@ create TABLE `t_stock_order_item`
     KEY `idx_goods` (`goods_id`),
     KEY `idx_brand_id` (`brand_id`),
     KEY `idx_series_id` (`series_id`),
-    KEY `idx_type_id` (`type_id`),
+    KEY `idx_category_id` (`category_id`),
     KEY `idx_maker_id` (`maker_id`)
 )
 ENGINE=InnoDB
@@ -250,16 +254,19 @@ create TABLE `t_stock_record`
     `brand_name`     VARCHAR(255)        DEFAULT NULL COMMENT '品牌名称',
     `series_id`      INT UNSIGNED        DEFAULT NULL COMMENT '系列ID',
     `series_name`    VARCHAR(255)        DEFAULT NULL COMMENT '系列名称',
-    `type_id`        INT UNSIGNED        DEFAULT NULL COMMENT '分类ID',
-    `type_name`      VARCHAR(255)        DEFAULT NULL COMMENT '分类名称',
-    `maker_id`       INT UNSIGNED        DEFAULT NULL COMMENT 'メーカーID',
-    `maker_name`     VARCHAR(255)        DEFAULT NULL COMMENT 'メーカー名称',
+
+    `category_id`    INT UNSIGNED        DEFAULT NULL COMMENT '商品类型ID',
+    `category_name`   VARCHAR(255)       DEFAULT NULL COMMENT '商品类型名称',
+    `type_id`        INT UNSIGNED        DEFAULT NULL COMMENT '库存商品分类ID',
+    `type_name`      VARCHAR(255)        DEFAULT NULL COMMENT '库存商品分类名称',
+    `maker_id`       INT UNSIGNED        DEFAULT NULL COMMENT '厂家ID',
+    `maker_name`     VARCHAR(255)        DEFAULT NULL COMMENT '厂家名称',
 
     `warehouse_id`      INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `before_qty`        INT(10)          NOT NULL COMMENT '变更前库存',
     `change_qty`        INT(10)          NOT NULL COMMENT '变化数量',
     `after_qty`         INT(10)          NOT NULL COMMENT '变更后库存',
-    `type`              TINYINT UNSIGNED NOT NULL COMMENT '单据类型:1 入库 2 出库 3 调整 4 盘点 5 调拨 6 退货',
+    `order_type`              TINYINT UNSIGNED NOT NULL COMMENT '单据类型:1 入库 2 出库 3 调整 4 盘点 5 调拨 6 退货',
      `source_type`      TINYINT UNSIGNED NOT NULL COMMENT '来源类型:1订单2退货3请求单4手动',
     `price`             DECIMAL(10, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
     `price_update_time` DATETIME         DEFAULT NULL COMMENT '价格最后更新时间',
@@ -278,12 +285,13 @@ create TABLE `t_stock_record`
     KEY idx_stock (stock_id),
     KEY idx_goods (goods_id),
     KEY idx_sku (sku),
-    KEY idx_type (type),
+    KEY idx_order_type (order_type),
     KEY idx_customer (customer_id),
     KEY idx_operator (operator_id),
     KEY idx_create_time (create_time),
     KEY `idx_brand_id` (`brand_id`),
     KEY `idx_series_id` (`series_id`),
+    KEY `idx_category_id` (`category_id`),
     KEY `idx_type_id` (`type_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
@@ -308,38 +316,90 @@ create TABLE t_warehouse
 
 
 DROP TABLE IF EXISTS `t_goods`;
-create TABLE `t_goods`
+CREATE TABLE `t_goods`
 (
-    `id`           INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `name`         VARCHAR(255)     NOT NULL COMMENT '商品名称',
-    `english_name` VARCHAR(255)              DEFAULT NULL COMMENT '英文品名',
-    `sku`          VARCHAR(128)     NOT NULL COMMENT '商品品番',
-    `series_id`    INT UNSIGNED     NOT NULL COMMENT '系列ID',
-    `brand_id`     INT UNSIGNED     NOT NULL COMMENT '品牌ID',
-    `type_id`      INT UNSIGNED     NOT NULL COMMENT '商品分类ID',
-    `maker_id`     INT UNSIGNED     NOT NULL COMMENT 'メーカーID',
-    `price`        DECIMAL(10, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
-    `discount`     DECIMAL(5, 4)    NOT NULL DEFAULT 1.0000 COMMENT '折扣率',
-    `status`       TINYINT UNSIGNED          DEFAULT 1    COMMENT '1:上架；2:下架',
-    `new_price`    DECIMAL(10, 2)            DEFAULT NULL COMMENT '下次更新后单价',
-    `price_update_time` DATETIME             DEFAULT NULL COMMENT '下次价格更新时间',
-    `images`       varchar(2000)    DEFAULT NULL COMMENT '商品图片',
-    `description`  varchar(1000)    DEFAULT NULL COMMENT '商品描述',
-    `is_hot`       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否热门:0=否,1=是',
-    `version`      BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '版本控制',
-    `deleted`      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
-    `create_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
-     PRIMARY KEY (`id`),
-     UNIQUE KEY uk_sku (sku),
-     KEY idx_brand (brand_id),
-     KEY idx_series (series_id),
-     KEY idx_maker (maker_id),
-     KEY idx_type (type_id)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT = '商品表';
+    `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '商品ID',
+    `name`          VARCHAR(255) NOT NULL COMMENT '商品名称',
+    `english_name`  VARCHAR(255) DEFAULT NULL COMMENT '英文品名',
+    `brand_id`      INT UNSIGNED NOT NULL COMMENT '品牌ID',
+    `series_id`     INT UNSIGNED NOT NULL COMMENT '系列ID',
+    `category_id`   INT UNSIGNED NOT NULL COMMENT '商品类型ID',
+    `maker_id`      INT UNSIGNED NOT NULL COMMENT '厂家ID',
+    `description`   VARCHAR(1000) DEFAULT NULL COMMENT '商品描述',
+    `is_hot`        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否热门',
+    `status`        TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态:1上架2下架',
+    `sort`          INT NOT NULL DEFAULT 0 COMMENT '排序',
+    `deleted`       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+    `create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_brand` (`brand_id`),
+    KEY `idx_series` (`series_id`),
+    KEY `idx_category` (`category_id`),
+    KEY `idx_maker` (`maker_id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+    COMMENT='商品主表';
 
+DROP TABLE IF EXISTS `t_goods_sku`;
+CREATE TABLE `t_goods_sku`
+(
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'SKU ID',
+    `goods_id`          INT UNSIGNED NOT NULL COMMENT '商品ID',
+    `sku_code`          VARCHAR(128) NOT NULL COMMENT 'SKU编码/商品品番',
+    `price`             DECIMAL(12,2) NOT NULL DEFAULT 0.00 COMMENT '销售价',
+    `cost_price`        DECIMAL(12,2) DEFAULT 0.00 COMMENT '成本价',
+    `update_price`      DECIMAL(12,2) DEFAULT NULL COMMENT '待更新价格',
+    `price_update_time` DATETIME DEFAULT NULL COMMENT '价格更新时间',
+    `barcode`           VARCHAR(64) DEFAULT NULL COMMENT '条码',
+    `weight`            DECIMAL(10,2) DEFAULT NULL COMMENT '重量',
+    `volume`            DECIMAL(10,2) DEFAULT NULL COMMENT '体积',
+    `status`            TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态',
+    `deleted`           TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+    `create_time`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_sku_code` (`sku_code`, `deleted`),
+    KEY `idx_goods_id` (`goods_id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+    COMMENT='商品SKU表';
+
+DROP TABLE IF EXISTS `t_goods_sku_spec`;
+
+CREATE TABLE `t_goods_sku_spec`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+    `sku_id`        BIGINT UNSIGNED NOT NULL COMMENT 'SKU ID',
+    `spec_id`       INT UNSIGNED NOT NULL COMMENT '规格ID',
+    `spec_name`     VARCHAR(64) NOT NULL COMMENT '规格名称快照',
+    `spec_value`    VARCHAR(128) NOT NULL COMMENT '规格值',
+    `sort`          INT NOT NULL DEFAULT 0,
+    `deleted`       TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    `create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_sku_id` (`sku_id`),
+    KEY `idx_spec_id` (`spec_id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+    COMMENT='SKU规格属性表';
+
+DROP TABLE IF EXISTS `t_goods_image`;
+CREATE TABLE `t_goods_image`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+    `goods_id`      INT UNSIGNED NOT NULL COMMENT '商品ID',
+    `image_url`     VARCHAR(500) NOT NULL COMMENT '图片地址',
+    `sort`          INT NOT NULL DEFAULT 0 COMMENT '排序',
+    `deleted`       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+    `create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_goods_id` (`goods_id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+    COMMENT='商品图片表';
 
 DROP TABLE IF EXISTS `t_price_record`;
 create TABLE `t_price_record`
@@ -384,10 +444,10 @@ DEFAULT CHARSET = utf8mb4
 COLLATE = utf8mb4_unicode_ci COMMENT = '品牌表';
 
 
-DROP TABLE IF EXISTS `t_goods_type`;
-create TABLE `t_goods_type`  (
+DROP TABLE IF EXISTS `t_category`;
+create TABLE `t_category`  (
   `id`           INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `name` varchar(255) NOT NULL COMMENT '分类名称',
+  `name` varchar(255) NOT NULL COMMENT '类型名称',
   `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态:1启用0停用',
   `deleted`      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
   `create_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -395,7 +455,7 @@ create TABLE `t_goods_type`  (
   PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT = '商品分类表';
+  COLLATE = utf8mb4_unicode_ci COMMENT = '商品类型表';
 
 
 DROP TABLE IF EXISTS `t_series`;
@@ -403,6 +463,7 @@ create TABLE `t_series`  (
     `id` INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
     `name` varchar(255) NOT NULL COMMENT '系列名称',
     `english_name`  VARCHAR(255)  DEFAULT NULL COMMENT '英文名',
+    `brand_id` INT UNSIGNED NOT NULL COMMENT '品牌ID',
     `content` text  DEFAULT NULL COMMENT '系列简介',
     `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态:1启用0停用',
     `deleted`      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -417,7 +478,7 @@ COLLATE = utf8mb4_unicode_ci COMMENT = '商品系列表';
 DROP TABLE IF EXISTS `t_maker`;
 create TABLE `t_maker`  (
   `id`           INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `name`         varchar(255) NOT NULL COMMENT 'メーカー名称',
+  `name`         varchar(255) NOT NULL COMMENT '厂家名称',
   `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态:1启用0停用',
   `deleted`      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
   `create_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -425,8 +486,36 @@ create TABLE `t_maker`  (
   PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT = 'メーカー表';
+  COLLATE = utf8mb4_unicode_ci COMMENT = '厂家表';
 
+CREATE TABLE t_brand_maker_relation (
+      `id`     INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
+      brand_id INT UNSIGNED NOT NULL COMMENT '品牌ID',
+      maker_id INT UNSIGNED NOT NULL COMMENT '厂家ID',
+      deleted TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+      create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_brand_maker (brand_id, maker_id),
+      KEY idx_brand (brand_id),
+      KEY idx_maker (maker_id)
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE = utf8mb4_unicode_ci COMMENT='品牌厂家关联表';
+
+
+DROP TABLE IF EXISTS `t_stock_type`;
+create TABLE `t_stock_type`  (
+     `id`           INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
+     `name` varchar(255) NOT NULL COMMENT '库存分类名称(常规品，不良品)',
+     `status` TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态:1启用0停用',
+     `deleted`      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+     `create_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+     `update_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
+     PRIMARY KEY (`id`)
+    ) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci COMMENT = '库存分类表';
 
 DROP TABLE IF EXISTS `t_request_form`;
 create TABLE `t_request_form`
@@ -473,10 +562,12 @@ create TABLE `t_request_item`
     `brand_name`      VARCHAR(255) DEFAULT NULL COMMENT '品牌名称',
     `series_id`       INT UNSIGNED DEFAULT NULL COMMENT '系列ID',
     `series_name`     VARCHAR(255) DEFAULT NULL COMMENT '系列名称',
-    `type_id`         INT UNSIGNED DEFAULT NULL COMMENT '分类ID',
-    `type_name`       VARCHAR(255) DEFAULT NULL COMMENT '分类名称',
-    `maker_id`        INT UNSIGNED DEFAULT NULL COMMENT 'メーカーID',
-    `maker_name`      VARCHAR(255) DEFAULT NULL COMMENT 'メーカー名称',
+    `category_id`         INT UNSIGNED DEFAULT NULL COMMENT '类型ID',
+    `category_name`       VARCHAR(255) DEFAULT NULL COMMENT '类型名称',
+    `type_id`         INT UNSIGNED DEFAULT NULL COMMENT '商品分类ID',
+    `type_name`       VARCHAR(255) DEFAULT NULL COMMENT '商品分类名称',
+    `maker_id`        INT UNSIGNED DEFAULT NULL COMMENT '厂家ID',
+    `maker_name`      VARCHAR(255) DEFAULT NULL COMMENT '厂家名称',
 
     `warehouse_id`  INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `price`         DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '单价',
@@ -494,6 +585,7 @@ create TABLE `t_request_item`
     KEY idx_sku (sku),
     KEY `idx_brand_id` (`brand_id`),
     KEY `idx_series_id` (`series_id`),
+    KEY `idx_category_id` (`category_id`),
     KEY `idx_type_id` (`type_id`),
     KEY `idx_maker_id` (`maker_id`)
 )
@@ -515,6 +607,10 @@ create TABLE `t_customer`
     city            VARCHAR(64) DEFAULT NULL COMMENT '城市',
     address         VARCHAR(255) DEFAULT NULL COMMENT '详细地址',
     level_id        TINYINT UNSIGNED DEFAULT 1 COMMENT '客户等级',
+
+    `owner_user_id`   INT UNSIGNED DEFAULT NULL COMMENT '归属负责人ID',
+    `owner_dept_id`   INT UNSIGNED DEFAULT NULL COMMENT '归属部门ID',
+
     remark          VARCHAR(500) DEFAULT NULL COMMENT '备注',
     status          TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态(1正常0停用)',
     deleted         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -522,7 +618,9 @@ create TABLE `t_customer`
     update_time     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY uk_customer_code (customer_code),
-    KEY idx_name (name)
+    KEY idx_name (name),
+    KEY `idx_owner_user` (`owner_user_id`),
+    KEY `idx_owner_dept` (`owner_dept_id`)
 ) ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4
     COLLATE = utf8mb4_unicode_ci COMMENT = '客户表';
@@ -540,6 +638,28 @@ CREATE TABLE `t_customer_level`
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='客户等级表';
+
+
+DROP TABLE IF EXISTS `t_goods_level_price`;
+CREATE TABLE `t_goods_level_price`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+    `goods_id`      INT UNSIGNED NOT NULL COMMENT '商品ID',
+    `level_id`      INT UNSIGNED NOT NULL COMMENT '客户等级ID',
+    `price`         DECIMAL(12,2) NOT NULL COMMENT '等级专属价格',
+    `discount`      DECIMAL(6,4) DEFAULT NULL COMMENT '等级折扣率(可选)',
+    `effective_time` DATETIME DEFAULT NULL COMMENT '生效时间',
+    `expire_time`    DATETIME DEFAULT NULL COMMENT '失效时间',
+    `status`        TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态',
+    `deleted`       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+    `create_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_goods_level` (`goods_id`, `level_id`, `deleted`),
+    KEY `idx_level` (`level_id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+    COMMENT='客户等级商品价格表';
 
 
 DROP TABLE IF EXISTS `t_message`;
