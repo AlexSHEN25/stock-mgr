@@ -12,7 +12,7 @@ public class RequestItemQueryDTO extends PageQuery {
     private Long requestId;
     private Long goodsId;
     private Long skuId;
-    private String sku;
+    private String skuCode;
     private String goodsName;
     private String englishName;
     private Long brandId;
@@ -21,6 +21,8 @@ public class RequestItemQueryDTO extends PageQuery {
     private String seriesName;
     private Long typeId;
     private String typeName;
+    private Long categoryId;
+    private String categoryName;
     private Long makerId;
     private String makerName;
     private Long warehouseId;

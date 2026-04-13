@@ -12,10 +12,9 @@ public class CreateGoodsDTO {
 
     private String name;
     private String englishName;
-    private String sku;
     private Long seriesId;
     private Long brandId;
-    private Long typeId;
+    private Long categoryId;
     private Long makerId;
     private BigDecimal price;
     private BigDecimal discount;

@@ -12,7 +12,7 @@ public class StockOrderItemQueryDTO extends PageQuery {
     private Long orderId;
     private Long goodsId;
     private Long skuId;
-    private String sku;
+    private String skuCode;
     private String goodsName;
     private String englishName;
     private Long brandId;

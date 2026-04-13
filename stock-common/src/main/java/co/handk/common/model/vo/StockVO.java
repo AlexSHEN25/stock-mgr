@@ -10,7 +10,7 @@ public class StockVO extends BaseVO {
     private Integer goodsId;
     private String goodsName;
     private Long skuId;
-    private String sku;
+    private String skuCode;
     private Integer typeId;
     private Integer warehouseId;
     private Integer currentQty;

@@ -85,17 +85,14 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
         wrapper.eq(dto.getWarehouseId() != null, Stock::getWarehouseId, dto.getWarehouseId())
                 .eq(dto.getStatus() != null, Stock::getStatus, (dto.getStatus() == null ? null : dto.getStatus().getCode()))
                 .eq(dto.getSkuId() != null, Stock::getSkuId, dto.getSkuId())
-                .eq(dto.getTypeId() != null, Stock::getTypeId, dto.getTypeId())
                 .eq(StringUtils.isNotBlank(dto.getCurrency()), Stock::getCurrency, dto.getCurrency())
                 .like(StringUtils.isNotBlank(dto.getGoodsName()), Stock::getGoodsName, dto.getGoodsName())
                 .like(StringUtils.isNotBlank(dto.getSkuCode()), Stock::getSkuCode, dto.getSkuCode())
                 .eq(Stock::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode());
         PageSortUtil.applyTimeSort(wrapper, dto, Stock::getCreateTime, Stock::getUpdateTime);
 
-        // 3. 謇ｧ陦悟・鬘ｵ譟･隸｢
         Page<Stock> resultPage = stockMapper.selectPage(page, wrapper);
 
-        // 4. 霓ｬ謐｢荳ｺ VO
         List<StockPageVO> records = resultPage.getRecords().stream().map(stock -> {
             StockPageVO vo = new StockPageVO();
             BeanUtils.copyProperties(stock, vo);
@@ -107,7 +104,6 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
             return vo;
         }).collect(Collectors.toList());
 
-        // 5. 霑泌屓扈滉ｸ蛻・｡ｵ扈捺棡
         return PageResult.build(resultPage.getTotal(), dto.getPageNum(), dto.getPageSize(), records);
 
     }

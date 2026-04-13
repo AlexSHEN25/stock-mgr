@@ -77,7 +77,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
                 .eq(query.getOrderId() != null, StockOrderItem::getOrderId, query.getOrderId())
                 .eq(query.getGoodsId() != null, StockOrderItem::getGoodsId, query.getGoodsId())
                 .eq(query.getSkuId() != null, StockOrderItem::getSkuId, query.getSkuId())
-                .like(StringUtils.isNotBlank(query.getSku()), StockOrderItem::getSkuCode, query.getSku())
+                .like(StringUtils.isNotBlank(query.getSkuCode()), StockOrderItem::getSkuCode, query.getSkuCode())
                 .like(StringUtils.isNotBlank(query.getGoodsName()), StockOrderItem::getGoodsName, query.getGoodsName())
                 .like(StringUtils.isNotBlank(query.getEnglishName()), StockOrderItem::getEnglishName, query.getEnglishName())
                 .eq(query.getBrandId() != null, StockOrderItem::getBrandId, query.getBrandId())

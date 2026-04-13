@@ -9,7 +9,7 @@ public class StockOrderItemVO extends BaseVO {
     private Long orderId;
     private Long goodsId;
     private Long skuId;
-    private String sku;
+    private String skuCode;
     private String goodsName;
     private String englishName;
     private Long brandId;

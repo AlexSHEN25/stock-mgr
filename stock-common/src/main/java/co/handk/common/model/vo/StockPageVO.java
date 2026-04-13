@@ -16,7 +16,7 @@ public class StockPageVO extends BaseVO {
 
     private Long skuId;
 
-    private String sku;
+    private String skuCode;
 
     private Integer typeId;
 

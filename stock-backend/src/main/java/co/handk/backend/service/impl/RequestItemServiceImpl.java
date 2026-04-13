@@ -43,7 +43,7 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     public RequestItemVO get(Long id) {
         RequestItem entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         RequestItemVO vo = new RequestItemVO();
         BeanUtils.copyProperties(entity, vo);
@@ -53,7 +53,7 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     @Override
     public Boolean update(UpdateRequestItemDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         RequestItem entity = new RequestItem();
         BeanUtils.copyProperties(dto, entity);
@@ -64,7 +64,7 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(RequestItem::getId, id).set(RequestItem::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
@@ -77,13 +77,17 @@ public class RequestItemServiceImpl extends ServiceImpl<RequestItemMapper, Reque
                 .eq(query.getRequestId() != null, RequestItem::getRequestId, query.getRequestId())
                 .eq(query.getGoodsId() != null, RequestItem::getGoodsId, query.getGoodsId())
                 .eq(query.getSkuId() != null, RequestItem::getSkuId, query.getSkuId())
-                .like(StringUtils.isNotBlank(query.getSku()), RequestItem::getSkuCode, query.getSku())
+                .like(StringUtils.isNotBlank(query.getSkuCode()), RequestItem::getSkuCode, query.getSkuCode())
                 .like(StringUtils.isNotBlank(query.getGoodsName()), RequestItem::getGoodsName, query.getGoodsName())
                 .like(StringUtils.isNotBlank(query.getEnglishName()), RequestItem::getEnglishName, query.getEnglishName())
                 .eq(query.getBrandId() != null, RequestItem::getBrandId, query.getBrandId())
                 .like(StringUtils.isNotBlank(query.getBrandName()), RequestItem::getBrandName, query.getBrandName())
                 .eq(query.getSeriesId() != null, RequestItem::getSeriesId, query.getSeriesId())
                 .like(StringUtils.isNotBlank(query.getSeriesName()), RequestItem::getSeriesName, query.getSeriesName())
+
+                .eq(query.getCategoryId() != null, RequestItem::getCategoryId, query.getCategoryId())
+                .like(StringUtils.isNotBlank(query.getCategoryName()), RequestItem::getCategoryName, query.getCategoryName())
+
                 .eq(query.getTypeId() != null, RequestItem::getTypeId, query.getTypeId())
                 .like(StringUtils.isNotBlank(query.getTypeName()), RequestItem::getTypeName, query.getTypeName())
                 .eq(query.getMakerId() != null, RequestItem::getMakerId, query.getMakerId())

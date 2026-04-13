@@ -15,7 +15,7 @@ public class UpdatePriceRecordDTO {
     private String goodsName;
     private String englishName;
     private Long skuId;
-    private String sku;
+    private String skuCode;
     private BigDecimal oldPrice;
     private BigDecimal newPrice;
     private String currency;

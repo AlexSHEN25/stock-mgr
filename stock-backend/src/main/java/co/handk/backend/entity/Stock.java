@@ -18,8 +18,6 @@ public class Stock extends BaseEntity {
 
     private String skuCode;
 
-    private Integer typeId;
-
     private Integer warehouseId;
 
     private Integer currentQty;

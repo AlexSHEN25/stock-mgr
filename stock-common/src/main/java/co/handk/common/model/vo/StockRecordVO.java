@@ -13,7 +13,7 @@ public class StockRecordVO extends BaseVO {
     private Long stockId;
     private Long goodsId;
     private Long skuId;
-    private String sku;
+    private String skuCode;
     private String goodsName;
     private String englishName;
     private Long brandId;

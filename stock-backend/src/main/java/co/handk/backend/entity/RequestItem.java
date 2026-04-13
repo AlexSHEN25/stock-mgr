@@ -29,6 +29,10 @@ public class RequestItem extends BaseEntity {
 
     private String seriesName;
 
+    private Long categoryId;
+
+    private String categoryName;
+
     private Long typeId;
 
     private String typeName;

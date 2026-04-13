@@ -78,7 +78,7 @@ public class PriceRecordServiceImpl extends ServiceImpl<PriceRecordMapper, Price
                 .like(StringUtils.isNotBlank(query.getGoodsName()), PriceRecord::getGoodsName, query.getGoodsName())
                 .like(StringUtils.isNotBlank(query.getEnglishName()), PriceRecord::getEnglishName, query.getEnglishName())
                 .eq(query.getSkuId() != null, PriceRecord::getSkuId, query.getSkuId())
-                .like(StringUtils.isNotBlank(query.getSku()), PriceRecord::getSkuCode, query.getSku())
+                .like(StringUtils.isNotBlank(query.getSkuCode()), PriceRecord::getSkuCode, query.getSkuCode())
                 .eq(query.getOldPrice() != null, PriceRecord::getOldPrice, query.getOldPrice())
                 .eq(query.getNewPrice() != null, PriceRecord::getNewPrice, query.getNewPrice())
                 .eq(StringUtils.isNotBlank(query.getCurrency()), PriceRecord::getCurrency, query.getCurrency())
