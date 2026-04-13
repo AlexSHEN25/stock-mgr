@@ -8,7 +8,7 @@ import lombok.Data;
 
 @Data
 public class UpdateStockRecordDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "ID荳崎・荳ｺ遨ｺ")
     private Long id;
 
     private String bizNo;
@@ -16,6 +16,7 @@ public class UpdateStockRecordDTO {
     private Long orderItemId;
     private Long stockId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -34,6 +35,7 @@ public class UpdateStockRecordDTO {
     private Integer type;
     private Integer sourceType;
     private BigDecimal price;
+    private String currency;
     private LocalDateTime priceUpdateTime;
     private Long customerId;
     private String customerName;
@@ -43,3 +45,4 @@ public class UpdateStockRecordDTO {
     private String operatorName;
     private String remark;
 }
+

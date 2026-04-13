@@ -27,6 +27,10 @@ public class Customer extends BaseEntity {
 
     private Integer levelId;
 
+    private Long ownerUserId;
+
+    private Long ownerDeptId;
+
     private String remark;
 
     private Integer status;

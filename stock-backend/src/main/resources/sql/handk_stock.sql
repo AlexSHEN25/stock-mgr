@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS `t_user`;
+﻿DROP TABLE IF EXISTS `t_user`;
 create TABLE `t_user`
 (
     `id`          INT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -147,6 +147,7 @@ create TABLE `t_stock`
     `current_qty`       INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '实际库存数量',
     `lock_qty`          INT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '已被锁定库存数量',
     `price`             DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `price_update_time` DATETIME                  DEFAULT NULL COMMENT '价格最后更新时间',
     `type_id`           INT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
     `status`            TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态',
@@ -222,6 +223,7 @@ CREATE TABLE t_stock_order_item
     `change_qty`  INT NOT NULL COMMENT '变化数量',
     `after_qty`   INT NOT NULL COMMENT '变更后库存',
     `price`       DECIMAL(18,2) DEFAULT 0 COMMENT '单价',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `remark`      VARCHAR(255) DEFAULT NULL,
     `deleted`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -273,6 +275,7 @@ create TABLE `t_stock_record`
     `order_type`              TINYINT UNSIGNED NOT NULL COMMENT '单据类型:1 入库 2 出库 3 调整 4 盘点 5 调拨 6 退货',
      `source_type`      TINYINT UNSIGNED NOT NULL COMMENT '来源类型:1订单2退货3请求单4手动',
     `price`             DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `price_update_time` DATETIME         DEFAULT NULL COMMENT '价格最后更新时间',
     `customer_id`       INT UNSIGNED     DEFAULT NULL COMMENT '客户ID',
     `customer_name`     VARCHAR(255)     DEFAULT NULL COMMENT '客户名称',
@@ -352,6 +355,7 @@ CREATE TABLE `t_goods_sku`
     `sku_code`          VARCHAR(128) NOT NULL COMMENT 'SKU编码/商品品番',
     `sku_name`          VARCHAR(255) DEFAULT NULL COMMENT 'SKU展示名称',
     `price`             DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT '销售价',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `cost_price`        DECIMAL(18,2) DEFAULT 0.00 COMMENT '成本价',
     `update_price`      DECIMAL(18,2) DEFAULT NULL COMMENT '待更新价格',
     `price_update_time` DATETIME DEFAULT NULL COMMENT '价格更新时间',
@@ -421,6 +425,7 @@ create TABLE `t_price_record`
     `sku_code`         VARCHAR(128)     DEFAULT NULL COMMENT '商品品番',
     `old_price`    DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '更新前单价',
     `new_price`    DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '更新后单价',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `discount`     DECIMAL(5, 4)    NOT NULL DEFAULT 1.0000 COMMENT '折扣率',
     `price_update_time` DATETIME             DEFAULT NULL COMMENT '价格更新时间',
      `operator_id` INT UNSIGNED     NOT NULL COMMENT '操作人id',
@@ -582,6 +587,7 @@ create TABLE `t_request_item`
 
     `warehouse_id`  INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `price`         DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT '单价',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `discount`      DECIMAL(5,4)  NOT NULL DEFAULT 1.0000 COMMENT '折扣率',
     `request_qty`   INT NOT NULL DEFAULT 0 COMMENT '申请数量',
     `approve_qty`   INT NOT NULL DEFAULT 0 COMMENT '审核通过数量',
@@ -660,6 +666,7 @@ CREATE TABLE `t_goods_level_price`
     `sku_code`         VARCHAR(128)     DEFAULT NULL COMMENT '商品品番',
     `level_id`      INT UNSIGNED NOT NULL COMMENT '客户等级ID',
     `price`         DECIMAL(18,2) NOT NULL COMMENT '等级专属价格',
+    `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `discount`      DECIMAL(5,4) DEFAULT NULL COMMENT '等级折扣率(可选)',
     `effective_time` DATETIME DEFAULT NULL COMMENT '生效时间',
     `expire_time`    DATETIME DEFAULT NULL COMMENT '失效时间',

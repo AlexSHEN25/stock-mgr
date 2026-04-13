@@ -5,9 +5,9 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class GoodsType extends BaseEntity {
+public class BrandMakerRelation extends BaseEntity {
 
-    private String name;
+    private Long brandId;
 
-    private Integer status;
+    private Long makerId;
 }

@@ -43,7 +43,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     public StockRecordVO get(Long id) {
         StockRecord entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("数据不存在");
+            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
         }
         StockRecordVO vo = new StockRecordVO();
         BeanUtils.copyProperties(entity, vo);
@@ -53,7 +53,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Override
     public Boolean update(UpdateStockRecordDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("数据不存在");
+            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
         }
         StockRecord entity = new StockRecord();
         BeanUtils.copyProperties(dto, entity);
@@ -64,7 +64,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("数据不存在");
+            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
         }
         return this.lambdaUpdate().eq(StockRecord::getId, id).set(StockRecord::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
@@ -79,7 +79,8 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
                 .eq(query.getOrderItemId() != null, StockRecord::getOrderItemId, query.getOrderItemId())
                 .eq(query.getStockId() != null, StockRecord::getStockId, query.getStockId())
                 .eq(query.getGoodsId() != null, StockRecord::getGoodsId, query.getGoodsId())
-                .like(StringUtils.isNotBlank(query.getSku()), StockRecord::getSku, query.getSku())
+                .eq(query.getSkuId() != null, StockRecord::getSkuId, query.getSkuId())
+                .like(StringUtils.isNotBlank(query.getSkuCode()), StockRecord::getSkuCode, query.getSkuCode())
                 .like(StringUtils.isNotBlank(query.getGoodsName()), StockRecord::getGoodsName, query.getGoodsName())
                 .like(StringUtils.isNotBlank(query.getEnglishName()), StockRecord::getEnglishName, query.getEnglishName())
                 .eq(query.getBrandId() != null, StockRecord::getBrandId, query.getBrandId())
@@ -94,9 +95,10 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
                 .eq(query.getBeforeQty() != null, StockRecord::getBeforeQty, query.getBeforeQty())
                 .eq(query.getChangeQty() != null, StockRecord::getChangeQty, query.getChangeQty())
                 .eq(query.getAfterQty() != null, StockRecord::getAfterQty, query.getAfterQty())
-                .eq(query.getType() != null, StockRecord::getType, query.getType())
+                .eq(query.getTypeId() != null, StockRecord::getTypeId, query.getTypeId())
                 .eq(query.getSourceType() != null, StockRecord::getSourceType, query.getSourceType())
                 .eq(query.getPrice() != null, StockRecord::getPrice, query.getPrice())
+                .eq(StringUtils.isNotBlank(query.getCurrency()), StockRecord::getCurrency, query.getCurrency())
                 .eq(query.getPriceUpdateTime() != null, StockRecord::getPriceUpdateTime, query.getPriceUpdateTime())
                 .eq(query.getCustomerId() != null, StockRecord::getCustomerId, query.getCustomerId())
                 .like(StringUtils.isNotBlank(query.getCustomerName()), StockRecord::getCustomerName, query.getCustomerName())
@@ -115,3 +117,4 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }
+

@@ -13,7 +13,9 @@ public class StockOrderItem extends BaseEntity {
 
     private Long goodsId;
 
-    private String sku;
+    private Long skuId;
+
+    private String skuCode;
 
     private String goodsName;
 
@@ -42,6 +44,8 @@ public class StockOrderItem extends BaseEntity {
     private Integer afterQty;
 
     private BigDecimal price;
+    private String currency;
 
     private String remark;
 }
+

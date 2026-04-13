@@ -43,7 +43,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     public StockOrderItemVO get(Long id) {
         StockOrderItem entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("数据不存在");
+            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
         }
         StockOrderItemVO vo = new StockOrderItemVO();
         BeanUtils.copyProperties(entity, vo);
@@ -53,7 +53,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     @Override
     public Boolean update(UpdateStockOrderItemDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("数据不存在");
+            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
         }
         StockOrderItem entity = new StockOrderItem();
         BeanUtils.copyProperties(dto, entity);
@@ -64,7 +64,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("数据不存在");
+            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
         }
         return this.lambdaUpdate().eq(StockOrderItem::getId, id).set(StockOrderItem::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
@@ -76,7 +76,8 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
         wrapper.eq(StockOrderItem::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
                 .eq(query.getOrderId() != null, StockOrderItem::getOrderId, query.getOrderId())
                 .eq(query.getGoodsId() != null, StockOrderItem::getGoodsId, query.getGoodsId())
-                .like(StringUtils.isNotBlank(query.getSku()), StockOrderItem::getSku, query.getSku())
+                .eq(query.getSkuId() != null, StockOrderItem::getSkuId, query.getSkuId())
+                .like(StringUtils.isNotBlank(query.getSku()), StockOrderItem::getSkuCode, query.getSku())
                 .like(StringUtils.isNotBlank(query.getGoodsName()), StockOrderItem::getGoodsName, query.getGoodsName())
                 .like(StringUtils.isNotBlank(query.getEnglishName()), StockOrderItem::getEnglishName, query.getEnglishName())
                 .eq(query.getBrandId() != null, StockOrderItem::getBrandId, query.getBrandId())
@@ -91,6 +92,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
                 .eq(query.getChangeQty() != null, StockOrderItem::getChangeQty, query.getChangeQty())
                 .eq(query.getAfterQty() != null, StockOrderItem::getAfterQty, query.getAfterQty())
                 .eq(query.getPrice() != null, StockOrderItem::getPrice, query.getPrice())
+                .eq(StringUtils.isNotBlank(query.getCurrency()), StockOrderItem::getCurrency, query.getCurrency())
                 .like(StringUtils.isNotBlank(query.getRemark()), StockOrderItem::getRemark, query.getRemark());
         PageSortUtil.applyTimeSort(wrapper, query, StockOrderItem::getCreateTime, StockOrderItem::getUpdateTime);
         Page<StockOrderItem> resultPage =     stockOrderItemMapper.selectPage(page, wrapper);
@@ -102,3 +104,4 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
         return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 }
+

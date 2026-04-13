@@ -11,11 +11,14 @@ public class CreatePriceRecordDTO {
     private Long goodsId;
     private String goodsName;
     private String englishName;
-    private String sku;
+    private Long skuId;
+    private String skuCode;
     private BigDecimal oldPrice;
     private BigDecimal newPrice;
+    private String currency;
     private BigDecimal discount;
     private LocalDateTime priceUpdateTime;
     private Long operatorId;
     private String operatorName;
 }
+

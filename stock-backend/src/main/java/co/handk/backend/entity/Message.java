@@ -13,7 +13,7 @@ public class Message extends BaseEntity {
 
     private String message;
 
-    private Long sourceId;
+    private Integer sourceId;
 
     private Integer isRead;
 

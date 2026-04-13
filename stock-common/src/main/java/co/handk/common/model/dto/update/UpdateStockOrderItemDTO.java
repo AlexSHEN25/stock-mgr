@@ -7,11 +7,12 @@ import lombok.Data;
 
 @Data
 public class UpdateStockOrderItemDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "ID荳崎・荳ｺ遨ｺ")
     private Long id;
 
     private Long orderId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -27,5 +28,7 @@ public class UpdateStockOrderItemDTO {
     private Integer changeQty;
     private Integer afterQty;
     private BigDecimal price;
+    private String currency;
     private String remark;
 }
+

@@ -11,7 +11,9 @@ public class StockOrder extends BaseEntity {
 
     private String orderNo;
 
-    private Integer type;
+    private Integer orderType;
+
+    private Integer typeId;
 
     private Long warehouseId;
 
@@ -38,6 +40,8 @@ public class StockOrder extends BaseEntity {
     private String approverName;
 
     private LocalDateTime approveTime;
+
+    private Long version;
 
     private LocalDateTime finishTime;
 }

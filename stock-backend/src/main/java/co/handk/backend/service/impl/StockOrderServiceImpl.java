@@ -75,7 +75,8 @@ public class StockOrderServiceImpl extends ServiceImpl<StockOrderMapper, StockOr
         LambdaQueryWrapper<StockOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockOrder::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
                 .like(StringUtils.isNotBlank(query.getOrderNo()), StockOrder::getOrderNo, query.getOrderNo())
-                .eq(query.getType() != null, StockOrder::getType, query.getType())
+                .eq(query.getType() != null, StockOrder::getOrderType, query.getType())
+                .eq(query.getTypeId() != null, StockOrder::getTypeId, query.getTypeId())
                 .eq(query.getWarehouseId() != null, StockOrder::getWarehouseId, query.getWarehouseId())
                 .eq(query.getSourceType() != null, StockOrder::getSourceType, query.getSourceType())
                 .eq(query.getSourceId() != null, StockOrder::getSourceId, query.getSourceId())
@@ -89,6 +90,7 @@ public class StockOrderServiceImpl extends ServiceImpl<StockOrderMapper, StockOr
                 .eq(query.getApproverId() != null, StockOrder::getApproverId, query.getApproverId())
                 .like(StringUtils.isNotBlank(query.getApproverName()), StockOrder::getApproverName, query.getApproverName())
                 .eq(query.getApproveTime() != null, StockOrder::getApproveTime, query.getApproveTime())
+                .eq(query.getVersion() != null, StockOrder::getVersion, query.getVersion())
                 .eq(query.getFinishTime() != null, StockOrder::getFinishTime, query.getFinishTime());
         PageSortUtil.applyTimeSort(wrapper, query, StockOrder::getCreateTime, StockOrder::getUpdateTime);
         Page<StockOrder> resultPage =     stockOrderMapper.selectPage(page, wrapper);

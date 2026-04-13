@@ -13,6 +13,7 @@ public class CreateStockRecordDTO {
     private Long orderItemId;
     private Long stockId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -31,6 +32,7 @@ public class CreateStockRecordDTO {
     private Integer type;
     private Integer sourceType;
     private BigDecimal price;
+    private String currency;
     private LocalDateTime priceUpdateTime;
     private Long customerId;
     private String customerName;
@@ -40,3 +42,4 @@ public class CreateStockRecordDTO {
     private String operatorName;
     private String remark;
 }
+

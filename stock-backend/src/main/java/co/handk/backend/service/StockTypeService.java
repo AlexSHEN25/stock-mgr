@@ -1,5 +1,5 @@
 package co.handk.backend.service;
-import co.handk.backend.entity.GoodsType;
+import co.handk.backend.entity.StockType;
 import co.handk.common.model.dto.create.CreateGoodsTypeDTO;
 import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
 import co.handk.common.model.vo.GoodsTypeVO;
@@ -11,7 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import jakarta.validation.constraints.NotNull;
 @Service
 @Validated
-public interface GoodsTypeService extends IService<GoodsType> {
+public interface StockTypeService extends IService<StockType> {
     Boolean create(@NotNull CreateGoodsTypeDTO dto);
     GoodsTypeVO get(@NotNull Long id);
     Boolean update(@NotNull UpdateGoodsTypeDTO dto);

@@ -8,7 +8,7 @@ public class CreateMessageDTO {
     private Integer type;
     private Long userId;
     private String message;
-    private Long sourceId;
+    private Integer sourceId;
     private Integer isRead;
     private Integer state;
 }

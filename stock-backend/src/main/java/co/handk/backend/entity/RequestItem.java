@@ -13,7 +13,9 @@ public class RequestItem extends BaseEntity {
 
     private Long goodsId;
 
-    private String sku;
+    private Long skuId;
+
+    private String skuCode;
 
     private String goodsName;
 
@@ -38,6 +40,7 @@ public class RequestItem extends BaseEntity {
     private Long warehouseId;
 
     private BigDecimal price;
+    private String currency;
 
     private BigDecimal discount;
 
@@ -51,3 +54,4 @@ public class RequestItem extends BaseEntity {
 
     private String remark;
 }
+

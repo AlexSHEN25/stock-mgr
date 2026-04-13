@@ -11,6 +11,7 @@ public class StockOrderQueryDTO extends PageQuery {
 
     private String orderNo;
     private Integer type;
+    private Integer typeId;
     private Long warehouseId;
     private Integer sourceType;
     private Long sourceId;
@@ -24,5 +25,6 @@ public class StockOrderQueryDTO extends PageQuery {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
+    private Long version;
     private LocalDateTime finishTime;
 }

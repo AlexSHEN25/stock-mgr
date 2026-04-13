@@ -8,13 +8,17 @@ import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class Stock extends BaseEntity{
+public class Stock extends BaseEntity {
 
     private Integer goodsId;
 
     private String goodsName;
 
-    private String sku;
+    private Long skuId;
+
+    private String skuCode;
+
+    private Integer typeId;
 
     private Integer warehouseId;
 
@@ -23,6 +27,7 @@ public class Stock extends BaseEntity{
     private Integer lockQty;
 
     private BigDecimal price;
+    private String currency;
 
     private LocalDateTime priceUpdateTime;
 
@@ -30,3 +35,4 @@ public class Stock extends BaseEntity{
 
     private Long version;
 }
+

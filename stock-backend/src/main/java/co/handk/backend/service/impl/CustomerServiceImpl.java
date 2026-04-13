@@ -84,6 +84,8 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
                 .like(StringUtils.isNotBlank(query.getCity()), Customer::getCity, query.getCity())
                 .like(StringUtils.isNotBlank(query.getAddress()), Customer::getAddress, query.getAddress())
                 .eq(query.getLevelId() != null, Customer::getLevelId, query.getLevelId())
+                .eq(query.getOwnerUserId() != null, Customer::getOwnerUserId, query.getOwnerUserId())
+                .eq(query.getOwnerDeptId() != null, Customer::getOwnerDeptId, query.getOwnerDeptId())
                 .like(StringUtils.isNotBlank(query.getRemark()), Customer::getRemark, query.getRemark())
                 .eq(query.getStatus() != null, Customer::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
         PageSortUtil.applyTimeSort(wrapper, query, Customer::getCreateTime, Customer::getUpdateTime);

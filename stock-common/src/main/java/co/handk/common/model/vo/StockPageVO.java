@@ -6,36 +6,42 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 库存分页返回对象
+ * 蠎灘ｭ伜・鬘ｵ霑泌屓蟇ｹ雎｡
  */
 @Data
 public class StockPageVO extends BaseVO {
-    private Long goodsId;
+    private Integer goodsId;
 
     private String goodsName;
 
+    private Long skuId;
+
     private String sku;
 
-    private Long warehouseId;
+    private Integer typeId;
+
+    private Integer warehouseId;
 
     /**
-     * 实际库存
+     * 螳樣刔蠎灘ｭ・
      */
     private Integer currentQty;
 
     /**
-     * 锁定库存
+     * 髞∝ｮ壼ｺ灘ｭ・
      */
     private Integer lockQty;
 
     /**
-     * 可用库存 = 实际库存 - 锁定库存
+     * 蜿ｯ逕ｨ蠎灘ｭ・= 螳樣刔蠎灘ｭ・- 髞∝ｮ壼ｺ灘ｭ・
      */
     private Integer availableQty;
 
     private BigDecimal price;
+    private String currency;
 
     private LocalDateTime priceUpdateTime;
 
     private Integer status;
 }
+

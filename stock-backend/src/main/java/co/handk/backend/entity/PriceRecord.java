@@ -16,11 +16,14 @@ public class PriceRecord extends BaseEntity {
 
     private String englishName;
 
-    private String sku;
+    private Long skuId;
+
+    private String skuCode;
 
     private BigDecimal oldPrice;
 
     private BigDecimal newPrice;
+    private String currency;
 
     private BigDecimal discount;
 
@@ -30,3 +33,4 @@ public class PriceRecord extends BaseEntity {
 
     private String operatorName;
 }
+

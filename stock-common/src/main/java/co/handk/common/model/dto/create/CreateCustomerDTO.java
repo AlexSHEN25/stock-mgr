@@ -17,6 +17,8 @@ public class CreateCustomerDTO {
     private String city;
     private String address;
     private Integer levelId;
+    private Long ownerUserId;
+    private Long ownerDeptId;
     private String remark;
     private StatusEnum status;
 }

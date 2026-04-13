@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 public class StockOrderItemVO extends BaseVO {
     private Long orderId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -23,5 +24,7 @@ public class StockOrderItemVO extends BaseVO {
     private Integer changeQty;
     private Integer afterQty;
     private BigDecimal price;
+    private String currency;
     private String remark;
 }
+

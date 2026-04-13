@@ -11,6 +11,7 @@ public class StockOrderItemQueryDTO extends PageQuery {
 
     private Long orderId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -26,5 +27,7 @@ public class StockOrderItemQueryDTO extends PageQuery {
     private Integer changeQty;
     private Integer afterQty;
     private BigDecimal price;
+    private String currency;
     private String remark;
 }
+

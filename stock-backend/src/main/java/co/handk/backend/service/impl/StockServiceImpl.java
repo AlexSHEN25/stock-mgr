@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 库存 Service 实现
+ * 蠎灘ｭ・Service 螳樒鴫
  */
 @Service
 @RequiredArgsConstructor
@@ -48,7 +48,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     public StockVO get(Long id) {
         Stock entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("库存不存在");
+            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
         }
         StockVO vo = new StockVO();
         BeanUtils.copyProperties(entity, vo);
@@ -58,7 +58,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     @Override
     public Boolean update(UpdateStockDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("库存不存在");
+            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
         }
         Stock entity = new Stock();
         BeanUtils.copyProperties(dto, entity);
@@ -69,7 +69,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("库存不存在");
+            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
         }
         return this.lambdaUpdate().eq(Stock::getId, id).set(Stock::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
@@ -77,22 +77,25 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     @Override
     public PageResult<StockPageVO> pageQuery(StockQueryDTO dto) {
 
-        // 1. 构建分页对象
+        // 1. 譫・ｻｺ蛻・｡ｵ蟇ｹ雎｡
         Page<Stock> page = new Page<>(dto.getPageNum(), dto.getPageSize());
 
-        // 2. 构建查询条件
+        // 2. 譫・ｻｺ譟･隸｢譚｡莉ｶ
         LambdaQueryWrapper<Stock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getWarehouseId() != null, Stock::getWarehouseId, dto.getWarehouseId())
                 .eq(dto.getStatus() != null, Stock::getStatus, (dto.getStatus() == null ? null : dto.getStatus().getCode()))
+                .eq(dto.getSkuId() != null, Stock::getSkuId, dto.getSkuId())
+                .eq(dto.getTypeId() != null, Stock::getTypeId, dto.getTypeId())
+                .eq(StringUtils.isNotBlank(dto.getCurrency()), Stock::getCurrency, dto.getCurrency())
                 .like(StringUtils.isNotBlank(dto.getGoodsName()), Stock::getGoodsName, dto.getGoodsName())
-                .like(StringUtils.isNotBlank(dto.getSku()), Stock::getSku, dto.getSku())
+                .like(StringUtils.isNotBlank(dto.getSkuCode()), Stock::getSkuCode, dto.getSkuCode())
                 .eq(Stock::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode());
         PageSortUtil.applyTimeSort(wrapper, dto, Stock::getCreateTime, Stock::getUpdateTime);
 
-        // 3. 执行分页查询
+        // 3. 謇ｧ陦悟・鬘ｵ譟･隸｢
         Page<Stock> resultPage = stockMapper.selectPage(page, wrapper);
 
-        // 4. 转换为 VO
+        // 4. 霓ｬ謐｢荳ｺ VO
         List<StockPageVO> records = resultPage.getRecords().stream().map(stock -> {
             StockPageVO vo = new StockPageVO();
             BeanUtils.copyProperties(stock, vo);
@@ -104,7 +107,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
             return vo;
         }).collect(Collectors.toList());
 
-        // 5. 返回统一分页结果
+        // 5. 霑泌屓扈滉ｸ蛻・｡ｵ扈捺棡
         return PageResult.build(resultPage.getTotal(), dto.getPageNum(), dto.getPageSize(), records);
 
     }
@@ -122,13 +125,14 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     private Boolean applyStockRecordQty(Long stockRecordId, boolean undo) {
         StockRecord record = stockRecordMapper.selectById(stockRecordId);
         if (record == null) {
-            throw new RuntimeException("库存流水不存在");
+            throw new RuntimeException("蠎灘ｭ俶ｵ∵ｰｴ荳榊ｭ伜惠");
         }
         Stock stock = this.getById(record.getStockId());
         if (stock == null) {
-            throw new RuntimeException("库存不存在");
+            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
         }
         stock.setCurrentQty(undo ? record.getBeforeQty() : record.getAfterQty());
         return this.updateById(stock);
     }
 }
+

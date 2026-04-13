@@ -20,7 +20,9 @@ public class StockRecord extends BaseEntity {
 
     private Long goodsId;
 
-    private String sku;
+    private Long skuId;
+
+    private String skuCode;
 
     private String goodsName;
 
@@ -50,11 +52,12 @@ public class StockRecord extends BaseEntity {
 
     private Integer afterQty;
 
-    private Integer type;
+    private Integer orderType;
 
     private Integer sourceType;
 
     private BigDecimal price;
+    private String currency;
 
     private LocalDateTime priceUpdateTime;
 
@@ -72,3 +75,4 @@ public class StockRecord extends BaseEntity {
 
     private String remark;
 }
+

@@ -9,6 +9,7 @@ public class CreateRequestItemDTO {
 
     private Long requestId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -22,6 +23,7 @@ public class CreateRequestItemDTO {
     private String makerName;
     private Long warehouseId;
     private BigDecimal price;
+    private String currency;
     private BigDecimal discount;
     private Integer requestQty;
     private Integer approveQty;
@@ -29,3 +31,4 @@ public class CreateRequestItemDTO {
     private Long stockRecordId;
     private String remark;
 }
+

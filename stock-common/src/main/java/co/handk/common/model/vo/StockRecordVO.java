@@ -12,6 +12,7 @@ public class StockRecordVO extends BaseVO {
     private Long orderItemId;
     private Long stockId;
     private Long goodsId;
+    private Long skuId;
     private String sku;
     private String goodsName;
     private String englishName;
@@ -30,6 +31,7 @@ public class StockRecordVO extends BaseVO {
     private Integer type;
     private Integer sourceType;
     private BigDecimal price;
+    private String currency;
     private LocalDateTime priceUpdateTime;
     private Long customerId;
     private String customerName;
@@ -39,3 +41,4 @@ public class StockRecordVO extends BaseVO {
     private String operatorName;
     private String remark;
 }
+

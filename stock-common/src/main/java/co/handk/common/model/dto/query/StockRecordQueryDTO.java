@@ -15,7 +15,8 @@ public class StockRecordQueryDTO extends PageQuery {
     private Long orderItemId;
     private Long stockId;
     private Long goodsId;
-    private String sku;
+    private Long skuId;
+    private String skuCode;
     private String goodsName;
     private String englishName;
     private Long brandId;
@@ -30,9 +31,9 @@ public class StockRecordQueryDTO extends PageQuery {
     private Integer beforeQty;
     private Integer changeQty;
     private Integer afterQty;
-    private Integer type;
     private Integer sourceType;
     private BigDecimal price;
+    private String currency;
     private LocalDateTime priceUpdateTime;
     private Long customerId;
     private String customerName;
@@ -42,3 +43,4 @@ public class StockRecordQueryDTO extends PageQuery {
     private String operatorName;
     private String remark;
 }
+

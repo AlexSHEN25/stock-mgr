@@ -9,12 +9,16 @@ import java.time.LocalDateTime;
 public class StockVO extends BaseVO {
     private Integer goodsId;
     private String goodsName;
+    private Long skuId;
     private String sku;
+    private Integer typeId;
     private Integer warehouseId;
     private Integer currentQty;
     private Integer lockQty;
     private BigDecimal price;
+    private String currency;
     private LocalDateTime priceUpdateTime;
     private Integer status;
     private Long version;
 }
+

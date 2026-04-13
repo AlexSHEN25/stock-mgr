@@ -9,7 +9,8 @@ public class CreateStockOrderItemDTO {
 
     private Long orderId;
     private Long goodsId;
-    private String sku;
+    private Long skuId;
+    private String skuCode;
     private String goodsName;
     private String englishName;
     private Long brandId;
@@ -24,5 +25,7 @@ public class CreateStockOrderItemDTO {
     private Integer changeQty;
     private Integer afterQty;
     private BigDecimal price;
+    private String currency;
     private String remark;
 }
+
