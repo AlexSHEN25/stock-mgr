@@ -8,6 +8,7 @@ import co.handk.backend.entity.StockRecord;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.StockService;
+import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
@@ -48,7 +49,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     public StockVO get(Long id) {
         Stock entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         StockVO vo = new StockVO();
         BeanUtils.copyProperties(entity, vo);
@@ -58,7 +59,7 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     @Override
     public Boolean update(UpdateStockDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         Stock entity = new Stock();
         BeanUtils.copyProperties(dto, entity);
@@ -69,18 +70,16 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Stock::getId, id).set(Stock::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
+        return this.lambdaUpdate().eq(Stock::getId, id).set(Stock::getDeleted, DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<StockPageVO> pageQuery(StockQueryDTO dto) {
 
-        // 1. 譫・ｻｺ蛻・｡ｵ蟇ｹ雎｡
         Page<Stock> page = new Page<>(dto.getPageNum(), dto.getPageSize());
 
-        // 2. 譫・ｻｺ譟･隸｢譚｡莉ｶ
         LambdaQueryWrapper<Stock> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(dto.getWarehouseId() != null, Stock::getWarehouseId, dto.getWarehouseId())
                 .eq(dto.getStatus() != null, Stock::getStatus, (dto.getStatus() == null ? null : dto.getStatus().getCode()))
@@ -121,11 +120,11 @@ public class StockServiceImpl extends ServiceImpl<StockMapper, Stock> implements
     private Boolean applyStockRecordQty(Long stockRecordId, boolean undo) {
         StockRecord record = stockRecordMapper.selectById(stockRecordId);
         if (record == null) {
-            throw new RuntimeException("蠎灘ｭ俶ｵ∵ｰｴ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         Stock stock = this.getById(record.getStockId());
         if (stock == null) {
-            throw new RuntimeException("蠎灘ｭ倅ｸ榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         stock.setCurrentQty(undo ? record.getBeforeQty() : record.getAfterQty());
         return this.updateById(stock);
