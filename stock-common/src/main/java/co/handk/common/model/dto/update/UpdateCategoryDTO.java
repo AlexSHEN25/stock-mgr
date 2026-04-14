@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class UpdateCategoryDTO {
-    @NotNull(message = "ID荳崎・荳ｺ遨ｺ")
+    @NotNull(message = "ID不能为空")
     private Long id;
 
     private String name;

@@ -8,7 +8,7 @@ import lombok.Data;
 
 @Data
 public class UpdateStockRecordDTO {
-    @NotNull(message = "ID荳崎・荳ｺ遨ｺ")
+    @NotNull(message = "ID不能为空")
     private Long id;
 
     private String bizNo;
