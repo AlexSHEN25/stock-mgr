@@ -27,15 +27,14 @@ public final class EnumFieldMapper {
             return;
         }
         Object value = invoke(getter, source);
-        if (!(value instanceof StatusEnum)) {
+        if (!(value instanceof StatusEnum status)) {
             return;
         }
-        StatusEnum status = (StatusEnum) value;
         Method setter = findIntegerSetter(target.getClass(), "setStatus");
         if (setter == null) {
             return;
         }
-        invoke(setter, target, status == null ? null : status.getCode());
+        invoke(setter, target, status.getCode());
     }
 
     private static void mapDeleted(Object source, Object target) {
@@ -44,15 +43,14 @@ public final class EnumFieldMapper {
             return;
         }
         Object value = invoke(getter, source);
-        if (!(value instanceof DeleteEnum)) {
+        if (!(value instanceof DeleteEnum deleted)) {
             return;
         }
-        DeleteEnum deleted = (DeleteEnum) value;
         Method setter = findIntegerSetter(target.getClass(), "setDeleted");
         if (setter == null) {
             return;
         }
-        invoke(setter, target, deleted == null ? null : deleted.getCode());
+        invoke(setter, target, deleted.getCode());
     }
 
     private static Method findMethod(Class<?> type, String name) {
