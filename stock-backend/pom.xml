@@ -20,7 +20,7 @@
 
         <dependency>
             <groupId>co.handk</groupId>
-            <artifactId>stock-api</artifactId>
+            <artifactId>stock-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 

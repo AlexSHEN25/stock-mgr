@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.GoodsTypeApi;
 import co.handk.backend.service.StockTypeService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsTypeDTO;
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/goodsType")
-public class GoodsTypeController implements GoodsTypeApi {
+public class GoodsTypeController {
     @Autowired
     private StockTypeService goodsTypeService;
 

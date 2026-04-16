@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.WarehouseApi;
 import co.handk.common.model.vo.WarehouseVO;
 import co.handk.common.model.dto.create.CreateWarehouseDTO;
 import co.handk.common.model.dto.update.UpdateWarehouseDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/warehouse")
-public class WarehouseController implements WarehouseApi {
+public class WarehouseController {
     @Autowired
     private WarehouseService warehouseService;
     @PostMapping

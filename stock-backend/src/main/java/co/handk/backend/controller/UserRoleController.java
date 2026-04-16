@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.UserRoleApi;
 import co.handk.common.model.vo.UserRoleVO;
 import co.handk.common.model.dto.create.CreateUserRoleDTO;
 import co.handk.common.model.dto.update.UpdateUserRoleDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/userRole")
-public class UserRoleController implements UserRoleApi {
+public class UserRoleController {
     @Autowired
     private UserRoleService userRoleService;
     @PostMapping

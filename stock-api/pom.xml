@@ -15,7 +15,7 @@
         <!-- 依赖 DTO -->
         <dependency>
             <groupId>co.handk</groupId>
-            <artifactId>stock-common</artifactId>
+            <artifactId>stock-backend</artifactId>
             <version>${project.version}</version>
         </dependency>
 

@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.BrandApi;
 import co.handk.common.model.vo.BrandVO;
 import co.handk.common.model.dto.create.CreateBrandDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/brand")
-public class BrandController implements BrandApi {
+public class BrandController{
     @Autowired
     private BrandService brandService;
     @PostMapping

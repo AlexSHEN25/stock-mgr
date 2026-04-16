@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.GoodsSkuApi;
 import co.handk.backend.service.GoodsSkuService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsSkuDTO;
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/goodsSku")
-public class GoodsSkuController implements GoodsSkuApi {
+public class GoodsSkuController {
     @Autowired
     private GoodsSkuService goodsSkuService;
 

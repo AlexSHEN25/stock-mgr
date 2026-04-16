@@ -26,6 +26,7 @@ import co.handk.common.model.vo.UserVO;
 import co.handk.common.util.PasswordUtil;
 import co.handk.common.util.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
@@ -61,7 +62,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         String salt = PasswordUtil.generateSalt();
         entity.setSalt(salt);
         entity.setPassword(PasswordUtil.encrypt(dto.getPassword(), salt));
-        entity.setId(null);
         return this.save(entity);
     }
 
@@ -169,6 +169,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
     }
 
+
     private void validateDeptExists(Long deptId) {
         Dept dept = deptMapper.selectById(deptId);
         if (Objects.isNull(dept)) {
@@ -193,7 +194,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private UserVO toUserVO(User user, Map<Long, String> deptNameMap) {
         UserVO vo = new UserVO();
         BeanUtils.copyProperties(user, vo);
-        vo.setDeptName(deptNameMap.get(user.getDeptId()));
         return vo;
     }
 }

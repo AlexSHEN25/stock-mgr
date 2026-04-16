@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.BrandMakerRelationApi;
 import co.handk.backend.service.BrandMakerRelationService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateBrandMakerRelationDTO;
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/brandMakerRelation")
-public class BrandMakerRelationController implements BrandMakerRelationApi {
+public class BrandMakerRelationController{
     @Autowired
     private BrandMakerRelationService brandMakerRelationService;
 

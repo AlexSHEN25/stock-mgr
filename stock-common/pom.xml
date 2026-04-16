@@ -12,6 +12,13 @@
     <packaging>jar</packaging>
 
     <dependencies>
+
+        <dependency>
+            <groupId>co.handk</groupId>
+            <artifactId>stock-schema</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- 可选 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

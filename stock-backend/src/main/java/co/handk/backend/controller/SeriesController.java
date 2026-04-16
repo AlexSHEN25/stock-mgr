@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.SeriesApi;
 import co.handk.common.model.vo.SeriesVO;
 import co.handk.common.model.dto.create.CreateSeriesDTO;
 import co.handk.common.model.dto.update.UpdateSeriesDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/series")
-public class SeriesController implements SeriesApi {
+public class SeriesController {
     @Autowired
     private SeriesService seriesService;
     @PostMapping

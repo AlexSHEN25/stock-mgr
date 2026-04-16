@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.ConfigApi;
 import co.handk.common.model.vo.ConfigVO;
 import co.handk.common.model.dto.create.CreateConfigDTO;
 import co.handk.common.model.dto.update.UpdateConfigDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/config")
-public class ConfigController implements ConfigApi {
+public class ConfigController {
     @Autowired
     private ConfigService configService;
     @PostMapping
