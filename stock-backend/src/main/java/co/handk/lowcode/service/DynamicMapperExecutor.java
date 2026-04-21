@@ -40,7 +40,7 @@ public class DynamicMapperExecutor {
 
         Page<Object> page = new Page<>(pageNo, pageSize);
 
-        IPage<Object> result = mapper.selectPage(page, (Wrapper) wrapper);
+        IPage<Object> result = mapper.selectPage(page,  wrapper);
 
         return PageResult.build(
                 result.getTotal(),

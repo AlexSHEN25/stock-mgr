@@ -5,6 +5,7 @@ import co.handk.backend.mapper.GoodsMapper;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.util.EnumFieldMapper;
 import co.handk.backend.util.PageSortUtil;
+import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsDTO;
 import co.handk.common.model.dto.query.GoodsQueryDTO;
@@ -63,14 +64,14 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Goods::getId, id).set(Goods::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
+        return this.lambdaUpdate().eq(Goods::getId, id).set(Goods::getDeleted, DeleteEnum.DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<GoodsVO> pageQuery(GoodsQueryDTO query) {
         Page<Goods> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Goods> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Goods::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+        wrapper.eq(Goods::getDeleted, DeleteEnum.UNDELETED.getCode())
                 .like(StringUtils.isNotBlank(query.getName()), Goods::getName, query.getName())
                 .like(StringUtils.isNotBlank(query.getEnglishName()), Goods::getEnglishName, query.getEnglishName())
                 .like(StringUtils.isNotBlank(query.getDescription()), Goods::getDescription, query.getDescription())
