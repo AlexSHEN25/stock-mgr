@@ -586,7 +586,8 @@ create TABLE `t_request_item`
     `maker_name`      VARCHAR(255) DEFAULT NULL COMMENT '厂家名称',
 
     `warehouse_id`  INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
-    `price`         DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT '单价',
+    `price`         DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT '单价',t_goods
+    `exchange_rate`  DECIMAL(18,4)  NOT NULL DEFAULT 1.0000 COMMENT '汇率',
     `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `discount`      DECIMAL(5,4)  NOT NULL DEFAULT 1.0000 COMMENT '折扣率',
     `request_qty`   INT NOT NULL DEFAULT 0 COMMENT '申请数量',
