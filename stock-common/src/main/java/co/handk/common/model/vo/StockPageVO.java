@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 蠎灘ｭ伜・鬘ｵ霑泌屓蟇ｹ雎｡
+ * 库存分页展示对象
  */
 @Data
 public class StockPageVO extends BaseVO {
@@ -23,17 +23,17 @@ public class StockPageVO extends BaseVO {
     private Integer warehouseId;
 
     /**
-     * 螳樣刔蠎灘ｭ・
+     * 当前库存
      */
     private Integer currentQty;
 
     /**
-     * 髞∝ｮ壼ｺ灘ｭ・
+     * 锁定库存
      */
     private Integer lockQty;
 
     /**
-     * 蜿ｯ逕ｨ蠎灘ｭ・= 螳樣刔蠎灘ｭ・- 髞∝ｮ壼ｺ灘ｭ・
+     * 可用库存 = 当前库存 - 锁定库存
      */
     private Integer availableQty;
 

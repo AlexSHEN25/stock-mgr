@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.SeriesVO;
-import co.handk.common.model.dto.create.CreateSeriesDTO;
-import co.handk.common.model.dto.update.UpdateSeriesDTO;
-import co.handk.common.model.dto.query.SeriesQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateSeriesDTO;
+import co.handk.common.model.dto.query.SeriesQueryDTO;
+import co.handk.common.model.dto.update.UpdateSeriesDTO;
+import co.handk.common.model.vo.SeriesVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/series")
 public interface SeriesApi {

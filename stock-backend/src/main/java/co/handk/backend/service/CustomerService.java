@@ -1,14 +1,16 @@
 package co.handk.backend.service;
+
 import co.handk.backend.entity.Customer;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateCustomerDTO;
+import co.handk.common.model.dto.query.CustomerQueryDTO;
 import co.handk.common.model.dto.update.UpdateCustomerDTO;
 import co.handk.common.model.vo.CustomerVO;
-import co.handk.common.model.dto.query.CustomerQueryDTO;
-import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import jakarta.validation.constraints.NotNull;
+
 @Service
 @Validated
 public interface CustomerService extends IService<Customer> {

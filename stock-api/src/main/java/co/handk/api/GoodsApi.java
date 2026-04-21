@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.GoodsVO;
-import co.handk.common.model.dto.create.CreateGoodsDTO;
-import co.handk.common.model.dto.update.UpdateGoodsDTO;
-import co.handk.common.model.dto.query.GoodsQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateGoodsDTO;
+import co.handk.common.model.dto.query.GoodsQueryDTO;
+import co.handk.common.model.dto.update.UpdateGoodsDTO;
+import co.handk.common.model.vo.GoodsVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/goods")
 public interface GoodsApi {

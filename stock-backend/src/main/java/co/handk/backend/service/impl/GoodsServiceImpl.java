@@ -1,24 +1,22 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.entity.Goods;
-import co.handk.common.model.dto.create.CreateGoodsDTO;
-import co.handk.common.model.dto.update.UpdateGoodsDTO;
-import co.handk.common.model.vo.GoodsVO;
 import co.handk.backend.mapper.GoodsMapper;
 import co.handk.backend.service.GoodsService;
-import co.handk.common.model.dto.query.GoodsQueryDTO;
+import co.handk.backend.util.EnumFieldMapper;
+import co.handk.backend.util.PageSortUtil;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.create.CreateGoodsDTO;
+import co.handk.common.model.dto.query.GoodsQueryDTO;
+import co.handk.common.model.dto.update.UpdateGoodsDTO;
+import co.handk.common.model.vo.GoodsVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;

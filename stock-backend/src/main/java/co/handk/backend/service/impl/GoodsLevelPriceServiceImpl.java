@@ -40,7 +40,7 @@ public class GoodsLevelPriceServiceImpl extends ServiceImpl<GoodsLevelPriceMappe
     public GoodsLevelPriceVO get(Long id) {
         GoodsLevelPrice entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         GoodsLevelPriceVO vo = new GoodsLevelPriceVO();
         BeanUtils.copyProperties(entity, vo);
@@ -50,7 +50,7 @@ public class GoodsLevelPriceServiceImpl extends ServiceImpl<GoodsLevelPriceMappe
     @Override
     public Boolean update(UpdateGoodsLevelPriceDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         GoodsLevelPrice entity = new GoodsLevelPrice();
         BeanUtils.copyProperties(dto, entity);
@@ -61,7 +61,7 @@ public class GoodsLevelPriceServiceImpl extends ServiceImpl<GoodsLevelPriceMappe
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(GoodsLevelPrice::getId, id)
                 .set(GoodsLevelPrice::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();

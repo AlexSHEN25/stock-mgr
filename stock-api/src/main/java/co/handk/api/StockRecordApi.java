@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.StockRecordVO;
-import co.handk.common.model.dto.create.CreateStockRecordDTO;
-import co.handk.common.model.dto.update.UpdateStockRecordDTO;
-import co.handk.common.model.dto.query.StockRecordQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateStockRecordDTO;
+import co.handk.common.model.dto.query.StockRecordQueryDTO;
+import co.handk.common.model.dto.update.UpdateStockRecordDTO;
+import co.handk.common.model.vo.StockRecordVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/stockRecord")
 public interface StockRecordApi {

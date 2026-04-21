@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class UpdateGoodsSkuDTO {
-    @NotNull(message = "ID闕ｳ蟠弱・闕ｳ・ｺ驕ｨ・ｺ")
+    @NotNull(message = "ID不能为空")
     private Long id;
 
     private Long goodsId;

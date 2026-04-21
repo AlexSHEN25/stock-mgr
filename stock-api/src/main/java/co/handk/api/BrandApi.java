@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.BrandVO;
-import co.handk.common.model.dto.create.CreateBrandDTO;
-import co.handk.common.model.dto.update.UpdateBrandDTO;
-import co.handk.common.model.dto.query.BrandQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateBrandDTO;
+import co.handk.common.model.dto.query.BrandQueryDTO;
+import co.handk.common.model.dto.update.UpdateBrandDTO;
+import co.handk.common.model.vo.BrandVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/brand")
 public interface BrandApi {

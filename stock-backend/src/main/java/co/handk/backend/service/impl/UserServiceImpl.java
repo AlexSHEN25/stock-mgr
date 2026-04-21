@@ -1,24 +1,22 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.context.UserContext;
 import co.handk.backend.entity.Dept;
 import co.handk.backend.entity.User;
 import co.handk.backend.mapper.DeptMapper;
 import co.handk.backend.mapper.UserMapper;
 import co.handk.backend.service.UserService;
+import co.handk.backend.util.EnumFieldMapper;
+import co.handk.backend.util.PageSortUtil;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.RedisKey;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
-import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.dto.create.CreateUserDTO;
+import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.dto.update.UpdateUserDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
@@ -26,19 +24,14 @@ import co.handk.common.model.vo.UserVO;
 import co.handk.common.util.PasswordUtil;
 import co.handk.common.util.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 

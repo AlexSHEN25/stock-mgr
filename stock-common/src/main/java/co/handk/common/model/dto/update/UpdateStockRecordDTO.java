@@ -1,10 +1,10 @@
 package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
-import lombok.Data;
 
 @Data
 public class UpdateStockRecordDTO {

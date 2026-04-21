@@ -1,8 +1,9 @@
 package co.handk.common.model.dto.query;
 
-import java.time.LocalDateTime;
-import lombok.Data;
 import co.handk.common.model.PageQuery;
+import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class RequestFormQueryDTO extends PageQuery {

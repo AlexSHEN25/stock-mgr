@@ -64,8 +64,11 @@ public class MapperRegistry {
     }
 
     private Class<?> resolveEntityType(Object mapper) {
-        Class<?> targetClass = AopUtils.getTargetClass(mapper);
-        return findEntityType(targetClass);
+        Class<?> entity = findEntityType(AopUtils.getTargetClass(mapper));
+        if (entity != null) {
+            return entity;
+        }
+        return findEntityType(mapper.getClass());
     }
 
     private Class<?> findEntityType(Class<?> clazz) {
@@ -86,21 +89,26 @@ public class MapperRegistry {
 
     private Class<?> extractEntity(Type type) {
 
-        if (!(type instanceof ParameterizedType pt)) {
-            return null;
+        if (type instanceof Class<?> clazz) {
+            return findEntityType(clazz);
         }
 
-        if (!(pt.getRawType() instanceof Class<?> rawClass)) {
-            return null;
-        }
+        if (type instanceof ParameterizedType pt) {
 
-        if (BaseMapper.class.isAssignableFrom(rawClass)) {
-
-            Type entityType = pt.getActualTypeArguments()[0];
-
-            if (entityType instanceof Class<?>) {
-                return (Class<?>) entityType;
+            if (!(pt.getRawType() instanceof Class<?> rawClass)) {
+                return null;
             }
+
+            if (BaseMapper.class.isAssignableFrom(rawClass)) {
+
+                Type entityType = pt.getActualTypeArguments()[0];
+
+                if (entityType instanceof Class<?>) {
+                    return (Class<?>) entityType;
+                }
+            }
+
+            return findEntityType(rawClass);
         }
 
         return null;

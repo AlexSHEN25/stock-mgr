@@ -40,7 +40,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     public CategoryVO get(Long id) {
         Category entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         CategoryVO vo = new CategoryVO();
         BeanUtils.copyProperties(entity, vo);
@@ -50,7 +50,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     @Override
     public Boolean update(UpdateCategoryDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         Category entity = new Category();
         BeanUtils.copyProperties(dto, entity);
@@ -61,7 +61,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(Category::getId, id)
                 .set(Category::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();

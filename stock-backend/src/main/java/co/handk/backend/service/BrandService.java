@@ -1,14 +1,16 @@
 package co.handk.backend.service;
+
 import co.handk.backend.entity.Brand;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateBrandDTO;
+import co.handk.common.model.dto.query.BrandQueryDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
 import co.handk.common.model.vo.BrandVO;
-import co.handk.common.model.dto.query.BrandQueryDTO;
-import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import jakarta.validation.constraints.NotNull;
+
 @Service
 @Validated
 public interface BrandService extends IService<Brand> {

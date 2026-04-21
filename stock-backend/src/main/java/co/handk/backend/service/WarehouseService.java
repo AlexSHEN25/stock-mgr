@@ -1,14 +1,16 @@
 package co.handk.backend.service;
+
 import co.handk.backend.entity.Warehouse;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateWarehouseDTO;
+import co.handk.common.model.dto.query.WarehouseQueryDTO;
 import co.handk.common.model.dto.update.UpdateWarehouseDTO;
 import co.handk.common.model.vo.WarehouseVO;
-import co.handk.common.model.dto.query.WarehouseQueryDTO;
-import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import jakarta.validation.constraints.NotNull;
+
 @Service
 @Validated
 public interface WarehouseService extends IService<Warehouse> {

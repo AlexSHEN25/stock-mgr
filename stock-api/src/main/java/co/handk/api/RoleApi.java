@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.RoleVO;
-import co.handk.common.model.dto.create.CreateRoleDTO;
-import co.handk.common.model.dto.update.UpdateRoleDTO;
-import co.handk.common.model.dto.query.RoleQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateRoleDTO;
+import co.handk.common.model.dto.query.RoleQueryDTO;
+import co.handk.common.model.dto.update.UpdateRoleDTO;
+import co.handk.common.model.vo.RoleVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/role")
 public interface RoleApi {

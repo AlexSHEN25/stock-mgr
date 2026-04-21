@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @MapperScan("co.handk.backend.mapper")
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "co.handk")
 public class StockBackendApplication {
 
     public static void main(String[] args) {

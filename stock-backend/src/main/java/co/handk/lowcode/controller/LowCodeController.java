@@ -22,7 +22,7 @@ public class LowCodeController {
      */
     @GetMapping("/{resource}")
     public Object page(
-            @PathVariable String resource,
+            @PathVariable("resource") String resource,
             @RequestParam Map<String, Object> params
     ) {
         return lowCodeService.page(resource, params);
@@ -32,7 +32,7 @@ public class LowCodeController {
      * 详情
      */
     @GetMapping("/{resource}/{id}")
-    public Object detail(@PathVariable String resource, @PathVariable Long id) {
+    public Object detail(@PathVariable("resource") String resource, @PathVariable("id") Long id) {
         return lowCodeService.detail(resource, id);
     }
 
@@ -40,7 +40,7 @@ public class LowCodeController {
      * 新增
      */
     @PostMapping("/{resource}")
-    public Object create(@PathVariable String resource, @RequestBody Map<String, Object> body) {
+    public Object create(@PathVariable("resource") String resource, @RequestBody Map<String, Object> body) {
         return lowCodeService.create(resource, body);
     }
 
@@ -49,8 +49,8 @@ public class LowCodeController {
      */
     @PutMapping("/{resource}/{id}")
     public Object update(
-            @PathVariable String resource,
-            @PathVariable Long id,
+            @PathVariable("resource") String resource,
+            @PathVariable("id") Long id,
             @RequestBody Map<String, Object> body
     ) {
         return lowCodeService.update(resource, id, body);
@@ -60,7 +60,7 @@ public class LowCodeController {
      * 删除（逻辑删除）
      */
     @DeleteMapping("/{resource}/{id}")
-    public Object delete(@PathVariable String resource, @PathVariable Long id) {
+    public Object delete(@PathVariable("resource") String resource, @PathVariable("id") Long id) {
         return lowCodeService.delete(resource, id);
     }
 }

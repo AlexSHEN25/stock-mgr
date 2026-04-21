@@ -1,23 +1,21 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.entity.UserRole;
-import co.handk.common.model.dto.create.CreateUserRoleDTO;
-import co.handk.common.model.dto.update.UpdateUserRoleDTO;
-import co.handk.common.model.vo.UserRoleVO;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.UserRoleService;
-import co.handk.common.model.dto.query.UserRoleQueryDTO;
+import co.handk.backend.util.EnumFieldMapper;
+import co.handk.backend.util.PageSortUtil;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.create.CreateUserRoleDTO;
+import co.handk.common.model.dto.query.UserRoleQueryDTO;
+import co.handk.common.model.dto.update.UpdateUserRoleDTO;
+import co.handk.common.model.vo.UserRoleVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;

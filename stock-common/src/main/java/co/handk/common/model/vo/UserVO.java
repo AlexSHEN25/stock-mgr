@@ -1,6 +1,9 @@
 package co.handk.common.model.vo;
 
-import co.handk.schema.annotation.*;
+import co.handk.schema.annotation.Schema;
+import co.handk.schema.annotation.SchemaDict;
+import co.handk.schema.annotation.SchemaField;
+import co.handk.schema.annotation.SchemaRef;
 import co.handk.schema.enums.FieldType;
 import lombok.Data;
 

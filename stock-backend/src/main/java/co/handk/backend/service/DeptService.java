@@ -1,14 +1,16 @@
 package co.handk.backend.service;
+
 import co.handk.backend.entity.Dept;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateDeptDTO;
+import co.handk.common.model.dto.query.DeptQueryDTO;
 import co.handk.common.model.dto.update.UpdateDeptDTO;
 import co.handk.common.model.vo.DeptVO;
-import co.handk.common.model.dto.query.DeptQueryDTO;
-import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import jakarta.validation.constraints.NotNull;
+
 @Service
 @Validated
 public interface DeptService extends IService<Dept> {

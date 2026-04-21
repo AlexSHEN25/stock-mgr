@@ -1,8 +1,8 @@
 package co.handk.common.model.dto.create;
 
-import java.math.BigDecimal;
-
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class CreateRequestItemDTO {

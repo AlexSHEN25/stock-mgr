@@ -40,7 +40,7 @@ public class GoodsImageServiceImpl extends ServiceImpl<GoodsImageMapper, GoodsIm
     public GoodsImageVO get(Long id) {
         GoodsImage entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         GoodsImageVO vo = new GoodsImageVO();
         BeanUtils.copyProperties(entity, vo);
@@ -50,7 +50,7 @@ public class GoodsImageServiceImpl extends ServiceImpl<GoodsImageMapper, GoodsIm
     @Override
     public Boolean update(UpdateGoodsImageDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         GoodsImage entity = new GoodsImage();
         BeanUtils.copyProperties(dto, entity);
@@ -61,7 +61,7 @@ public class GoodsImageServiceImpl extends ServiceImpl<GoodsImageMapper, GoodsIm
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(GoodsImage::getId, id)
                 .set(GoodsImage::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();

@@ -1,16 +1,17 @@
 package co.handk.backend.controller;
 
-import co.handk.common.model.vo.MessageVO;
-import co.handk.common.model.dto.create.CreateMessageDTO;
-import co.handk.common.model.dto.update.UpdateMessageDTO;
 import co.handk.backend.service.MessageService;
-import co.handk.common.model.dto.query.MessageQueryDTO;
 import co.handk.common.model.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateMessageDTO;
+import co.handk.common.model.dto.query.MessageQueryDTO;
+import co.handk.common.model.dto.update.UpdateMessageDTO;
+import co.handk.common.model.vo.MessageVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @Validated
 @RequestMapping("/message")

@@ -1,8 +1,9 @@
 package co.handk.schema.annotation;
 
-import java.lang.annotation.*;
 import co.handk.schema.enums.FieldType;
 import co.handk.schema.enums.QueryType;
+
+import java.lang.annotation.*;
 
 /**
  * 字段 Schema 定义

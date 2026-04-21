@@ -39,7 +39,7 @@ public class BrandMakerRelationServiceImpl extends ServiceImpl<BrandMakerRelatio
     public BrandMakerRelationVO get(Long id) {
         BrandMakerRelation entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         BrandMakerRelationVO vo = new BrandMakerRelationVO();
         BeanUtils.copyProperties(entity, vo);
@@ -49,7 +49,7 @@ public class BrandMakerRelationServiceImpl extends ServiceImpl<BrandMakerRelatio
     @Override
     public Boolean update(UpdateBrandMakerRelationDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         BrandMakerRelation entity = new BrandMakerRelation();
         BeanUtils.copyProperties(dto, entity);
@@ -60,7 +60,7 @@ public class BrandMakerRelationServiceImpl extends ServiceImpl<BrandMakerRelatio
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(BrandMakerRelation::getId, id)
                 .set(BrandMakerRelation::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();

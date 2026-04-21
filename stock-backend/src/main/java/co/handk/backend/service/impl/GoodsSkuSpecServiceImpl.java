@@ -40,7 +40,7 @@ public class GoodsSkuSpecServiceImpl extends ServiceImpl<GoodsSkuSpecMapper, Goo
     public GoodsSkuSpecVO get(Long id) {
         GoodsSkuSpec entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         GoodsSkuSpecVO vo = new GoodsSkuSpecVO();
         BeanUtils.copyProperties(entity, vo);
@@ -50,7 +50,7 @@ public class GoodsSkuSpecServiceImpl extends ServiceImpl<GoodsSkuSpecMapper, Goo
     @Override
     public Boolean update(UpdateGoodsSkuSpecDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         GoodsSkuSpec entity = new GoodsSkuSpec();
         BeanUtils.copyProperties(dto, entity);
@@ -61,7 +61,7 @@ public class GoodsSkuSpecServiceImpl extends ServiceImpl<GoodsSkuSpecMapper, Goo
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(GoodsSkuSpec::getId, id)
                 .set(GoodsSkuSpec::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();

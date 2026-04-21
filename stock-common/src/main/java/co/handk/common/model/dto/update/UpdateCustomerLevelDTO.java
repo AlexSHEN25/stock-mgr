@@ -1,11 +1,10 @@
 package co.handk.common.model.dto.update;
 
 import co.handk.common.enums.StatusEnum;
-
 import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
-
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class UpdateCustomerLevelDTO {

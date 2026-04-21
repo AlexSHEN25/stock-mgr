@@ -1,10 +1,15 @@
 package co.handk.schema.builder;
 
-import co.handk.schema.annotation.*;
+import co.handk.schema.annotation.Schema;
+import co.handk.schema.annotation.SchemaAction;
+import co.handk.schema.annotation.SchemaActions;
+import co.handk.schema.annotation.SchemaField;
 import co.handk.schema.model.SchemaVO;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 
@@ -25,7 +30,24 @@ public class SchemaBuilder {
         // ===== 基础信息 =====
         vo.setResource(schema.resource());
         vo.setName(schema.name());
-        vo.setGroup(schema.group());
+        String groupPath = schema.group();
+        vo.setGroupPath(groupPath);
+        if (groupPath != null && groupPath.contains("/")) {
+            String[] parts = groupPath.split("/", 2);
+            vo.setGroup(parts[0]);
+            vo.setSubGroup(parts[1]);
+        } else {
+            vo.setGroup(groupPath);
+            vo.setSubGroup(null);
+        }
+        String topMenuId = toMenuId("top", vo.getGroup());
+        String subMenuId = vo.getSubGroup() == null ? null : toMenuId("sub", vo.getGroup() + "/" + vo.getSubGroup());
+        String defaultMenuId = "res_" + schema.resource();
+        String defaultParentId = subMenuId == null ? topMenuId : subMenuId;
+        vo.setTopMenuId(topMenuId);
+        vo.setSubMenuId(subMenuId);
+        vo.setMenuId(schema.menuId().isEmpty() ? defaultMenuId : schema.menuId());
+        vo.setParentId(schema.parentId().isEmpty() ? defaultParentId : schema.parentId());
 
         // ===== 字段解析 =====
         List<SchemaVO.FieldVO> fields = new ArrayList<>();
@@ -119,5 +141,15 @@ public class SchemaBuilder {
         vo.setApi(action.api());
         vo.setMethod(action.method().name());
         return vo;
+    }
+
+    private static String toMenuId(String prefix, String value) {
+        if (value == null || value.isEmpty()) {
+            return prefix + "_default";
+        }
+        String encoded = Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(value.getBytes(StandardCharsets.UTF_8));
+        return prefix + "_" + encoded;
     }
 }

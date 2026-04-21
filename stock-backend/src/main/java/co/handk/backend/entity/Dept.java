@@ -8,7 +8,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Schema(resource = "dept", name = "部门管理", group = "系统管理")
+@Schema(resource = "dept", name = "部署", group = "システム管理/ユーザー管理")
 public class Dept extends BaseEntity {
 
     @SchemaField(title = "父部门ID")
@@ -20,12 +20,12 @@ public class Dept extends BaseEntity {
     @SchemaField(title = "部门编码")
     private String code;
 
-    @SchemaField(title = "负责人")
+    @SchemaField(title = "部门负责人ID")
     private Long leaderId;
 
     @SchemaField(title = "排序")
     private Integer sort;
 
-    @SchemaField(title = "状态", type = FieldType.SWITCH)
+    @SchemaField(title = "状态:1正常0停用", type = FieldType.SWITCH)
     private Integer status;
 }

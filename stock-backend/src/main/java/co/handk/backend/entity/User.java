@@ -1,13 +1,16 @@
 package co.handk.backend.entity;
 
-import co.handk.schema.annotation.*;
+import co.handk.schema.annotation.Schema;
+import co.handk.schema.annotation.SchemaField;
+import co.handk.schema.annotation.SchemaRef;
 import co.handk.schema.enums.FieldType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@Schema(resource = "user", name = "用户管理", group = "系统管理")
+@Schema(resource = "user", name = "ユーザー", group = "システム管理/ユーザー管理")
 public class User extends BaseEntity {
 
     @SchemaField(
@@ -20,13 +23,15 @@ public class User extends BaseEntity {
      * deptId：用于提交 & 查询（隐藏展示）
      */
     @SchemaField(
-            title = "部门",
+            title = "部门ID",
             type = FieldType.SELECT,
+            table = false,
             search = true, // 查询用ID
             ref = @SchemaRef(
                     resource = "dept",
                     labelField = "name",
-                    valueField = "id"
+                    valueField = "id",
+                    displayField = "deptName"
             )
     )
     private Long deptId;
@@ -38,6 +43,7 @@ public class User extends BaseEntity {
             title = "部门名称",
             editable = false
     )
+    @TableField(exist = false)
     private String deptName;
 
     /**
@@ -56,7 +62,7 @@ public class User extends BaseEntity {
      * 盐（完全隐藏）
      */
     @SchemaField(
-            title = "盐值",
+            title = "密码盐",
             table = false,
             search = false,
             detail = false,
@@ -64,10 +70,10 @@ public class User extends BaseEntity {
     )
     private String salt;
 
-    @SchemaField(title = "邮箱")
+    @SchemaField(title = "电子邮箱")
     private String email;
 
-    @SchemaField(title = "手机号")
+    @SchemaField(title = "联系方式")
     private String phone;
 
     @SchemaField(title = "头像", type = FieldType.UPLOAD)

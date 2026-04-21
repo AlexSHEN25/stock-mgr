@@ -1,8 +1,9 @@
 package co.handk.common.model.dto.query;
 
-import java.math.BigDecimal;
-import lombok.Data;
 import co.handk.common.model.PageQuery;
+import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class RequestItemQueryDTO extends PageQuery {

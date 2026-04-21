@@ -1,95 +1,130 @@
 package co.handk.lowcode.engine;
 
 import co.handk.schema.model.SchemaVO;
+import co.handk.schema.registry.MapperRegistry;
 import co.handk.schema.registry.SchemaRegistry;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 自动关联填充引擎（核心）
+ * 低代码关联字段填充引擎。
  */
 @Component
 @RequiredArgsConstructor
 public class RefEngine {
 
     private final SchemaRegistry registry;
+    private final MapperRegistry mapperRegistry;
 
-    /**
-     * 批量填充关联字段
-     */
-    public List<Map<String, Object>> fillRefs(
-            List<Map<String, Object>> list,
-            SchemaVO schema
-    ) {
-
-        if (list == null || list.isEmpty()) return list;
+    public <T> List<T> fillRefs(List<T> records, SchemaVO schema) {
+        if (records == null || records.isEmpty() || schema == null || schema.getFields() == null) {
+            return records;
+        }
 
         for (SchemaVO.FieldVO field : schema.getFields()) {
+            if (field.getRef() == null || field.getRef().isBlank()) {
+                continue;
+            }
 
-            if (field.getRef() == null) continue;
-
-            String refResource = field.getRef();
-
-            //  收集所有 deptId
-            Set<Object> ids = list.stream()
-                    .map(row -> row.get(field.getName()))
+            Set<Object> ids = records.stream()
+                    .map(row -> getFieldValue(row, field.getName()))
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
-            if (ids.isEmpty()) continue;
+            if (ids.isEmpty()) {
+                continue;
+            }
 
-            //  查询关联数据
             Map<Object, Object> refMap = loadRefData(
-                    refResource,
+                    field.getRef(),
                     ids,
                     field.getRefLabelField(),
                     field.getRefValueField()
             );
 
-            //  回填
-            for (Map<String, Object> row : list) {
-
-                Object id = row.get(field.getName());
-                if (id == null) continue;
-
-                Object label = refMap.get(id);
-
-                String displayField = field.getRefDisplayField();
-                row.put(displayField, label);
+            String displayField = field.getRefDisplayField();
+            for (T row : records) {
+                Object id = getFieldValue(row, field.getName());
+                if (id == null) {
+                    continue;
+                }
+                Object label = refMap.get(String.valueOf(id));
+                if (label == null) {
+                    continue;
+                }
+                setFieldValue(row, displayField, label);
             }
         }
 
-        return list;
+        return records;
     }
 
-    /**
-     * 查询关联数据（核心扩展点）
-     */
     private Map<Object, Object> loadRefData(
             String resource,
             Set<Object> ids,
             String labelField,
             String valueField
     ) {
+        Class<?> refEntityClass = registry.get(resource);
+        @SuppressWarnings("unchecked")
+        BaseMapper<Object> mapper = (BaseMapper<Object>) mapperRegistry.get((Class<Object>) refEntityClass);
+        List<Serializable> serializableIds = ids.stream()
+                .filter(Serializable.class::isInstance)
+                .map(Serializable.class::cast)
+                .toList();
+        List<Object> rows = mapper.selectBatchIds(serializableIds);
 
-        Class<?> clazz = registry.get(resource);
+        Map<Object, Object> result = new HashMap<>();
+        for (Object row : rows) {
+            Object key = getFieldValue(row, valueField);
+            Object label = getFieldValue(row, labelField);
+            if (key != null) {
+                result.put(String.valueOf(key), label);
+            }
+        }
+        return result;
+    }
 
-        //  这里你可以接 MyBatis-Plus
-        // 简化写法：用反射 or Service 查询
+    private Object getFieldValue(Object obj, String fieldName) {
+        Field field = findField(obj.getClass(), fieldName);
+        if (field == null) {
+            return null;
+        }
+        try {
+            field.setAccessible(true);
+            return field.get(obj);
+        } catch (IllegalAccessException e) {
+            return null;
+        }
+    }
 
-        // ===== 示例（伪代码）=====
-        /*
-        List<?> list = service.listByIds(ids);
+    private void setFieldValue(Object obj, String fieldName, Object value) {
+        Field field = findField(obj.getClass(), fieldName);
+        if (field == null) {
+            return;
+        }
+        try {
+            field.setAccessible(true);
+            field.set(obj, value);
+        } catch (IllegalAccessException ignored) {
+        }
+    }
 
-        return list.stream().collect(Collectors.toMap(
-            e -> getField(e, valueField),
-            e -> getField(e, labelField)
-        ));
-        */
-
-        return new HashMap<>();
+    private Field findField(Class<?> clazz, String fieldName) {
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
     }
 }

@@ -1,6 +1,8 @@
 package co.handk.schema.annotation;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 外键关联定义（用于下拉、树等）

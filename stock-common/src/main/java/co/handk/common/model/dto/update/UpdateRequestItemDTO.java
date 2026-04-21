@@ -1,9 +1,9 @@
 package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
-
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class UpdateRequestItemDTO {

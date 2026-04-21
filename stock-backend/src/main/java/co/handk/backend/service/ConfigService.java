@@ -1,14 +1,16 @@
 package co.handk.backend.service;
+
 import co.handk.backend.entity.Config;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateConfigDTO;
+import co.handk.common.model.dto.query.ConfigQueryDTO;
 import co.handk.common.model.dto.update.UpdateConfigDTO;
 import co.handk.common.model.vo.ConfigVO;
-import co.handk.common.model.dto.query.ConfigQueryDTO;
-import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-import jakarta.validation.constraints.NotNull;
+
 @Service
 @Validated
 public interface ConfigService extends IService<Config> {

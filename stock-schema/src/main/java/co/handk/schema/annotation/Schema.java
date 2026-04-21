@@ -51,4 +51,14 @@ public @interface Schema {
      * 描述
      */
     String description() default "";
+
+    /**
+     * 菜单ID（可选，未配置时自动生成）
+     */
+    String menuId() default "";
+
+    /**
+     * 父菜单ID（可选，未配置时自动生成）
+     */
+    String parentId() default "";
 }

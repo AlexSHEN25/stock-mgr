@@ -1,11 +1,10 @@
 package co.handk.common.model.dto.create;
 
 import co.handk.common.enums.StatusEnum;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
-import lombok.Data;
 
 @Data
 public class CreateStockDTO {

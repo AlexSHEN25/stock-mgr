@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.RolePermissionVO;
-import co.handk.common.model.dto.create.CreateRolePermissionDTO;
-import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
-import co.handk.common.model.dto.query.RolePermissionQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateRolePermissionDTO;
+import co.handk.common.model.dto.query.RolePermissionQueryDTO;
+import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
+import co.handk.common.model.vo.RolePermissionVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/rolePermission")
 public interface RolePermissionApi {

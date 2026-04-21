@@ -1,13 +1,15 @@
 package co.handk.api;
-import co.handk.common.model.vo.UserRoleVO;
-import co.handk.common.model.dto.create.CreateUserRoleDTO;
-import co.handk.common.model.dto.update.UpdateUserRoleDTO;
-import co.handk.common.model.dto.query.UserRoleQueryDTO;
+
 import co.handk.common.model.PageResult;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateUserRoleDTO;
+import co.handk.common.model.dto.query.UserRoleQueryDTO;
+import co.handk.common.model.dto.update.UpdateUserRoleDTO;
+import co.handk.common.model.vo.UserRoleVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @Validated
 @RequestMapping("/userRole")
 public interface UserRoleApi {

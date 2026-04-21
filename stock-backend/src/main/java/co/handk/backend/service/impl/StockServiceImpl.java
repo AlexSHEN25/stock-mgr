@@ -1,13 +1,12 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.util.EnumFieldMapper;
-import co.handk.backend.util.PageSortUtil;
-
 import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockRecord;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.StockService;
+import co.handk.backend.util.EnumFieldMapper;
+import co.handk.backend.util.PageSortUtil;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockDTO;
@@ -27,7 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 蠎灘ｭ・Service 螳樒鴫
+ * 库存 Service 实现
  */
 @Service
 @RequiredArgsConstructor

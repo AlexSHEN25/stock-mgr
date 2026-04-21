@@ -3,7 +3,9 @@ package co.handk.lowcode.service;
 import cn.hutool.core.bean.BeanUtil;
 import co.handk.common.model.PageResult;
 import co.handk.lowcode.engine.PageParamParser;
+import co.handk.lowcode.engine.RefEngine;
 import co.handk.schema.builder.QueryBuilder;
+import co.handk.schema.builder.SchemaBuilder;
 import co.handk.schema.registry.SchemaRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ public class LowCodeService {
 
     private final SchemaRegistry schemaRegistry;
     private final DynamicMapperExecutor mapperExecutor;
+    private final RefEngine refEngine;
 
     /**
      * 分页查询
@@ -32,7 +35,9 @@ public class LowCodeService {
 
         var wrapper = QueryBuilder.build(entityClass, params);
 
-        return mapperExecutor.page(entityClass, pageNo, pageSize, wrapper);
+        PageResult<?> pageResult = mapperExecutor.page(entityClass, pageNo, pageSize, wrapper);
+        refEngine.fillRefs((java.util.List) pageResult.getRecords(), SchemaBuilder.build(entityClass));
+        return pageResult;
     }
 
     /**
