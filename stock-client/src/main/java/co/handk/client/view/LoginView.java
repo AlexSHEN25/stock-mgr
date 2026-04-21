@@ -13,19 +13,19 @@ import org.json.JSONObject;
 
 public class LoginView {
 
-    private VBox view;
+    private final VBox view;
 
     public LoginView(MainApp app) {
         view = new VBox(10);
         view.setPadding(new Insets(20));
 
         TextField username = new TextField();
-        username.setPromptText("用户名");
+        username.setPromptText("ユーザー名");
 
         PasswordField password = new PasswordField();
-        password.setPromptText("密码");
+        password.setPromptText("パスワード");
 
-        Button loginBtn = new Button("登录");
+        Button loginBtn = new Button("ログイン");
         Label msg = new Label();
 
         loginBtn.setOnAction(e -> {
@@ -36,24 +36,21 @@ public class LoginView {
                 );
 
                 String res = ApiClient.post("/user/login", body);
-
                 JSONObject json = new JSONObject(res);
-                if (json.getInt("code") == 0) {
+
+                if (json.optInt("code", -1) == 0) {
                     JSONObject data = json.getJSONObject("data");
-
-                    String token = data.getString("token");
-                    Long userId = data.getLong("userId");
-                    String name = data.getString("username");
-
-                    Session.set(token, userId, name);
-
+                    Session.set(
+                            data.getString("token"),
+                            data.getLong("userId"),
+                            data.getString("username")
+                    );
                     app.showMain();
                 } else {
-                    msg.setText(json.getString("message"));
+                    msg.setText(json.optString("message", "ログインに失敗しました"));
                 }
-
             } catch (Exception ex) {
-                msg.setText("请求失败：" + ex.getMessage());
+                msg.setText("ログインエラー: " + ex.getMessage());
             }
         });
 

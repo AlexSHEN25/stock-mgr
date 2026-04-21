@@ -19,9 +19,9 @@ public class MainApp extends Application {
         ApiClient.setLoginTimeoutHandler(() -> {
             Session.clear();
             Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("登录状态");
+            alert.setTitle("ログイン状態");
             alert.setHeaderText(null);
-            alert.setContentText("login timeout");
+            alert.setContentText("ログインの有効期限が切れました。再ログインしてください。");
             alert.showAndWait();
             showLogin();
         });
@@ -30,15 +30,16 @@ public class MainApp extends Application {
 
     public void showLogin() {
         LoginView view = new LoginView(this);
-        primaryStage.setScene(new Scene(view.getView(), 300, 200));
-        primaryStage.setTitle("登录");
+        primaryStage.setScene(new Scene(view.getView(), 320, 220));
+        primaryStage.setTitle("ログイン");
         primaryStage.show();
     }
 
     public void showMain() {
         MainView view = new MainView(this);
-        primaryStage.setScene(new Scene(view.getView(), 400, 300));
-        primaryStage.setTitle("主页");
+        primaryStage.setScene(new Scene(view.getView(), 1200, 760));
+        primaryStage.setTitle("管理画面");
+        primaryStage.show();
     }
 
     public static void main(String[] args) {

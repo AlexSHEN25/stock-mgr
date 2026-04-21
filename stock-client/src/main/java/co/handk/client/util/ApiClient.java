@@ -6,6 +6,10 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.StringJoiner;
 
 public class ApiClient {
 
@@ -17,10 +21,38 @@ public class ApiClient {
     }
 
     public static String post(String path, String json) throws Exception {
+        return request("POST", path, json);
+    }
+
+    public static String get(String path) throws Exception {
+        return request("GET", path, null);
+    }
+
+    public static String get(String path, Map<String, Object> params) throws Exception {
+        if (params == null || params.isEmpty()) {
+            return get(path);
+        }
+        StringJoiner joiner = new StringJoiner("&");
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            if (entry.getValue() == null) {
+                continue;
+            }
+            String k = URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8);
+            String v = URLEncoder.encode(String.valueOf(entry.getValue()), StandardCharsets.UTF_8);
+            joiner.add(k + "=" + v);
+        }
+        String query = joiner.toString();
+        if (query.isEmpty()) {
+            return get(path);
+        }
+        return get(path + "?" + query);
+    }
+
+    private static String request(String method, String path, String json) throws Exception {
         URL url = new URL(BASE_URL + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-        conn.setRequestMethod("POST");
+        conn.setRequestMethod(method);
         conn.setRequestProperty("Content-Type", "application/json");
 
         String token = Session.getToken();
@@ -28,10 +60,11 @@ public class ApiClient {
             conn.setRequestProperty("Authorization", "Bearer " + token);
         }
 
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(json.getBytes());
+        if (json != null && !json.isEmpty() && !"GET".equalsIgnoreCase(method)) {
+            conn.setDoOutput(true);
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(json.getBytes(StandardCharsets.UTF_8));
+            }
         }
 
         return read(conn);
