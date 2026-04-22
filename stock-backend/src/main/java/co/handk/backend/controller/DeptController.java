@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.DeptApi;
 import co.handk.common.model.vo.DeptVO;
 import co.handk.common.model.dto.create.CreateDeptDTO;
 import co.handk.common.model.dto.update.UpdateDeptDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/dept")
-public class DeptController implements DeptApi {
+public class DeptController {
     @Autowired
     private DeptService deptService;
     @PostMapping

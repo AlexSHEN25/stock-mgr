@@ -23,6 +23,7 @@ public class PriceRecord extends BaseEntity {
     private BigDecimal oldPrice;
 
     private BigDecimal newPrice;
+
     private String currency;
 
     private BigDecimal discount;

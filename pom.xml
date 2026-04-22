@@ -16,7 +16,6 @@
         <module>stock-backend</module>
         <module>stock-client</module>
         <module>stock-common</module>
-        <module>stock-api</module>
     </modules>
 
     <!-- 统一版本管理 -->

@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.GoodsImageApi;
 import co.handk.backend.service.GoodsImageService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsImageDTO;
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/goodsImage")
-public class GoodsImageController implements GoodsImageApi {
+public class GoodsImageController {
     @Autowired
     private GoodsImageService goodsImageService;
 

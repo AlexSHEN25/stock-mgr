@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.RequestItemApi;
 import co.handk.common.model.vo.RequestItemVO;
 import co.handk.common.model.dto.create.CreateRequestItemDTO;
 import co.handk.common.model.dto.update.UpdateRequestItemDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/requestItem")
-public class RequestItemController implements RequestItemApi {
+public class RequestItemController {
     @Autowired
     private RequestItemService requestItemService;
     @PostMapping

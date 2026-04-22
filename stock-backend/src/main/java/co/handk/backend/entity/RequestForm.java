@@ -3,6 +3,7 @@ package co.handk.backend.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -29,11 +30,13 @@ public class RequestForm extends BaseEntity {
 
     private Integer requestQty;
 
+    private BigDecimal totalAmt;
+
     private Integer state;
 
     private Long approverId;
 
-    private String approveName;
+    private String approverName;
 
     private LocalDateTime approveTime;
 

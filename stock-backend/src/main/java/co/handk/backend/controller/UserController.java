@@ -1,7 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.UserApi;
-
 import co.handk.backend.service.UserService;
 import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
@@ -21,7 +19,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/user")
-public class UserController implements UserApi {
+public class UserController {
 
     @Autowired
     private UserService userService;

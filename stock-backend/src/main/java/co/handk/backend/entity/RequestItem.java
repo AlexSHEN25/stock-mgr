@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -44,6 +45,9 @@ public class RequestItem extends BaseEntity {
     private Long warehouseId;
 
     private BigDecimal price;
+
+    private BigDecimal exchangeRate;
+
     private String currency;
 
     private BigDecimal discount;
@@ -53,6 +57,12 @@ public class RequestItem extends BaseEntity {
     private Integer approveQty;
 
     private Integer outQty;
+
+    private BigDecimal totalAmt;
+
+    private BigDecimal depositAmt;
+
+    private LocalDateTime depositTime;
 
     private Long stockRecordId;
 

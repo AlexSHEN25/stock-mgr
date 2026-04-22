@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.MessageApi;
 import co.handk.common.model.vo.MessageVO;
 import co.handk.common.model.dto.create.CreateMessageDTO;
 import co.handk.common.model.dto.update.UpdateMessageDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/message")
-public class MessageController implements MessageApi {
+public class MessageController {
     @Autowired
     private MessageService messageService;
     @PostMapping

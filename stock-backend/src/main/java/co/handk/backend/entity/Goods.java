@@ -11,19 +11,19 @@ public class Goods extends BaseEntity {
 
     private String englishName;
 
-    private Long seriesId;
-
     private Long brandId;
+
+    private Long seriesId;
 
     private Long categoryId;
 
     private Long makerId;
 
-    private Integer status;
-
     private String description;
 
     private Integer isHot;
+
+    private Integer status;
 
     private Integer sort;
 }

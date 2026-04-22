@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.GoodsLevelPriceApi;
 import co.handk.backend.service.GoodsLevelPriceService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsLevelPriceDTO;
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/goodsLevelPrice")
-public class GoodsLevelPriceController implements GoodsLevelPriceApi {
+public class GoodsLevelPriceController {
     @Autowired
     private GoodsLevelPriceService goodsLevelPriceService;
 

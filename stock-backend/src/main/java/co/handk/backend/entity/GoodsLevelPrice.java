@@ -19,6 +19,7 @@ public class GoodsLevelPrice extends BaseEntity {
     private Long levelId;
 
     private BigDecimal price;
+
     private String currency;
 
     private BigDecimal discount;

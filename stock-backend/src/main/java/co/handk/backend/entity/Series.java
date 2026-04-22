@@ -11,6 +11,8 @@ public class Series extends BaseEntity {
 
     private String englishName;
 
+    private Long brandId;
+
     private String content;
 
     private Integer status;

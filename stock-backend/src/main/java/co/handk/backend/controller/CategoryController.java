@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.CategoryApi;
 import co.handk.backend.service.CategoryService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateCategoryDTO;
@@ -16,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @Validated
 @RequestMapping("/category")
-public class CategoryController implements CategoryApi {
+public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 

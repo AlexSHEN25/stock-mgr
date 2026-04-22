@@ -36,9 +36,13 @@ public class StockRecord extends BaseEntity {
 
     private String seriesName;
 
-    private Long typeId;
+    private Long categoryId;
 
-    private String typeName;
+    private String categoryName;
+
+    private Long stockTypeId;
+
+    private String stockTypeName;
 
     private Long makerId;
 
@@ -57,6 +61,7 @@ public class StockRecord extends BaseEntity {
     private Integer sourceType;
 
     private BigDecimal price;
+
     private String currency;
 
     private LocalDateTime priceUpdateTime;

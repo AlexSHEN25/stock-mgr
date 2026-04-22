@@ -17,6 +17,7 @@ public class GoodsSku extends BaseEntity {
     private String skuName;
 
     private BigDecimal price;
+
     private String currency;
 
     private BigDecimal costPrice;

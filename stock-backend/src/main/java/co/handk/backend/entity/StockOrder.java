@@ -13,8 +13,6 @@ public class StockOrder extends BaseEntity {
 
     private Integer orderType;
 
-    private Integer typeId;
-
     private Long warehouseId;
 
     private Integer sourceType;
@@ -22,6 +20,8 @@ public class StockOrder extends BaseEntity {
     private Long sourceId;
 
     private Integer totalQty;
+
+    private Long stockTypeId;
 
     private Integer state;
 

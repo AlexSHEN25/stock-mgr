@@ -10,7 +10,6 @@ public class Config extends BaseEntity {
 
     private String name;
 
-    @TableField("`group`")
     private String group;
 
     private String title;

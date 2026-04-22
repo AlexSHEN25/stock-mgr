@@ -1,6 +1,5 @@
 package co.handk.backend.controller;
 
-import co.handk.api.CustomerApi;
 import co.handk.common.model.vo.CustomerVO;
 import co.handk.common.model.dto.create.CreateCustomerDTO;
 import co.handk.common.model.dto.update.UpdateCustomerDTO;
@@ -15,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 @RestController
 @Validated
 @RequestMapping("/customer")
-public class CustomerController implements CustomerApi {
+public class CustomerController {
     @Autowired
     private CustomerService customerService;
     @PostMapping
