@@ -16,6 +16,9 @@ import org.springframework.validation.annotation.Validated;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.Collection;
+import java.util.Set;
+
 @RestController
 @Validated
 @RequestMapping("/user")
@@ -49,18 +52,26 @@ public class UserController {
     // 修改
     @PutMapping
     public boolean update(@RequestBody @NotNull @Valid UpdateUserDTO dto) {
-        return userService.update(dto);
+//        return userService.updateByIdWithNotDeleted( User::getId,
+//                User::getDeleted,
+//                1L,
+//                w -> w.set(User::getStatus, 1));
+        return false;
     }
 
     // 删除
     @DeleteMapping("/{id}")
     public boolean delete(@PathVariable @NotNull Long id) {
-        return userService.delete(id);
+        return userService.removeById(id);
+    }
+
+    // 删除
+    @DeleteMapping("/{ids}")
+    public boolean batchDelete(@PathVariable @NotNull Set<Long> ids) {
+        return userService.removeByIds(ids);
     }
 
     // 条件分页查询
-
-    // 分页查询
     @GetMapping("/page")
     public PageResult<UserVO> page(@Valid UserQueryDTO query) {
         return userService.pageQuery(query);

@@ -1,24 +1,22 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.context.UserContext;
 import co.handk.backend.entity.Dept;
 import co.handk.backend.entity.User;
 import co.handk.backend.mapper.DeptMapper;
 import co.handk.backend.mapper.UserMapper;
 import co.handk.backend.service.UserService;
+import co.handk.backend.util.EnumFieldMapper;
+import co.handk.backend.util.PageSortUtil;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.RedisKey;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
-import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.dto.create.CreateUserDTO;
+import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.dto.update.UpdateUserDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
@@ -27,22 +25,19 @@ import co.handk.common.util.PasswordUtil;
 import co.handk.common.util.TokenUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static co.handk.common.enums.DeleteEnum.DELETED;
+
 @Service
-public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
+public class UserServiceImpl extends BaseServiceImpl<UserMapper, User> implements UserService {
     @Autowired
     private UserMapper userMapper;
 
@@ -51,48 +46,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private DeptMapper deptMapper;
-
-    @Override
-    public Boolean create(CreateUserDTO dto) {
-        validateDeptExists(dto.getDeptId());
-        User entity = new User();
-        BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        String salt = PasswordUtil.generateSalt();
-        entity.setSalt(salt);
-        entity.setPassword(PasswordUtil.encrypt(dto.getPassword(), salt));
-        entity.setId(null);
-        return this.save(entity);
-    }
-
-    @Override
-    public UserVO get(Long id) {
-        User entity = this.getById(id);
-        if (entity == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        return toUserVO(entity, buildDeptNameMap(Collections.singletonList(entity)));
-    }
-
-    @Override
-    public Boolean update(UpdateUserDTO dto) {
-        if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        validateDeptExists(dto.getDeptId());
-        User entity = new User();
-        BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        return this.updateById(entity);
-    }
-
-    @Override
-    public Boolean delete(Long id) {
-        if (this.getById(id) == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        return this.lambdaUpdate().eq(User::getId, id).set(User::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
-    }
 
     @Override
     public LoginVO login(LoginDTO dto) {
@@ -149,6 +102,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 3. 删除 userKey
         stringRedisUtil.delete(userKey);
         return LogoutVO.success(userId);
+    }
+
+    @Override
+    public Boolean create(CreateUserDTO dto) {
+        validateDeptExists(dto.getDeptId());
+        User entity = new User();
+        BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
+        String salt = PasswordUtil.generateSalt();
+        entity.setSalt(salt);
+        entity.setPassword(PasswordUtil.encrypt(dto.getPassword(), salt));
+        entity.setId(null);
+        return this.save(entity);
+    }
+
+    @Override
+    public UserVO get(Long id) {
+        User entity = this.getById(id);
+        if (entity == null) {
+            throw new RuntimeException("数据不存在");
+        }
+        return toUserVO(entity, buildDeptNameMap(Collections.singletonList(entity)));
+    }
+
+    @Override
+    public Boolean update(UpdateUserDTO dto) {
+        if (this.getById(dto.getId()) == null) {
+            throw new RuntimeException("数据不存在");
+        }
+        validateDeptExists(dto.getDeptId());
+        User entity = new User();
+        BeanUtils.copyProperties(dto, entity);
+        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
+        return this.updateById(entity);
+    }
+
+    @Override
+    public Boolean delete(Long id) {
+        if (this.getById(id) == null) {
+            throw new RuntimeException("数据不存在");
+        }
+        return this.lambdaUpdate().eq(User::getId, id).set(User::getDeleted, DELETED.getCode()).update();
     }
 
     @Override

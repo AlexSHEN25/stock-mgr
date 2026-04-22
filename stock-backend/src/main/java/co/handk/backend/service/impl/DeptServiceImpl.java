@@ -22,7 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.BeanUtils;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import static co.handk.common.enums.DeleteEnum.DELETED;
+import static co.handk.common.enums.DeleteEnum.UNDELETED;
 
 @Service
 @RequiredArgsConstructor
@@ -66,27 +70,38 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
         if (this.getById(id) == null) {
             throw new RuntimeException("数据不存在");
         }
-        return this.lambdaUpdate().eq(Dept::getId, id).set(Dept::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
+        return this.lambdaUpdate().eq(Dept::getId, id).set(Dept::getDeleted, DELETED.getCode()).update();
     }
 
     @Override
     public PageResult<DeptVO> pageQuery(DeptQueryDTO query) {
         Page<Dept> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Dept::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
-                .eq(query.getParentId() != null, Dept::getParentId, query.getParentId())
-                .like(StringUtils.isNotBlank(query.getName()), Dept::getName, query.getName())
-                .like(StringUtils.isNotBlank(query.getCode()), Dept::getCode, query.getCode())
-                .eq(query.getLeaderId() != null, Dept::getLeaderId, query.getLeaderId())
-                .eq(query.getSort() != null, Dept::getSort, query.getSort())
-                .eq(query.getStatus() != null, Dept::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
+        wrapper.eq(Dept::getDeleted, UNDELETED.getCode()).eq(query.getParentId() != null, Dept::getParentId, query.getParentId()).like(StringUtils.isNotBlank(query.getName()), Dept::getName, query.getName()).like(StringUtils.isNotBlank(query.getCode()), Dept::getCode, query.getCode()).eq(query.getLeaderId() != null, Dept::getLeaderId, query.getLeaderId()).eq(query.getSort() != null, Dept::getSort, query.getSort()).eq(query.getStatus() != null, Dept::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
         PageSortUtil.applyTimeSort(wrapper, query, Dept::getCreateTime, Dept::getUpdateTime);
-        Page<Dept> resultPage =     deptMapper.selectPage(page, wrapper);
+        Page<Dept> resultPage = deptMapper.selectPage(page, wrapper);
         List<DeptVO> records = resultPage.getRecords().stream().map(entity -> {
             DeptVO vo = new DeptVO();
             BeanUtils.copyProperties(entity, vo);
             return vo;
         }).collect(Collectors.toList());
         return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
+    }
+
+    /**
+     * 根据部门名称查询部门ID
+     *
+     * @param deptName
+     * @return deptId
+     */
+    @Override
+    public Long getDeptIdByName(String deptName) {
+        LambdaQueryWrapper<Dept> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(StringUtils.isNotBlank(deptName), Dept::getName, deptName).eq(Dept::getDeleted, UNDELETED.getCode());
+        Dept dept = deptMapper.selectOne(wrapper);
+        if (Objects.isNull(dept)) {
+            throw new RuntimeException("数据不存在");
+        }
+        return dept.getId();
     }
 }

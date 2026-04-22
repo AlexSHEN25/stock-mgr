@@ -17,4 +17,6 @@ public interface DeptService extends IService<Dept> {
     Boolean update(@NotNull UpdateDeptDTO dto);
     Boolean delete(@NotNull Long id);
     PageResult<DeptVO> pageQuery(@NotNull DeptQueryDTO query);
+
+    Long getDeptIdByName(String deptName);
 }
