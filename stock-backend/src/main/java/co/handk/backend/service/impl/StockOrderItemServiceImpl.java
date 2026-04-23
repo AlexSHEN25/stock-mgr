@@ -43,7 +43,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     public StockOrderItemVO get(Long id) {
         StockOrderItem entity = this.getById(id);
         if (entity == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         StockOrderItemVO vo = new StockOrderItemVO();
         BeanUtils.copyProperties(entity, vo);
@@ -53,7 +53,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     @Override
     public Boolean update(UpdateStockOrderItemDTO dto) {
         if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         StockOrderItem entity = new StockOrderItem();
         BeanUtils.copyProperties(dto, entity);
@@ -64,7 +64,7 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
     @Override
     public Boolean delete(Long id) {
         if (this.getById(id) == null) {
-            throw new RuntimeException("謨ｰ謐ｮ荳榊ｭ伜惠");
+            throw new RuntimeException("数据不存在");
         }
         return this.lambdaUpdate().eq(StockOrderItem::getId, id).set(StockOrderItem::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
     }
@@ -84,8 +84,8 @@ public class StockOrderItemServiceImpl extends ServiceImpl<StockOrderItemMapper,
                 .like(StringUtils.isNotBlank(query.getBrandName()), StockOrderItem::getBrandName, query.getBrandName())
                 .eq(query.getSeriesId() != null, StockOrderItem::getSeriesId, query.getSeriesId())
                 .like(StringUtils.isNotBlank(query.getSeriesName()), StockOrderItem::getSeriesName, query.getSeriesName())
-                .eq(query.getTypeId() != null, StockOrderItem::getTypeId, query.getTypeId())
-                .like(StringUtils.isNotBlank(query.getTypeName()), StockOrderItem::getTypeName, query.getTypeName())
+                .eq(query.getCategoryId() != null, StockOrderItem::getCategoryId, query.getCategoryId())
+                .like(StringUtils.isNotBlank(query.getCategoryName()), StockOrderItem::getCategoryName, query.getCategoryName())
                 .eq(query.getMakerId() != null, StockOrderItem::getMakerId, query.getMakerId())
                 .like(StringUtils.isNotBlank(query.getMakerName()), StockOrderItem::getMakerName, query.getMakerName())
                 .eq(query.getBeforeQty() != null, StockOrderItem::getBeforeQty, query.getBeforeQty())

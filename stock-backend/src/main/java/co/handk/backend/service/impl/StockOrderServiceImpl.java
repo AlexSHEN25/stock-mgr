@@ -75,8 +75,8 @@ public class StockOrderServiceImpl extends ServiceImpl<StockOrderMapper, StockOr
         LambdaQueryWrapper<StockOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockOrder::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
                 .like(StringUtils.isNotBlank(query.getOrderNo()), StockOrder::getOrderNo, query.getOrderNo())
-                .eq(query.getType() != null, StockOrder::getOrderType, query.getType())
-                .eq(query.getTypeId() != null, StockOrder::getTypeId, query.getTypeId())
+                .eq(query.getOrderType() != null, StockOrder::getOrderType, query.getOrderType())
+                .eq(query.getStockTypeId() != null, StockOrder::getStockTypeId, query.getStockTypeId())
                 .eq(query.getWarehouseId() != null, StockOrder::getWarehouseId, query.getWarehouseId())
                 .eq(query.getSourceType() != null, StockOrder::getSourceType, query.getSourceType())
                 .eq(query.getSourceId() != null, StockOrder::getSourceId, query.getSourceId())

@@ -1,22 +1,20 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.service.UserService;
-import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.dto.create.CreateUserDTO;
+import co.handk.common.model.dto.query.UserQueryDTO;
 import co.handk.common.model.dto.update.UpdateUserDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
 import co.handk.common.model.vo.UserVO;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
 import java.util.Set;
 
 @RestController
@@ -52,23 +50,19 @@ public class UserController {
     // 修改
     @PutMapping
     public boolean update(@RequestBody @NotNull @Valid UpdateUserDTO dto) {
-//        return userService.updateByIdWithNotDeleted( User::getId,
-//                User::getDeleted,
-//                1L,
-//                w -> w.set(User::getStatus, 1));
-        return false;
+        return userService.update(dto);
     }
 
     // 删除
     @DeleteMapping("/{id}")
-    public boolean delete(@PathVariable @NotNull Long id) {
-        return userService.removeById(id);
+    public int delete(@PathVariable @NotNull Long id) {
+        return userService.logicDeleteById(id);
     }
 
     // 删除
     @DeleteMapping("/{ids}")
-    public boolean batchDelete(@PathVariable @NotNull Set<Long> ids) {
-        return userService.removeByIds(ids);
+    public int batchDelete(@PathVariable @NotNull Set<Long> ids) {
+        return userService.logicDeleteBatch(ids);
     }
 
     // 条件分页查询

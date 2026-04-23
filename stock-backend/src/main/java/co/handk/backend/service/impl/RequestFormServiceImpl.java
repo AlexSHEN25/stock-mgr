@@ -86,7 +86,7 @@ public class RequestFormServiceImpl extends ServiceImpl<RequestFormMapper, Reque
                 .eq(query.getRequestQty() != null, RequestForm::getRequestQty, query.getRequestQty())
                 .eq(query.getState() != null, RequestForm::getState, query.getState())
                 .eq(query.getApproverId() != null, RequestForm::getApproverId, query.getApproverId())
-                .like(StringUtils.isNotBlank(query.getApproveName()), RequestForm::getApproveName, query.getApproveName())
+                .like(StringUtils.isNotBlank(query.getApproverName()), RequestForm::getApproverName, query.getApproverName())
                 .eq(query.getApproveTime() != null, RequestForm::getApproveTime, query.getApproveTime())
                 .like(StringUtils.isNotBlank(query.getApproveRemark()), RequestForm::getApproveRemark, query.getApproveRemark());
         PageSortUtil.applyTimeSort(wrapper, query, RequestForm::getCreateTime, RequestForm::getUpdateTime);
