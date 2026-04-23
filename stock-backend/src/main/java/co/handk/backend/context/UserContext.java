@@ -12,6 +12,10 @@ public class UserContext {
         return USER_THREAD_LOCAL.get();
     }
 
+    public static Long getUserIdOrDefault() {
+        return USER_THREAD_LOCAL.get() == null ? 0L : USER_THREAD_LOCAL.get();
+    }
+
     public static void clear() {
         USER_THREAD_LOCAL.remove();
     }

@@ -55,14 +55,14 @@ public class UserController {
 
     // 删除
     @DeleteMapping("/{id}")
-    public int delete(@PathVariable @NotNull Long id) {
-        return userService.logicDeleteById(id);
+    public int delete(@PathVariable Long id) {
+        return userService.deleteById(id, 1L);
     }
 
     // 删除
     @DeleteMapping("/{ids}")
     public int batchDelete(@PathVariable @NotNull Set<Long> ids) {
-        return userService.logicDeleteBatch(ids);
+        return userService.deleteBatchIds(ids,1L);
     }
 
     // 条件分页查询

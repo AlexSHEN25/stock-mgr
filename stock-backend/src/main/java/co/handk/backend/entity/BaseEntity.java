@@ -1,18 +1,15 @@
 package co.handk.backend.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
-public class BaseEntity implements Serializable {
+public abstract class BaseEntity implements Serializable {
 
-    @TableId
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     @TableField(fill = FieldFill.INSERT)
