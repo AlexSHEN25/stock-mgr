@@ -1,5 +1,6 @@
 package co.handk.backend.controller;
 
+import co.handk.backend.service.LoginService;
 import co.handk.backend.service.UserService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.LoginDTO;
@@ -11,63 +12,83 @@ import co.handk.common.model.vo.LogoutVO;
 import co.handk.common.model.vo.UserVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Set;
+import java.util.List;
 
 @RestController
-@Validated
 @RequestMapping("/user")
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    private final LoginService loginService;
 
     @PostMapping("/login")
     public LoginVO login(@RequestBody @NotNull @Valid LoginDTO dto) {
-        return userService.login(dto);
+        return loginService.login(dto);
     }
 
     @PostMapping("/logout")
     public LogoutVO logout() {
-        return userService.logout();
+        return loginService.logout();
     }
 
-    // 新增
-    @PostMapping
-    public Boolean save(@RequestBody @NotNull @Valid CreateUserDTO dto) {
-        return userService.create(dto);
+    /**
+     * 分页查询
+     */
+    @PostMapping("/page")
+    public PageResult<UserVO> page(@RequestBody UserQueryDTO dto) {
+        return userService.page(dto);
     }
 
-    // 根据ID查询
+    /**
+     * 列表查询（不分页）
+     */
+    @PostMapping("/list")
+    public List<UserVO> list(@RequestBody UserQueryDTO dto) {
+        return userService.list(dto);
+    }
+
+    /**
+     * 根据ID查询
+     */
     @GetMapping("/{id}")
-    public UserVO getById(@PathVariable @NotNull Long id) {
-        return userService.get(id);
+    public UserVO get(@PathVariable Long id) {
+        return userService.getVOById(id);
     }
 
-    // 修改
-    @PutMapping
-    public boolean update(@RequestBody @NotNull @Valid UpdateUserDTO dto) {
-        return userService.update(dto);
+    /**
+     * 新增
+     */
+    @PostMapping
+    public boolean create(@RequestBody CreateUserDTO dto) {
+        return userService.saveByDto(dto);
     }
 
-    // 删除
+    /**
+     * 更新
+     */
+    @PutMapping("/{id}")
+    public boolean update(@RequestBody UpdateUserDTO dto) {
+        return userService.updateByDto(dto);
+    }
+
+    /**
+     * 单条逻辑删除
+     */
     @DeleteMapping("/{id}")
     public int delete(@PathVariable Long id) {
-        return userService.deleteById(id, 1L);
+        return userService.deleteByIdLogic(id);
     }
 
-    // 删除
-    @DeleteMapping("/{ids}")
-    public int batchDelete(@PathVariable @NotNull Set<Long> ids) {
-        return userService.deleteBatchIds(ids,1L);
-    }
-
-    // 条件分页查询
-    @GetMapping("/page")
-    public PageResult<UserVO> page(@Valid UserQueryDTO query) {
-        return userService.pageQuery(query);
+    /**
+     * 批量逻辑删除
+     */
+    @DeleteMapping("/batch")
+    public int deleteBatch(@RequestBody List<Long> ids) {
+        return userService.deleteBatchLogic(ids);
     }
 }

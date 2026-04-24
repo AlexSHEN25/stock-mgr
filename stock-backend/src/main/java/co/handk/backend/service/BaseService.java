@@ -1,39 +1,29 @@
 package co.handk.backend.service;
 
-import co.handk.backend.entity.BaseEntity;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import com.baomidou.mybatisplus.extension.service.IService;
 
-import java.util.Collection;
+import java.io.Serializable;
 import java.util.List;
-import java.util.Optional;
 
-public interface BaseService<T extends BaseEntity> extends IService<T> {
+public interface BaseService<T, V> extends IService<T> {
 
-    /**
-     * 单条逻辑删除（返回影响行数）
-     */
-    int deleteById(Long id, Long operatorId);
+    T getByIdNotDeleted(Serializable id);
 
-    /**
-     * 批量逻辑删除（返回实际删除条数）
-     */
-    int deleteBatchIds(Collection<Long> ids, Long operatorId);
+    V getVOById(Serializable id);
 
-    /**
-     * 查询单条（未删除）
-     */
-    Optional<T> getByIdNotDeleted(Long id);
+    <Q> List<V> list(Q queryDto);
 
-    /**
-     * 查询列表（未删除）
-     */
-    List<T> listNotDeleted();
+    <Q extends PageQuery> PageResult<V> page(Q queryDto);
 
-    /**
-     * 分页查询（未删除）
-     */
-    PageResult<T> page(PageQuery query);
+    <C> boolean saveByDto(C createDto);
 
+    <U> boolean updateByDto(U updateDto);
+
+    int deleteByIdLogic(Long id);
+
+    int deleteBatchLogic(List<Long> ids);
+
+    boolean existsById(Long id);
 }
