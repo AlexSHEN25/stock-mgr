@@ -20,7 +20,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity, V extends BaseVO> extends ServiceImpl<M, T> implements BaseService<T, V> {
+public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity, V extends BaseVO>
+        extends ServiceImpl<M, T>
+        implements BaseService<T, V> {
 
     /**
      * ================= 查询 =================
@@ -44,23 +46,16 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
     @Override
     public <Q extends PageQuery> PageResult<V> page(Q dto) {
-
         Page<T> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-
         QueryWrapper<T> wrapper = buildWrapper(dto);
-
         boolean asc = "asc".equalsIgnoreCase(dto.getSortOrder());
-
         if ("createTime".equals(dto.getSortBy())) {
             wrapper.orderBy(true, asc, "create_time");
         } else {
             wrapper.orderBy(true, asc, "update_time");
         }
-
         Page<T> result = this.page(page, wrapper);
-
         List<V> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
-
         return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), voList);
     }
 
@@ -77,18 +72,13 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      */
     @Override
     public <U> boolean updateByDto(U dto) {
-
         T entity = toEntity(dto);
-
         if (entity.getId() == null) {
             throw new RuntimeException("ID不能为空");
         }
         UpdateWrapper<T> wrapper = new UpdateWrapper<>();
-
         wrapper.eq("id", entity.getId()).eq("deleted", DeleteEnum.UNDELETED.getCode());
-
         buildUpdateSet(entity, wrapper);
-
         return baseMapper.update(null, wrapper) > DeleteEnum.UNDELETED.getCode();
     }
 
@@ -97,7 +87,9 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      */
     @Override
     public int deleteByIdLogic(Long id) {
-        return baseMapper.update(null, new UpdateWrapper<T>().eq("id", id).eq("deleted", DeleteEnum.UNDELETED.getCode()).set("deleted", 1));
+        return baseMapper.update(null, new UpdateWrapper<T>()
+                .eq("id", id).eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .set("deleted", DeleteEnum.DELETED.getCode()));
     }
 
     @Override
@@ -105,7 +97,9 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
         if (ids == null || ids.isEmpty()) return DeleteEnum.UNDELETED.getCode();
 
-        return baseMapper.update(null, new UpdateWrapper<T>().in("id", ids).eq("deleted", DeleteEnum.UNDELETED.getCode()).set("deleted", 1));
+        return baseMapper.update(null, new UpdateWrapper<T>().in("id", ids)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .set("deleted", DeleteEnum.DELETED.getCode()));
     }
 
     @Override
@@ -117,27 +111,18 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      * ================= 注解驱动查询 =================
      */
     protected <Q> QueryWrapper<T> buildWrapper(Q dto) {
-
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-
         // 全局过滤未删除
         wrapper.eq("deleted", DeleteEnum.UNDELETED.getCode());
-
         if (dto == null) return wrapper;
-
         for (Field field : dto.getClass().getDeclaredFields()) {
-
             field.setAccessible(true);
-
             QueryField queryField = field.getAnnotation(QueryField.class);
             if (queryField == null) continue;
-
             try {
                 Object value = field.get(dto);
                 if (value == null) continue;
-
                 String column = queryField.column().isEmpty() ? camelToUnderline(field.getName()) : queryField.column();
-
                 switch (queryField.type()) {
                     case EQ -> wrapper.eq(column, value);
                     case LIKE -> wrapper.like(column, value);
@@ -158,7 +143,6 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                 throw new RuntimeException("构建查询失败", e);
             }
         }
-
         return wrapper;
     }
 

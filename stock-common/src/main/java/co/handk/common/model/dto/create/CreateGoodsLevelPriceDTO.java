@@ -18,6 +18,7 @@ public class CreateGoodsLevelPriceDTO {
     private Long levelId;
 
     private BigDecimal price;
+
     private String currency;
 
     private BigDecimal discount;
@@ -26,6 +27,5 @@ public class CreateGoodsLevelPriceDTO {
 
     private LocalDateTime expireTime;
 
-    private StatusEnum status;
 }
 

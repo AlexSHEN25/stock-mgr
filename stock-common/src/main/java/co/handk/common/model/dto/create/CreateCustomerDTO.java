@@ -20,5 +20,4 @@ public class CreateCustomerDTO {
     private Long ownerUserId;
     private Long ownerDeptId;
     private String remark;
-    private StatusEnum status;
 }

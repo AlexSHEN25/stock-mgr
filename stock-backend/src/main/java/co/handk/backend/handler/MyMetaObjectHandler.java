@@ -2,6 +2,7 @@ package co.handk.backend.handler;
 
 import co.handk.backend.context.UserContext;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.StatusEnum;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
 
         this.strictInsertFill(metaObject, "deleted", Integer.class, DeleteEnum.UNDELETED.getCode());
+        this.strictInsertFill(metaObject, "status", Integer.class, StatusEnum.NOMAL.getCode());
     }
 
     @Override

@@ -12,5 +12,4 @@ public class CreateCustomerLevelDTO {
     private String name;
     private BigDecimal discount;
     private String remark;
-    private StatusEnum status;
 }

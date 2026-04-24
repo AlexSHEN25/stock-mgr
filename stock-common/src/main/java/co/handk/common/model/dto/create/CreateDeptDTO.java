@@ -12,5 +12,4 @@ public class CreateDeptDTO {
     private String code;
     private Long leaderId;
     private Integer sort;
-    private StatusEnum status;
 }
