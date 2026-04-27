@@ -20,8 +20,12 @@ public class UpdateRequestItemDTO {
     private String brandName;
     private Long seriesId;
     private String seriesName;
-    private Long typeId;
-    private String typeName;
+    private Long categoryId;
+    private String categoryName;
+
+    private Long stockTypeId;
+    private String stockTypeName;
+
     private Long makerId;
     private String makerName;
     private Long warehouseId;

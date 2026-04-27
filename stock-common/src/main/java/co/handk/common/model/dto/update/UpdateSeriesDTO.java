@@ -12,6 +12,7 @@ public class UpdateSeriesDTO {
 
     private String name;
     private String englishName;
+    private Long brandId;
     private String content;
     private StatusEnum status;
 }

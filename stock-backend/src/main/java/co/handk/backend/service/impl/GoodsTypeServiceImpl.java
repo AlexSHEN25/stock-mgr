@@ -8,7 +8,7 @@ import co.handk.backend.util.PageSortUtil;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockTypeDTO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
-import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
+import co.handk.common.model.dto.update.UpdateStockTypeDTO;
 import co.handk.common.model.vo.GoodsTypeVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -48,7 +48,7 @@ public class GoodsTypeServiceImpl extends ServiceImpl<StockTypeMapper, StockType
     }
 
     @Override
-    public Boolean update(UpdateGoodsTypeDTO dto) {
+    public Boolean update(UpdateStockTypeDTO dto) {
         if (this.getById(dto.getId()) == null) {
             throw new RuntimeException("数据不存在");
         }

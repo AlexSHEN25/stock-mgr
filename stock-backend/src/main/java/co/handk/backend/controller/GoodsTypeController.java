@@ -4,7 +4,7 @@ import co.handk.backend.service.StockTypeService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockTypeDTO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
-import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
+import co.handk.common.model.dto.update.UpdateStockTypeDTO;
 import co.handk.common.model.vo.GoodsTypeVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -30,7 +30,7 @@ public class GoodsTypeController {
     }
 
     @PutMapping
-    public Boolean update(@RequestBody @NotNull @Valid UpdateGoodsTypeDTO dto) {
+    public Boolean update(@RequestBody @NotNull @Valid UpdateStockTypeDTO dto) {
         return goodsTypeService.update(dto);
     }
 

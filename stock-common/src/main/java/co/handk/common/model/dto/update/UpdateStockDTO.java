@@ -17,13 +17,14 @@ public class UpdateStockDTO {
     private String goodsName;
     private Long skuId;
     private String skuCode;
-    private Integer typeId;
     private Integer warehouseId;
     private Integer currentQty;
     private Integer lockQty;
     private BigDecimal price;
     private String currency;
     private LocalDateTime priceUpdateTime;
+    private Long stockTypeId;
+
     private StatusEnum status;
     private Long version;
 }

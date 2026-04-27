@@ -1,7 +1,7 @@
 package co.handk.backend.service;
 import co.handk.backend.entity.StockType;
 import co.handk.common.model.dto.create.CreateStockTypeDTO;
-import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
+import co.handk.common.model.dto.update.UpdateStockTypeDTO;
 import co.handk.common.model.vo.GoodsTypeVO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
 import co.handk.common.model.PageResult;
@@ -14,7 +14,7 @@ import jakarta.validation.constraints.NotNull;
 public interface StockTypeService extends IService<StockType> {
     Boolean create(@NotNull CreateStockTypeDTO dto);
     GoodsTypeVO get(@NotNull Long id);
-    Boolean update(@NotNull UpdateGoodsTypeDTO dto);
+    Boolean update(@NotNull UpdateStockTypeDTO dto);
     Boolean delete(@NotNull Long id);
     PageResult<GoodsTypeVO> pageQuery(@NotNull GoodsTypeQueryDTO query);
 }
