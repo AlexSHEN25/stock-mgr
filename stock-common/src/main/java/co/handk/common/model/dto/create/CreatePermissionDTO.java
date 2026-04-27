@@ -16,5 +16,4 @@ public class CreatePermissionDTO {
     private Integer sort;
     private String icon;
     private String component;
-    private StatusEnum status;
 }

@@ -8,12 +8,12 @@ import lombok.Data;
 public class CreateStockOrderDTO {
 
     private String orderNo;
-    private Integer type;
-    private Integer typeId;
+    private Integer orderType;
     private Long warehouseId;
     private Integer sourceType;
     private Long sourceId;
     private Integer totalQty;
+    private Long stockTypeId;
     private Integer state;
     private Long requesterId;
     private String requesterName;

@@ -2,7 +2,7 @@ package co.handk.backend.controller;
 
 import co.handk.backend.service.StockTypeService;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.create.CreateGoodsTypeDTO;
+import co.handk.common.model.dto.create.CreateStockTypeDTO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
 import co.handk.common.model.vo.GoodsTypeVO;
@@ -20,7 +20,7 @@ public class GoodsTypeController {
     private StockTypeService goodsTypeService;
 
     @PostMapping
-    public Boolean create(@RequestBody @NotNull @Valid CreateGoodsTypeDTO dto) {
+    public Boolean create(@RequestBody @NotNull @Valid CreateStockTypeDTO dto) {
         return goodsTypeService.create(dto);
     }
 

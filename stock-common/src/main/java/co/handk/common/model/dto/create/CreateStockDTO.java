@@ -14,14 +14,12 @@ public class CreateStockDTO {
     private String goodsName;
     private Long skuId;
     private String skuCode;
-    private Integer typeId;
     private Integer warehouseId;
     private Integer currentQty;
     private Integer lockQty;
     private BigDecimal price;
     private String currency;
     private LocalDateTime priceUpdateTime;
-    private StatusEnum status;
-    private Long version;
+    private Long stockTypeId;
 }
 

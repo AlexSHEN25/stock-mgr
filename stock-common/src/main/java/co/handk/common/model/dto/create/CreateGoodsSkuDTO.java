@@ -30,6 +30,5 @@ public class CreateGoodsSkuDTO {
 
     private BigDecimal volume;
 
-    private StatusEnum status;
 }
 

@@ -3,9 +3,7 @@ package co.handk.common.model.dto.create;
 import lombok.Data;
 
 @Data
-public class CreateRoleDTO {
+public class CreateStockTypeDTO {
 
     private String name;
-    private String code;
-    private String remark;
 }

@@ -16,7 +16,6 @@ public class CreateOperateLogDTO {
     private String requestIp;
     private String requestParam;
     private String responseData;
-    private StatusEnum status;
     private String errorMsg;
     private Integer costTime;
 }

@@ -19,7 +19,7 @@ public class CreateRequestFormDTO {
     private Integer requestQty;
     private Integer state;
     private Long approverId;
-    private String approveName;
+    private String approverName;
     private LocalDateTime approveTime;
     private String approveRemark;
 }

@@ -6,7 +6,7 @@ import co.handk.backend.service.StockTypeService;
 import co.handk.backend.util.EnumFieldMapper;
 import co.handk.backend.util.PageSortUtil;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.create.CreateGoodsTypeDTO;
+import co.handk.common.model.dto.create.CreateStockTypeDTO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsTypeDTO;
 import co.handk.common.model.vo.GoodsTypeVO;
@@ -28,7 +28,7 @@ public class GoodsTypeServiceImpl extends ServiceImpl<StockTypeMapper, StockType
     private final StockTypeMapper goodsTypeMapper;
 
     @Override
-    public Boolean create(CreateGoodsTypeDTO dto) {
+    public Boolean create(CreateStockTypeDTO dto) {
         StockType entity = new StockType();
         BeanUtils.copyProperties(dto, entity);
         EnumFieldMapper.mapStatusAndDeleted(dto, entity);
