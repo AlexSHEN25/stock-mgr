@@ -8,4 +8,5 @@ public class RoleVO extends BaseVO {
     private String code;
     private String remark;
     private Integer status;
+    private String statusDesc;
 }

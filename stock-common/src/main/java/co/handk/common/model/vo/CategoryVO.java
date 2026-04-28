@@ -6,4 +6,5 @@ import lombok.Data;
 public class CategoryVO extends BaseVO {
     private String name;
     private Integer status;
+    private String statusDesc;
 }

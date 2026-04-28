@@ -10,4 +10,5 @@ public class DeptVO extends BaseVO {
     private Long leaderId;
     private Integer sort;
     private Integer status;
+    private String statusDesc;
 }

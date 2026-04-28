@@ -9,4 +9,5 @@ public class BrandVO extends BaseVO {
     private String image;
     private String content;
     private Integer status;
+    private String statusDesc;
 }

@@ -6,4 +6,5 @@ import lombok.Data;
 public class MakerVO extends BaseVO {
     private String name;
     private Integer status;
+    private String statusDesc;
 }

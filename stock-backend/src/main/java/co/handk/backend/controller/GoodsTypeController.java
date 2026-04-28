@@ -5,7 +5,7 @@ import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockTypeDTO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockTypeDTO;
-import co.handk.common.model.vo.GoodsTypeVO;
+import co.handk.common.model.vo.StockTypeVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +25,7 @@ public class GoodsTypeController {
     }
 
     @GetMapping("/{id}")
-    public GoodsTypeVO get(@PathVariable @NotNull Long id) {
+    public StockTypeVO get(@PathVariable @NotNull Long id) {
         return goodsTypeService.get(id);
     }
 
@@ -40,7 +40,7 @@ public class GoodsTypeController {
     }
 
     @GetMapping("/page")
-    public PageResult<GoodsTypeVO> page(@Valid GoodsTypeQueryDTO query) {
+    public PageResult<StockTypeVO> page(@Valid GoodsTypeQueryDTO query) {
         return goodsTypeService.pageQuery(query);
     }
 }

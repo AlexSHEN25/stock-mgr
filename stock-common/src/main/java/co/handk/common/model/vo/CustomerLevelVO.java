@@ -10,4 +10,5 @@ public class CustomerLevelVO extends BaseVO {
     private BigDecimal discount;
     private String remark;
     private Integer status;
+    private String statusDesc;
 }

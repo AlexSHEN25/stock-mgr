@@ -11,14 +11,15 @@ public class StockVO extends BaseVO {
     private String goodsName;
     private Long skuId;
     private String skuCode;
-    private Integer typeId;
+
     private Integer warehouseId;
     private Integer currentQty;
     private Integer lockQty;
     private BigDecimal price;
     private String currency;
     private LocalDateTime priceUpdateTime;
+    private Integer stockTypeId;
     private Integer status;
-    private Long version;
+    private String statusDesc;
 }
 

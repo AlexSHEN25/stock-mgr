@@ -6,6 +6,7 @@ import lombok.Data;
 public class MessageVO extends BaseVO {
     private Integer type;
     private Long userId;
+    private String username;
     private String message;
     private Integer sourceId;
     private Integer isRead;

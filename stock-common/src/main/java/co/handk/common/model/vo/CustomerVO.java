@@ -14,8 +14,11 @@ public class CustomerVO extends BaseVO {
     private String city;
     private String address;
     private Integer levelId;
+    private String levelName;
     private Long ownerUserId;
+    private String ownerUserName;
     private Long ownerDeptId;
     private String remark;
     private Integer status;
+    private String statusDesc;
 }

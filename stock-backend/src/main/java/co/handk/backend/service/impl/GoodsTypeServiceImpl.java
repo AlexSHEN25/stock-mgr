@@ -9,7 +9,7 @@ import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockTypeDTO;
 import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockTypeDTO;
-import co.handk.common.model.vo.GoodsTypeVO;
+import co.handk.common.model.vo.StockTypeVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -37,12 +37,12 @@ public class GoodsTypeServiceImpl extends ServiceImpl<StockTypeMapper, StockType
     }
 
     @Override
-    public GoodsTypeVO get(Long id) {
+    public StockTypeVO get(Long id) {
         StockType entity = this.getById(id);
         if (entity == null) {
             throw new RuntimeException("数据不存在");
         }
-        GoodsTypeVO vo = new GoodsTypeVO();
+        StockTypeVO vo = new StockTypeVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
     }
@@ -68,7 +68,7 @@ public class GoodsTypeServiceImpl extends ServiceImpl<StockTypeMapper, StockType
     }
 
     @Override
-    public PageResult<GoodsTypeVO> pageQuery(GoodsTypeQueryDTO query) {
+    public PageResult<StockTypeVO> pageQuery(GoodsTypeQueryDTO query) {
         Page<StockType> page = new Page<>(query.getPageNum(), query.getPageSize());
         LambdaQueryWrapper<StockType> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StockType::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
@@ -76,8 +76,8 @@ public class GoodsTypeServiceImpl extends ServiceImpl<StockTypeMapper, StockType
                 .eq(query.getStatus() != null, StockType::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
         PageSortUtil.applyTimeSort(wrapper, query, StockType::getCreateTime, StockType::getUpdateTime);
         Page<StockType> resultPage = goodsTypeMapper.selectPage(page, wrapper);
-        List<GoodsTypeVO> records = resultPage.getRecords().stream().map(entity -> {
-            GoodsTypeVO vo = new GoodsTypeVO();
+        List<StockTypeVO> records = resultPage.getRecords().stream().map(entity -> {
+            StockTypeVO vo = new StockTypeVO();
             BeanUtils.copyProperties(entity, vo);
             return vo;
         }).collect(Collectors.toList());

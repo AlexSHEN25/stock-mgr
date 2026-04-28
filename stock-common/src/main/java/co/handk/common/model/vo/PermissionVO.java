@@ -14,4 +14,5 @@ public class PermissionVO extends BaseVO {
     private String icon;
     private String component;
     private Integer status;
+    private String statusDesc;
 }

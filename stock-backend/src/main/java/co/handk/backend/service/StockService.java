@@ -5,7 +5,6 @@ import co.handk.common.model.dto.create.CreateStockDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.vo.StockPageVO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.springframework.stereotype.Service;

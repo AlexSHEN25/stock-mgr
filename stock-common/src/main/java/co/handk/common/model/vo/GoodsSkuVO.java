@@ -19,5 +19,6 @@ public class GoodsSkuVO extends BaseVO {
     private BigDecimal weight;
     private BigDecimal volume;
     private Integer status;
+    private String statusDesc;
 }
 

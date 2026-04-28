@@ -12,5 +12,6 @@ public class UserVO extends BaseVO {
     private String phone;
     private String avatar;
     private Integer status;
+    private String statusDesc;
 
 }

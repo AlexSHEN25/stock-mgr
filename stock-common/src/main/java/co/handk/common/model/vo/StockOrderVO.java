@@ -7,12 +7,13 @@ import java.time.LocalDateTime;
 @Data
 public class StockOrderVO extends BaseVO {
     private String orderNo;
-    private Integer type;
-    private Integer typeId;
+    private Integer orderType;
+
     private Long warehouseId;
     private Integer sourceType;
     private Long sourceId;
     private Integer totalQty;
+    private Integer stockTypeId;
     private Integer state;
     private Long requesterId;
     private String requesterName;
@@ -22,6 +23,5 @@ public class StockOrderVO extends BaseVO {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
-    private Long version;
     private LocalDateTime finishTime;
 }

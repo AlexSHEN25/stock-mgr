@@ -12,4 +12,5 @@ public class UserTokenVO extends BaseVO {
     private LocalDateTime expireTime;
     private String loginIp;
     private Integer status;
+    private String statusDesc;
 }

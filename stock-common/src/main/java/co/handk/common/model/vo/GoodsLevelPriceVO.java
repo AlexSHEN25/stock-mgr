@@ -17,5 +17,6 @@ public class GoodsLevelPriceVO extends BaseVO {
     private LocalDateTime effectiveTime;
     private LocalDateTime expireTime;
     private Integer status;
+    private String statusDesc;
 }
 

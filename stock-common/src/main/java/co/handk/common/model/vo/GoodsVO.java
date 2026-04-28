@@ -6,12 +6,17 @@ import lombok.Data;
 public class GoodsVO extends BaseVO {
     private String name;
     private String englishName;
-    private String skuCode;
-    private Long seriesId;
     private Long brandId;
-    private Long typeId;
+    private String brandName;
+    private Long seriesId;
+    private String seriesName;
+    private Long categoryId;
+    private String categoryName;
     private Long makerId;
+    private String makerName;
     private String description;
     private Integer isHot;
+    private Integer sort;
     private Integer status;
+    private String statusDesc;
 }
