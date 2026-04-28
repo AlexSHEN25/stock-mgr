@@ -16,31 +16,32 @@ import org.springframework.web.bind.annotation.*;
 @Validated
 @RequestMapping("/goodsSkuSpec")
 public class GoodsSkuSpecController {
+
     @Autowired
     private GoodsSkuSpecService goodsSkuSpecService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsSkuSpecDTO dto) {
-        return goodsSkuSpecService.create(dto);
+        return goodsSkuSpecService.saveByDto(dto);
     }
 
     @GetMapping("/{id}")
     public GoodsSkuSpecVO get(@PathVariable @NotNull Long id) {
-        return goodsSkuSpecService.get(id);
+        return goodsSkuSpecService.getVOById(id);
     }
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateGoodsSkuSpecDTO dto) {
-        return goodsSkuSpecService.update(dto);
+        return goodsSkuSpecService.updateByDto(dto);
     }
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return goodsSkuSpecService.delete(id);
+        return goodsSkuSpecService.deleteByIdLogic(id) > 0;
     }
 
     @GetMapping("/page")
     public PageResult<GoodsSkuSpecVO> page(@Valid GoodsSkuSpecQueryDTO query) {
-        return goodsSkuSpecService.pageQuery(query);
+        return goodsSkuSpecService.page(query);
     }
 }

@@ -21,26 +21,27 @@ public class GoodsLevelPriceController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsLevelPriceDTO dto) {
-        return goodsLevelPriceService.create(dto);
+        return goodsLevelPriceService.saveByDto(dto);
     }
 
     @GetMapping("/{id}")
     public GoodsLevelPriceVO get(@PathVariable @NotNull Long id) {
-        return goodsLevelPriceService.get(id);
+        return goodsLevelPriceService.getVOById(id);
     }
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateGoodsLevelPriceDTO dto) {
-        return goodsLevelPriceService.update(dto);
+        return goodsLevelPriceService.updateByDto(dto);
     }
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return goodsLevelPriceService.delete(id);
+        return goodsLevelPriceService.deleteByIdLogic(id) > 0;
     }
 
     @GetMapping("/page")
     public PageResult<GoodsLevelPriceVO> page(@Valid GoodsLevelPriceQueryDTO query) {
-        return goodsLevelPriceService.pageQuery(query);
+        return goodsLevelPriceService.page(query);
     }
 }
+

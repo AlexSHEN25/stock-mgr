@@ -19,22 +19,23 @@ public class WarehouseController {
     private WarehouseService warehouseService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateWarehouseDTO dto) {
-        return warehouseService.create(dto);
+        return warehouseService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public WarehouseVO get(@PathVariable @NotNull Long id) {
-        return warehouseService.get(id);
+        return warehouseService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateWarehouseDTO dto) {
-        return warehouseService.update(dto);
+        return warehouseService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return warehouseService.delete(id);
+        return warehouseService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<WarehouseVO> page(@Valid WarehouseQueryDTO query) {
-        return warehouseService.pageQuery(query);
+        return warehouseService.page(query);
     }
 }
+

@@ -19,22 +19,23 @@ public class PermissionController {
     private PermissionService permissionService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreatePermissionDTO dto) {
-        return permissionService.create(dto);
+        return permissionService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public PermissionVO get(@PathVariable @NotNull Long id) {
-        return permissionService.get(id);
+        return permissionService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdatePermissionDTO dto) {
-        return permissionService.update(dto);
+        return permissionService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return permissionService.delete(id);
+        return permissionService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<PermissionVO> page(@Valid PermissionQueryDTO query) {
-        return permissionService.pageQuery(query);
+        return permissionService.page(query);
     }
 }
+

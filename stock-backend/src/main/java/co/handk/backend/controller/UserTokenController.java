@@ -19,22 +19,23 @@ public class UserTokenController {
     private UserTokenService userTokenService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateUserTokenDTO dto) {
-        return userTokenService.create(dto);
+        return userTokenService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public UserTokenVO get(@PathVariable @NotNull Long id) {
-        return userTokenService.get(id);
+        return userTokenService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateUserTokenDTO dto) {
-        return userTokenService.update(dto);
+        return userTokenService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return userTokenService.delete(id);
+        return userTokenService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<UserTokenVO> page(@Valid UserTokenQueryDTO query) {
-        return userTokenService.pageQuery(query);
+        return userTokenService.page(query);
     }
 }
+

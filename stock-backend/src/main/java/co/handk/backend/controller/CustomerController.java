@@ -19,22 +19,23 @@ public class CustomerController {
     private CustomerService customerService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateCustomerDTO dto) {
-        return customerService.create(dto);
+        return customerService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public CustomerVO get(@PathVariable @NotNull Long id) {
-        return customerService.get(id);
+        return customerService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateCustomerDTO dto) {
-        return customerService.update(dto);
+        return customerService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return customerService.delete(id);
+        return customerService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<CustomerVO> page(@Valid CustomerQueryDTO query) {
-        return customerService.pageQuery(query);
+        return customerService.page(query);
     }
 }
+

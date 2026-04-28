@@ -19,22 +19,23 @@ public class UserRoleController {
     private UserRoleService userRoleService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateUserRoleDTO dto) {
-        return userRoleService.create(dto);
+        return userRoleService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public UserRoleVO get(@PathVariable @NotNull Long id) {
-        return userRoleService.get(id);
+        return userRoleService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateUserRoleDTO dto) {
-        return userRoleService.update(dto);
+        return userRoleService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return userRoleService.delete(id);
+        return userRoleService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<UserRoleVO> page(@Valid UserRoleQueryDTO query) {
-        return userRoleService.pageQuery(query);
+        return userRoleService.page(query);
     }
 }
+

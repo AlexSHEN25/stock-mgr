@@ -1,49 +1,20 @@
 package co.handk.backend.service.impl;
 
-import org.apache.commons.lang3.StringUtils;
-
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.entity.Maker;
-import co.handk.common.model.dto.create.CreateMakerDTO;
-import co.handk.common.model.dto.update.UpdateMakerDTO;
-import co.handk.common.model.vo.MakerVO;
 import co.handk.backend.mapper.MakerMapper;
 import co.handk.backend.service.MakerService;
-import co.handk.common.model.dto.query.MakerQueryDTO;
-import co.handk.common.model.PageResult;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import co.handk.common.model.vo.MakerVO;
 import org.springframework.beans.BeanUtils;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements MakerService {
-
-    private final MakerMapper makerMapper;
+public class MakerServiceImpl extends BaseServiceImpl<MakerMapper, Maker, MakerVO>
+        implements MakerService {
 
     @Override
-    public Boolean create(CreateMakerDTO dto) {
-        Maker entity = new Maker();
-        BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        entity.setId(null);
-        return this.save(entity);
-    }
-
-    @Override
-    public MakerVO get(Long id) {
-        Maker entity = this.getById(id);
+    protected MakerVO toVO(Maker entity) {
         if (entity == null) {
-            throw new RuntimeException("数据不存在");
+            return null;
         }
         MakerVO vo = new MakerVO();
         BeanUtils.copyProperties(entity, vo);
@@ -51,38 +22,12 @@ public class MakerServiceImpl extends ServiceImpl<MakerMapper, Maker> implements
     }
 
     @Override
-    public Boolean update(UpdateMakerDTO dto) {
-        if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("数据不存在");
+    protected <D> Maker toEntity(D dto) {
+        if (dto == null) {
+            return null;
         }
         Maker entity = new Maker();
         BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        return this.updateById(entity);
-    }
-
-    @Override
-    public Boolean delete(Long id) {
-        if (this.getById(id) == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        return this.lambdaUpdate().eq(Maker::getId, id).set(Maker::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
-    }
-
-    @Override
-    public PageResult<MakerVO> pageQuery(MakerQueryDTO query) {
-        Page<Maker> page = new Page<>(query.getPageNum(), query.getPageSize());
-        LambdaQueryWrapper<Maker> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Maker::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
-                .like(StringUtils.isNotBlank(query.getName()), Maker::getName, query.getName())
-                .eq(query.getStatus() != null, Maker::getStatus, (query.getStatus() == null ? null : query.getStatus().getCode()));
-        PageSortUtil.applyTimeSort(wrapper, query, Maker::getCreateTime, Maker::getUpdateTime);
-        Page<Maker> resultPage =     makerMapper.selectPage(page, wrapper);
-        List<MakerVO> records = resultPage.getRecords().stream().map(entity -> {
-            MakerVO vo = new MakerVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
+        return entity;
     }
 }

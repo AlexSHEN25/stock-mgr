@@ -19,22 +19,23 @@ public class CustomerLevelController {
     private CustomerLevelService customerLevelService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateCustomerLevelDTO dto) {
-        return customerLevelService.create(dto);
+        return customerLevelService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public CustomerLevelVO get(@PathVariable @NotNull Long id) {
-        return customerLevelService.get(id);
+        return customerLevelService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateCustomerLevelDTO dto) {
-        return customerLevelService.update(dto);
+        return customerLevelService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return customerLevelService.delete(id);
+        return customerLevelService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<CustomerLevelVO> page(@Valid CustomerLevelQueryDTO query) {
-        return customerLevelService.pageQuery(query);
+        return customerLevelService.page(query);
     }
 }
+

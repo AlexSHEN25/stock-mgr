@@ -19,22 +19,23 @@ public class GoodsController {
     private GoodsService goodsService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsDTO dto) {
-        return goodsService.create(dto);
+        return goodsService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public GoodsVO get(@PathVariable @NotNull Long id) {
-        return goodsService.get(id);
+        return goodsService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateGoodsDTO dto) {
-        return goodsService.update(dto);
+        return goodsService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return goodsService.delete(id);
+        return goodsService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<GoodsVO> page(@Valid GoodsQueryDTO query) {
-        return goodsService.pageQuery(query);
+        return goodsService.page(query);
     }
 }
+

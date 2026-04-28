@@ -19,22 +19,23 @@ public class SeriesController {
     private SeriesService seriesService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateSeriesDTO dto) {
-        return seriesService.create(dto);
+        return seriesService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public SeriesVO get(@PathVariable @NotNull Long id) {
-        return seriesService.get(id);
+        return seriesService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateSeriesDTO dto) {
-        return seriesService.update(dto);
+        return seriesService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return seriesService.delete(id);
+        return seriesService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<SeriesVO> page(@Valid SeriesQueryDTO query) {
-        return seriesService.pageQuery(query);
+        return seriesService.page(query);
     }
 }
+

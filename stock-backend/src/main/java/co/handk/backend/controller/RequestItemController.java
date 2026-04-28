@@ -19,22 +19,23 @@ public class RequestItemController {
     private RequestItemService requestItemService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRequestItemDTO dto) {
-        return requestItemService.create(dto);
+        return requestItemService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public RequestItemVO get(@PathVariable @NotNull Long id) {
-        return requestItemService.get(id);
+        return requestItemService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateRequestItemDTO dto) {
-        return requestItemService.update(dto);
+        return requestItemService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return requestItemService.delete(id);
+        return requestItemService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<RequestItemVO> page(@Valid RequestItemQueryDTO query) {
-        return requestItemService.pageQuery(query);
+        return requestItemService.page(query);
     }
 }
+

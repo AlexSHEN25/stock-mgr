@@ -19,22 +19,23 @@ public class DeptController {
     private DeptService deptService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateDeptDTO dto) {
-        return deptService.create(dto);
+        return deptService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public DeptVO get(@PathVariable @NotNull Long id) {
-        return deptService.get(id);
+        return deptService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateDeptDTO dto) {
-        return deptService.update(dto);
+        return deptService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return deptService.delete(id);
+        return deptService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<DeptVO> page(@Valid DeptQueryDTO query) {
-        return deptService.pageQuery(query);
+        return deptService.page(query);
     }
 }
+

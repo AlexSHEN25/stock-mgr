@@ -21,26 +21,27 @@ public class BrandMakerRelationController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateBrandMakerRelationDTO dto) {
-        return brandMakerRelationService.create(dto);
+        return brandMakerRelationService.saveByDto(dto);
     }
 
     @GetMapping("/{id}")
     public BrandMakerRelationVO get(@PathVariable @NotNull Long id) {
-        return brandMakerRelationService.get(id);
+        return brandMakerRelationService.getVOById(id);
     }
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateBrandMakerRelationDTO dto) {
-        return brandMakerRelationService.update(dto);
+        return brandMakerRelationService.updateByDto(dto);
     }
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return brandMakerRelationService.delete(id);
+        return brandMakerRelationService.deleteByIdLogic(id) > 0;
     }
 
     @GetMapping("/page")
     public PageResult<BrandMakerRelationVO> page(@Valid BrandMakerRelationQueryDTO query) {
-        return brandMakerRelationService.pageQuery(query);
+        return brandMakerRelationService.page(query);
     }
 }
+

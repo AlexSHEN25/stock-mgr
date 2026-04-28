@@ -19,22 +19,23 @@ public class MessageController {
     private MessageService messageService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateMessageDTO dto) {
-        return messageService.create(dto);
+        return messageService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public MessageVO get(@PathVariable @NotNull Long id) {
-        return messageService.get(id);
+        return messageService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateMessageDTO dto) {
-        return messageService.update(dto);
+        return messageService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return messageService.delete(id);
+        return messageService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<MessageVO> page(@Valid MessageQueryDTO query) {
-        return messageService.pageQuery(query);
+        return messageService.page(query);
     }
 }
+

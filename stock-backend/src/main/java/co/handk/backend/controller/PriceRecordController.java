@@ -19,22 +19,23 @@ public class PriceRecordController {
     private PriceRecordService priceRecordService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreatePriceRecordDTO dto) {
-        return priceRecordService.create(dto);
+        return priceRecordService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public PriceRecordVO get(@PathVariable @NotNull Long id) {
-        return priceRecordService.get(id);
+        return priceRecordService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdatePriceRecordDTO dto) {
-        return priceRecordService.update(dto);
+        return priceRecordService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return priceRecordService.delete(id);
+        return priceRecordService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<PriceRecordVO> page(@Valid PriceRecordQueryDTO query) {
-        return priceRecordService.pageQuery(query);
+        return priceRecordService.page(query);
     }
 }
+

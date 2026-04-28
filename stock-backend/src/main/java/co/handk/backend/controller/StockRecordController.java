@@ -19,22 +19,23 @@ public class StockRecordController {
     private StockRecordService stockRecordService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockRecordDTO dto) {
-        return stockRecordService.create(dto);
+        return stockRecordService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public StockRecordVO get(@PathVariable @NotNull Long id) {
-        return stockRecordService.get(id);
+        return stockRecordService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateStockRecordDTO dto) {
-        return stockRecordService.update(dto);
+        return stockRecordService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return stockRecordService.delete(id);
+        return stockRecordService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<StockRecordVO> page(@Valid StockRecordQueryDTO query) {
-        return stockRecordService.pageQuery(query);
+        return stockRecordService.page(query);
     }
 }
+

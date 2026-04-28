@@ -19,22 +19,23 @@ public class BrandController {
     private BrandService brandService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateBrandDTO dto) {
-        return brandService.create(dto);
+        return brandService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public BrandVO get(@PathVariable @NotNull Long id) {
-        return brandService.get(id);
+        return brandService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateBrandDTO dto) {
-        return brandService.update(dto);
+        return brandService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return brandService.delete(id);
+        return brandService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<BrandVO> page(@Valid BrandQueryDTO query) {
-        return brandService.pageQuery(query);
+        return brandService.page(query);
     }
 }
+

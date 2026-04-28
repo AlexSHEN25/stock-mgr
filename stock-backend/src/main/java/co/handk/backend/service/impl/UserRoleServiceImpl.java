@@ -1,47 +1,20 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.entity.UserRole;
-import co.handk.common.model.dto.create.CreateUserRoleDTO;
-import co.handk.common.model.dto.update.UpdateUserRoleDTO;
-import co.handk.common.model.vo.UserRoleVO;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.UserRoleService;
-import co.handk.common.model.dto.query.UserRoleQueryDTO;
-import co.handk.common.model.PageResult;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import co.handk.common.model.vo.UserRoleVO;
 import org.springframework.beans.BeanUtils;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> implements UserRoleService {
-
-    private final UserRoleMapper userRoleMapper;
+public class UserRoleServiceImpl extends BaseServiceImpl<UserRoleMapper, UserRole, UserRoleVO>
+        implements UserRoleService {
 
     @Override
-    public Boolean create(CreateUserRoleDTO dto) {
-        UserRole entity = new UserRole();
-        BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        entity.setId(null);
-        return this.save(entity);
-    }
-
-    @Override
-    public UserRoleVO get(Long id) {
-        UserRole entity = this.getById(id);
+    protected UserRoleVO toVO(UserRole entity) {
         if (entity == null) {
-            throw new RuntimeException("数据不存在");
+            return null;
         }
         UserRoleVO vo = new UserRoleVO();
         BeanUtils.copyProperties(entity, vo);
@@ -49,38 +22,12 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
     }
 
     @Override
-    public Boolean update(UpdateUserRoleDTO dto) {
-        if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("数据不存在");
+    protected <D> UserRole toEntity(D dto) {
+        if (dto == null) {
+            return null;
         }
         UserRole entity = new UserRole();
         BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        return this.updateById(entity);
-    }
-
-    @Override
-    public Boolean delete(Long id) {
-        if (this.getById(id) == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        return this.lambdaUpdate().eq(UserRole::getId, id).set(UserRole::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
-    }
-
-    @Override
-    public PageResult<UserRoleVO> pageQuery(UserRoleQueryDTO query) {
-        Page<UserRole> page = new Page<>(query.getPageNum(), query.getPageSize());
-        LambdaQueryWrapper<UserRole> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserRole::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
-                .eq(query.getUserId() != null, UserRole::getUserId, query.getUserId())
-                .eq(query.getRoleId() != null, UserRole::getRoleId, query.getRoleId());
-        PageSortUtil.applyTimeSort(wrapper, query, UserRole::getCreateTime, UserRole::getUpdateTime);
-        Page<UserRole> resultPage =     userRoleMapper.selectPage(page, wrapper);
-        List<UserRoleVO> records = resultPage.getRecords().stream().map(entity -> {
-            UserRoleVO vo = new UserRoleVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
+        return entity;
     }
 }

@@ -19,22 +19,23 @@ public class StockOrderController {
     private StockOrderService stockOrderService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockOrderDTO dto) {
-        return stockOrderService.create(dto);
+        return stockOrderService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public StockOrderVO get(@PathVariable @NotNull Long id) {
-        return stockOrderService.get(id);
+        return stockOrderService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateStockOrderDTO dto) {
-        return stockOrderService.update(dto);
+        return stockOrderService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return stockOrderService.delete(id);
+        return stockOrderService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<StockOrderVO> page(@Valid StockOrderQueryDTO query) {
-        return stockOrderService.pageQuery(query);
+        return stockOrderService.page(query);
     }
 }
+

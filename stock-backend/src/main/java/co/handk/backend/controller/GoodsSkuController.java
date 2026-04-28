@@ -21,26 +21,27 @@ public class GoodsSkuController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsSkuDTO dto) {
-        return goodsSkuService.create(dto);
+        return goodsSkuService.saveByDto(dto);
     }
 
     @GetMapping("/{id}")
     public GoodsSkuVO get(@PathVariable @NotNull Long id) {
-        return goodsSkuService.get(id);
+        return goodsSkuService.getVOById(id);
     }
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateGoodsSkuDTO dto) {
-        return goodsSkuService.update(dto);
+        return goodsSkuService.updateByDto(dto);
     }
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return goodsSkuService.delete(id);
+        return goodsSkuService.deleteByIdLogic(id) > 0;
     }
 
     @GetMapping("/page")
     public PageResult<GoodsSkuVO> page(@Valid GoodsSkuQueryDTO query) {
-        return goodsSkuService.pageQuery(query);
+        return goodsSkuService.page(query);
     }
 }
+

@@ -19,22 +19,23 @@ public class RequestFormController {
     private RequestFormService requestFormService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRequestFormDTO dto) {
-        return requestFormService.create(dto);
+        return requestFormService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public RequestFormVO get(@PathVariable @NotNull Long id) {
-        return requestFormService.get(id);
+        return requestFormService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateRequestFormDTO dto) {
-        return requestFormService.update(dto);
+        return requestFormService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return requestFormService.delete(id);
+        return requestFormService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<RequestFormVO> page(@Valid RequestFormQueryDTO query) {
-        return requestFormService.pageQuery(query);
+        return requestFormService.page(query);
     }
 }
+

@@ -19,22 +19,23 @@ public class OperateLogController {
     private OperateLogService operateLogService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateOperateLogDTO dto) {
-        return operateLogService.create(dto);
+        return operateLogService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public OperateLogVO get(@PathVariable @NotNull Long id) {
-        return operateLogService.get(id);
+        return operateLogService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateOperateLogDTO dto) {
-        return operateLogService.update(dto);
+        return operateLogService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return operateLogService.delete(id);
+        return operateLogService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<OperateLogVO> page(@Valid OperateLogQueryDTO query) {
-        return operateLogService.pageQuery(query);
+        return operateLogService.page(query);
     }
 }
+

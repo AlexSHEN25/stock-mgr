@@ -1,49 +1,20 @@
 package co.handk.backend.service.impl;
 
-import org.apache.commons.lang3.StringUtils;
-
-import co.handk.backend.util.PageSortUtil;
-
-import co.handk.backend.util.EnumFieldMapper;
-
 import co.handk.backend.entity.RequestForm;
-import co.handk.common.model.dto.create.CreateRequestFormDTO;
-import co.handk.common.model.dto.update.UpdateRequestFormDTO;
-import co.handk.common.model.vo.RequestFormVO;
 import co.handk.backend.mapper.RequestFormMapper;
 import co.handk.backend.service.RequestFormService;
-import co.handk.common.model.dto.query.RequestFormQueryDTO;
-import co.handk.common.model.PageResult;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import co.handk.common.model.vo.RequestFormVO;
 import org.springframework.beans.BeanUtils;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-public class RequestFormServiceImpl extends ServiceImpl<RequestFormMapper, RequestForm> implements RequestFormService {
-
-    private final RequestFormMapper requestFormMapper;
+public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, RequestForm, RequestFormVO>
+        implements RequestFormService {
 
     @Override
-    public Boolean create(CreateRequestFormDTO dto) {
-        RequestForm entity = new RequestForm();
-        BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        entity.setId(null);
-        return this.save(entity);
-    }
-
-    @Override
-    public RequestFormVO get(Long id) {
-        RequestForm entity = this.getById(id);
+    protected RequestFormVO toVO(RequestForm entity) {
         if (entity == null) {
-            throw new RuntimeException("数据不存在");
+            return null;
         }
         RequestFormVO vo = new RequestFormVO();
         BeanUtils.copyProperties(entity, vo);
@@ -51,51 +22,12 @@ public class RequestFormServiceImpl extends ServiceImpl<RequestFormMapper, Reque
     }
 
     @Override
-    public Boolean update(UpdateRequestFormDTO dto) {
-        if (this.getById(dto.getId()) == null) {
-            throw new RuntimeException("数据不存在");
+    protected <D> RequestForm toEntity(D dto) {
+        if (dto == null) {
+            return null;
         }
         RequestForm entity = new RequestForm();
         BeanUtils.copyProperties(dto, entity);
-        EnumFieldMapper.mapStatusAndDeleted(dto, entity);
-        return this.updateById(entity);
-    }
-
-    @Override
-    public Boolean delete(Long id) {
-        if (this.getById(id) == null) {
-            throw new RuntimeException("数据不存在");
-        }
-        return this.lambdaUpdate().eq(RequestForm::getId, id).set(RequestForm::getDeleted, co.handk.common.enums.DeleteEnum.DELETED.getCode()).update();
-    }
-
-    @Override
-    public PageResult<RequestFormVO> pageQuery(RequestFormQueryDTO query) {
-        Page<RequestForm> page = new Page<>(query.getPageNum(), query.getPageSize());
-        LambdaQueryWrapper<RequestForm> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(RequestForm::getDeleted, co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
-                .like(StringUtils.isNotBlank(query.getBizNo()), RequestForm::getBizNo, query.getBizNo())
-                .eq(query.getUserId() != null, RequestForm::getUserId, query.getUserId())
-                .like(StringUtils.isNotBlank(query.getUsername()), RequestForm::getUsername, query.getUsername())
-                .eq(query.getDeptId() != null, RequestForm::getDeptId, query.getDeptId())
-                .like(StringUtils.isNotBlank(query.getDeptName()), RequestForm::getDeptName, query.getDeptName())
-                .eq(query.getCustomerId() != null, RequestForm::getCustomerId, query.getCustomerId())
-                .like(StringUtils.isNotBlank(query.getCustomerName()), RequestForm::getCustomerName, query.getCustomerName())
-                .eq(query.getWarehouseId() != null, RequestForm::getWarehouseId, query.getWarehouseId())
-                .eq(query.getTotalQty() != null, RequestForm::getTotalQty, query.getTotalQty())
-                .eq(query.getRequestQty() != null, RequestForm::getRequestQty, query.getRequestQty())
-                .eq(query.getState() != null, RequestForm::getState, query.getState())
-                .eq(query.getApproverId() != null, RequestForm::getApproverId, query.getApproverId())
-                .like(StringUtils.isNotBlank(query.getApproverName()), RequestForm::getApproverName, query.getApproverName())
-                .eq(query.getApproveTime() != null, RequestForm::getApproveTime, query.getApproveTime())
-                .like(StringUtils.isNotBlank(query.getApproveRemark()), RequestForm::getApproveRemark, query.getApproveRemark());
-        PageSortUtil.applyTimeSort(wrapper, query, RequestForm::getCreateTime, RequestForm::getUpdateTime);
-        Page<RequestForm> resultPage =     requestFormMapper.selectPage(page, wrapper);
-        List<RequestFormVO> records = resultPage.getRecords().stream().map(entity -> {
-            RequestFormVO vo = new RequestFormVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).collect(Collectors.toList());
-        return PageResult.build(resultPage.getTotal(), query.getPageNum(), query.getPageSize(), records);
+        return entity;
     }
 }

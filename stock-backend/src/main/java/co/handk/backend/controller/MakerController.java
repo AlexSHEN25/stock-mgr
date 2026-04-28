@@ -19,22 +19,23 @@ public class MakerController {
     private MakerService makerService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateMakerDTO dto) {
-        return makerService.create(dto);
+        return makerService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public MakerVO get(@PathVariable @NotNull Long id) {
-        return makerService.get(id);
+        return makerService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateMakerDTO dto) {
-        return makerService.update(dto);
+        return makerService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return makerService.delete(id);
+        return makerService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<MakerVO> page(@Valid MakerQueryDTO query) {
-        return makerService.pageQuery(query);
+        return makerService.page(query);
     }
 }
+

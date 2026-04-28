@@ -21,26 +21,27 @@ public class CategoryController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateCategoryDTO dto) {
-        return categoryService.create(dto);
+        return categoryService.saveByDto(dto);
     }
 
     @GetMapping("/{id}")
     public CategoryVO get(@PathVariable @NotNull Long id) {
-        return categoryService.get(id);
+        return categoryService.getVOById(id);
     }
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateCategoryDTO dto) {
-        return categoryService.update(dto);
+        return categoryService.updateByDto(dto);
     }
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return categoryService.delete(id);
+        return categoryService.deleteByIdLogic(id) > 0;
     }
 
     @GetMapping("/page")
     public PageResult<CategoryVO> page(@Valid CategoryQueryDTO query) {
-        return categoryService.pageQuery(query);
+        return categoryService.page(query);
     }
 }
+

@@ -19,22 +19,23 @@ public class ConfigController {
     private ConfigService configService;
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateConfigDTO dto) {
-        return configService.create(dto);
+        return configService.saveByDto(dto);
     }
     @GetMapping("/{id}")
     public ConfigVO get(@PathVariable @NotNull Long id) {
-        return configService.get(id);
+        return configService.getVOById(id);
     }
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateConfigDTO dto) {
-        return configService.update(dto);
+        return configService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return configService.delete(id);
+        return configService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")
     public PageResult<ConfigVO> page(@Valid ConfigQueryDTO query) {
-        return configService.pageQuery(query);
+        return configService.page(query);
     }
 }
+

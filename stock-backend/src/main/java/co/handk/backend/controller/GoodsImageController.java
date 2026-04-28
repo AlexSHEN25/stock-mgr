@@ -21,26 +21,27 @@ public class GoodsImageController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsImageDTO dto) {
-        return goodsImageService.create(dto);
+        return goodsImageService.saveByDto(dto);
     }
 
     @GetMapping("/{id}")
     public GoodsImageVO get(@PathVariable @NotNull Long id) {
-        return goodsImageService.get(id);
+        return goodsImageService.getVOById(id);
     }
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateGoodsImageDTO dto) {
-        return goodsImageService.update(dto);
+        return goodsImageService.updateByDto(dto);
     }
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable @NotNull Long id) {
-        return goodsImageService.delete(id);
+        return goodsImageService.deleteByIdLogic(id) > 0;
     }
 
     @GetMapping("/page")
     public PageResult<GoodsImageVO> page(@Valid GoodsImageQueryDTO query) {
-        return goodsImageService.pageQuery(query);
+        return goodsImageService.page(query);
     }
 }
+
