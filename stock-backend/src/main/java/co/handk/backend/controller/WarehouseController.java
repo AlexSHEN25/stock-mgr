@@ -1,16 +1,17 @@
 package co.handk.backend.controller;
 
-import co.handk.common.model.vo.WarehouseVO;
-import co.handk.common.model.dto.create.CreateWarehouseDTO;
-import co.handk.common.model.dto.update.UpdateWarehouseDTO;
 import co.handk.backend.service.WarehouseService;
-import co.handk.common.model.dto.query.WarehouseQueryDTO;
 import co.handk.common.model.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateWarehouseDTO;
+import co.handk.common.model.dto.query.WarehouseQueryDTO;
+import co.handk.common.model.dto.update.UpdateWarehouseDTO;
+import co.handk.common.model.vo.WarehouseVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @Validated
 @RequestMapping("/warehouse")
@@ -22,7 +23,7 @@ public class WarehouseController {
         return warehouseService.saveByDto(dto);
     }
     @GetMapping("/{id}")
-    public WarehouseVO get(@PathVariable @NotNull Long id) {
+    public WarehouseVO get(@PathVariable("id") @NotNull Long id) {
         return warehouseService.getVOById(id);
     }
     @PutMapping
@@ -30,7 +31,7 @@ public class WarehouseController {
         return warehouseService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return warehouseService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")

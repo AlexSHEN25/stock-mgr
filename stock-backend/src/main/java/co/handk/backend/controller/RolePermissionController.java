@@ -1,16 +1,17 @@
 package co.handk.backend.controller;
 
-import co.handk.common.model.vo.RolePermissionVO;
-import co.handk.common.model.dto.create.CreateRolePermissionDTO;
-import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
 import co.handk.backend.service.RolePermissionService;
-import co.handk.common.model.dto.query.RolePermissionQueryDTO;
 import co.handk.common.model.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateRolePermissionDTO;
+import co.handk.common.model.dto.query.RolePermissionQueryDTO;
+import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
+import co.handk.common.model.vo.RolePermissionVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @Validated
 @RequestMapping("/rolePermission")
@@ -22,7 +23,7 @@ public class RolePermissionController {
         return rolePermissionService.saveByDto(dto);
     }
     @GetMapping("/{id}")
-    public RolePermissionVO get(@PathVariable @NotNull Long id) {
+    public RolePermissionVO get(@PathVariable("id") @NotNull Long id) {
         return rolePermissionService.getVOById(id);
     }
     @PutMapping
@@ -30,7 +31,7 @@ public class RolePermissionController {
         return rolePermissionService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return rolePermissionService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")

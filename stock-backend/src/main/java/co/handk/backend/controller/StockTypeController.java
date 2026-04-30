@@ -26,7 +26,7 @@ public class StockTypeController {
     }
 
     @GetMapping("/{id}")
-    public StockTypeVO get(@PathVariable @NotNull Long id) {
+    public StockTypeVO get(@PathVariable("id") @NotNull Long id) {
         return stockTypeService.getVOById(id);
     }
 
@@ -36,7 +36,7 @@ public class StockTypeController {
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return stockTypeService.deleteByIdLogic(id) > 0;
     }
 

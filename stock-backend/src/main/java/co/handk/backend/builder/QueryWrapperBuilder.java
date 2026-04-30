@@ -1,8 +1,8 @@
 package co.handk.backend.builder;
 
 import co.handk.backend.annotation.QueryField;
-import co.handk.common.enums.QueryType;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.QueryType;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 
 import java.lang.reflect.Field;

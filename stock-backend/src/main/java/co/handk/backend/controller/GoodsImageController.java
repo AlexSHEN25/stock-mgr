@@ -25,7 +25,7 @@ public class GoodsImageController {
     }
 
     @GetMapping("/{id}")
-    public GoodsImageVO get(@PathVariable @NotNull Long id) {
+    public GoodsImageVO get(@PathVariable("id") @NotNull Long id) {
         return goodsImageService.getVOById(id);
     }
 
@@ -35,7 +35,7 @@ public class GoodsImageController {
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return goodsImageService.deleteByIdLogic(id) > 0;
     }
 

@@ -5,6 +5,7 @@ import co.handk.backend.annotation.UpdateIgnore;
 import co.handk.backend.entity.BaseEntity;
 import co.handk.backend.service.BaseService;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageQuery;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.vo.BaseVO;
@@ -35,13 +36,21 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     @Override
     public V getVOById(Serializable id) {
         T entity = getByIdNotDeleted(id);
-        return entity == null ? null : toVO(entity);
+        if (entity == null) {
+            return null;
+        }
+        V vo = toVO(entity);
+        fillStatusDesc(vo);
+        return vo;
     }
 
     @Override
     public <Q> List<V> list(Q dto) {
         QueryWrapper<T> wrapper = buildWrapper(dto);
-        return list(wrapper).stream().map(this::toVO).collect(Collectors.toList());
+        return list(wrapper).stream()
+                .map(this::toVO)
+                .peek(this::fillStatusDesc)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -55,8 +64,45 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             wrapper.orderBy(true, asc, "update_time");
         }
         Page<T> result = this.page(page, wrapper);
-        List<V> voList = result.getRecords().stream().map(this::toVO).collect(Collectors.toList());
+        List<V> voList = result.getRecords().stream()
+                .map(this::toVO)
+                .peek(this::fillStatusDesc)
+                .collect(Collectors.toList());
         return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), voList);
+    }
+
+    protected void fillStatusDesc(V vo) {
+        if (vo == null) {
+            return;
+        }
+        try {
+            Field statusField = findField(vo.getClass(), "status");
+            Field statusDescField = findField(vo.getClass(), "statusDesc");
+            if (statusField == null || statusDescField == null) {
+                return;
+            }
+            statusField.setAccessible(true);
+            statusDescField.setAccessible(true);
+            Object statusValue = statusField.get(vo);
+            if (!(statusValue instanceof Number number)) {
+                return;
+            }
+            StatusEnum statusEnum = StatusEnum.fromValue(number.intValue());
+            statusDescField.set(vo, statusEnum == null ? null : statusEnum.getMessage());
+        } catch (Exception ignored) {
+        }
+    }
+
+    private Field findField(Class<?> clazz, String fieldName) {
+        Class<?> current = clazz;
+        while (current != null && current != Object.class) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ignored) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
     }
 
     /**

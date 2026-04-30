@@ -1,8 +1,8 @@
 package co.handk.common.model.dto.create;
 
-import java.time.LocalDateTime;
-
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class CreateStockOrderDTO {

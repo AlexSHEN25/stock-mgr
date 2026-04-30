@@ -1,16 +1,17 @@
 package co.handk.backend.controller;
 
-import co.handk.common.model.vo.StockOrderItemVO;
-import co.handk.common.model.dto.create.CreateStockOrderItemDTO;
-import co.handk.common.model.dto.update.UpdateStockOrderItemDTO;
 import co.handk.backend.service.StockOrderItemService;
-import co.handk.common.model.dto.query.StockOrderItemQueryDTO;
 import co.handk.common.model.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateStockOrderItemDTO;
+import co.handk.common.model.dto.query.StockOrderItemQueryDTO;
+import co.handk.common.model.dto.update.UpdateStockOrderItemDTO;
+import co.handk.common.model.vo.StockOrderItemVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @Validated
 @RequestMapping("/stockOrderItem")
@@ -22,7 +23,7 @@ public class StockOrderItemController {
         return stockOrderItemService.saveByDto(dto);
     }
     @GetMapping("/{id}")
-    public StockOrderItemVO get(@PathVariable @NotNull Long id) {
+    public StockOrderItemVO get(@PathVariable("id") @NotNull Long id) {
         return stockOrderItemService.getVOById(id);
     }
     @PutMapping
@@ -30,7 +31,7 @@ public class StockOrderItemController {
         return stockOrderItemService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return stockOrderItemService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")

@@ -1,11 +1,10 @@
 package co.handk.common.model.dto.update;
 
 import co.handk.common.enums.StatusEnum;
-
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
-
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class UpdateUserTokenDTO {

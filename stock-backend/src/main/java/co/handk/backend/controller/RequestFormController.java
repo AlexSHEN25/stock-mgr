@@ -1,16 +1,17 @@
 package co.handk.backend.controller;
 
-import co.handk.common.model.vo.RequestFormVO;
-import co.handk.common.model.dto.create.CreateRequestFormDTO;
-import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import co.handk.backend.service.RequestFormService;
-import co.handk.common.model.dto.query.RequestFormQueryDTO;
 import co.handk.common.model.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreateRequestFormDTO;
+import co.handk.common.model.dto.query.RequestFormQueryDTO;
+import co.handk.common.model.dto.update.UpdateRequestFormDTO;
+import co.handk.common.model.vo.RequestFormVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @Validated
 @RequestMapping("/requestForm")
@@ -22,7 +23,7 @@ public class RequestFormController {
         return requestFormService.saveByDto(dto);
     }
     @GetMapping("/{id}")
-    public RequestFormVO get(@PathVariable @NotNull Long id) {
+    public RequestFormVO get(@PathVariable("id") @NotNull Long id) {
         return requestFormService.getVOById(id);
     }
     @PutMapping
@@ -30,7 +31,7 @@ public class RequestFormController {
         return requestFormService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return requestFormService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")

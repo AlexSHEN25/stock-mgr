@@ -1,7 +1,7 @@
 package co.handk.common.model.dto.query;
 
-import lombok.Data;
 import co.handk.common.model.PageQuery;
+import lombok.Data;
 
 @Data
 public class RolePermissionQueryDTO extends PageQuery {

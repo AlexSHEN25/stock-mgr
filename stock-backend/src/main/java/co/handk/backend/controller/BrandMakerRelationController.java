@@ -25,7 +25,7 @@ public class BrandMakerRelationController {
     }
 
     @GetMapping("/{id}")
-    public BrandMakerRelationVO get(@PathVariable @NotNull Long id) {
+    public BrandMakerRelationVO get(@PathVariable("id") @NotNull Long id) {
         return brandMakerRelationService.getVOById(id);
     }
 
@@ -35,7 +35,7 @@ public class BrandMakerRelationController {
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return brandMakerRelationService.deleteByIdLogic(id) > 0;
     }
 

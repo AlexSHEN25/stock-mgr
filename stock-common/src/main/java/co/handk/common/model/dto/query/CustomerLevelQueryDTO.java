@@ -1,10 +1,10 @@
 package co.handk.common.model.dto.query;
 
 import co.handk.common.enums.StatusEnum;
+import co.handk.common.model.PageQuery;
+import lombok.Data;
 
 import java.math.BigDecimal;
-import lombok.Data;
-import co.handk.common.model.PageQuery;
 
 @Data
 public class CustomerLevelQueryDTO extends PageQuery {

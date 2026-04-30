@@ -1,9 +1,9 @@
 package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotNull;
-import java.time.LocalDateTime;
-
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class UpdateStockOrderDTO {

@@ -25,7 +25,7 @@ public class GoodsLevelPriceController {
     }
 
     @GetMapping("/{id}")
-    public GoodsLevelPriceVO get(@PathVariable @NotNull Long id) {
+    public GoodsLevelPriceVO get(@PathVariable("id") @NotNull Long id) {
         return goodsLevelPriceService.getVOById(id);
     }
 
@@ -35,7 +35,7 @@ public class GoodsLevelPriceController {
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return goodsLevelPriceService.deleteByIdLogic(id) > 0;
     }
 

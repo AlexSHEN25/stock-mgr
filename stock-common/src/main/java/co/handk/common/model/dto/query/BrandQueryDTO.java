@@ -1,9 +1,8 @@
 package co.handk.common.model.dto.query;
 
 import co.handk.common.enums.StatusEnum;
-
-import lombok.Data;
 import co.handk.common.model.PageQuery;
+import lombok.Data;
 
 @Data
 public class BrandQueryDTO extends PageQuery {

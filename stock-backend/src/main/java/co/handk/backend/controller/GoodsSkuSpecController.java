@@ -26,7 +26,7 @@ public class GoodsSkuSpecController {
     }
 
     @GetMapping("/{id}")
-    public GoodsSkuSpecVO get(@PathVariable @NotNull Long id) {
+    public GoodsSkuSpecVO get(@PathVariable("id") @NotNull Long id) {
         return goodsSkuSpecService.getVOById(id);
     }
 
@@ -36,7 +36,7 @@ public class GoodsSkuSpecController {
     }
 
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return goodsSkuSpecService.deleteByIdLogic(id) > 0;
     }
 

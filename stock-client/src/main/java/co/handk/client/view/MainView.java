@@ -4,7 +4,8 @@ import co.handk.client.MainApp;
 import co.handk.client.model.Session;
 import co.handk.client.util.ApiClient;
 import javafx.geometry.Insets;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import org.json.JSONObject;
 

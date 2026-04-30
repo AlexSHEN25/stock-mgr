@@ -1,16 +1,17 @@
 package co.handk.backend.controller;
 
-import co.handk.common.model.vo.PriceRecordVO;
-import co.handk.common.model.dto.create.CreatePriceRecordDTO;
-import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
 import co.handk.backend.service.PriceRecordService;
-import co.handk.common.model.dto.query.PriceRecordQueryDTO;
 import co.handk.common.model.PageResult;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.validation.annotation.Validated;
+import co.handk.common.model.dto.create.CreatePriceRecordDTO;
+import co.handk.common.model.dto.query.PriceRecordQueryDTO;
+import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
+import co.handk.common.model.vo.PriceRecordVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @Validated
 @RequestMapping("/priceRecord")
@@ -22,7 +23,7 @@ public class PriceRecordController {
         return priceRecordService.saveByDto(dto);
     }
     @GetMapping("/{id}")
-    public PriceRecordVO get(@PathVariable @NotNull Long id) {
+    public PriceRecordVO get(@PathVariable("id") @NotNull Long id) {
         return priceRecordService.getVOById(id);
     }
     @PutMapping
@@ -30,7 +31,7 @@ public class PriceRecordController {
         return priceRecordService.updateByDto(dto);
     }
     @DeleteMapping("/{id}")
-    public Boolean delete(@PathVariable @NotNull Long id) {
+    public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return priceRecordService.deleteByIdLogic(id) > 0;
     }
     @GetMapping("/page")

@@ -37,7 +37,7 @@ public class UserController {
     }
 
     /**
-     * 分页查询
+     * 蛻・｡ｵ譟･隸｢
      */
     @PostMapping("/page")
     public PageResult<UserVO> page(@RequestBody UserQueryDTO dto) {
@@ -45,7 +45,7 @@ public class UserController {
     }
 
     /**
-     * 列表查询（不分页）
+     * 蛻苓｡ｨ譟･隸｢・井ｸ榊・鬘ｵ・・
      */
     @PostMapping("/list")
     public List<UserVO> list(@RequestBody UserQueryDTO dto) {
@@ -53,15 +53,15 @@ public class UserController {
     }
 
     /**
-     * 根据ID查询
+     * 譬ｹ謐ｮID譟･隸｢
      */
     @GetMapping("/{id}")
-    public UserVO get(@PathVariable Long id) {
+    public UserVO get(@PathVariable("id") Long id) {
         return userService.getVOById(id);
     }
 
     /**
-     * 新增
+     * 譁ｰ蠅・
      */
     @PostMapping
     public boolean create(@RequestBody CreateUserDTO dto) {
@@ -69,7 +69,7 @@ public class UserController {
     }
 
     /**
-     * 更新
+     * 譖ｴ譁ｰ
      */
     @PutMapping("/{id}")
     public boolean update(@RequestBody UpdateUserDTO dto) {
@@ -77,15 +77,15 @@ public class UserController {
     }
 
     /**
-     * 单条逻辑删除
+     * 蜊墓擅騾ｻ霎大唖髯､
      */
     @DeleteMapping("/{id}")
-    public int delete(@PathVariable Long id) {
+    public int delete(@PathVariable("id") Long id) {
         return userService.deleteByIdLogic(id);
     }
 
     /**
-     * 批量逻辑删除
+     * 謇ｹ驥城ｻ霎大唖髯､
      */
     @DeleteMapping("/batch")
     public int deleteBatch(@RequestBody List<Long> ids) {

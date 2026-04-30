@@ -1,9 +1,10 @@
 package co.handk.common.model.dto.query;
 
+import co.handk.common.model.PageQuery;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import lombok.Data;
-import co.handk.common.model.PageQuery;
 
 @Data
 public class PriceRecordQueryDTO extends PageQuery {
