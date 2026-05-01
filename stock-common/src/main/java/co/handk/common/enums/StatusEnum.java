@@ -7,8 +7,8 @@ import lombok.Getter;
 @Getter
 public enum StatusEnum {
 
-    NOMAL(1, "normal"),
-    FOBBIDEN(0, "forbidden");
+    NOMAL(1, "有効"),
+    FOBBIDEN(0, "無効");
 
     private final Integer code;
     private final String message;
