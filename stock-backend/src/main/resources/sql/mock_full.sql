@@ -1,516 +1,228 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
--- t_dept
-INSERT INTO t_dept (parent_id,name,code,leader_id,sort) VALUES
+-- clean
+TRUNCATE TABLE t_operate_log;
+TRUNCATE TABLE t_config;
+TRUNCATE TABLE t_message;
+TRUNCATE TABLE t_request_item;
+TRUNCATE TABLE t_request_form;
+TRUNCATE TABLE t_goods_level_price;
+TRUNCATE TABLE t_customer;
+TRUNCATE TABLE t_customer_level;
+TRUNCATE TABLE t_stock_record;
+TRUNCATE TABLE t_stock_order_item;
+TRUNCATE TABLE t_stock_order;
+TRUNCATE TABLE t_price_record;
+TRUNCATE TABLE t_stock;
+TRUNCATE TABLE t_warehouse;
+TRUNCATE TABLE t_stock_type;
+TRUNCATE TABLE t_goods_image;
+TRUNCATE TABLE t_goods_sku_spec;
+TRUNCATE TABLE t_goods_sku;
+TRUNCATE TABLE t_goods;
+TRUNCATE TABLE t_brand_maker_relation;
+TRUNCATE TABLE t_maker;
+TRUNCATE TABLE t_series;
+TRUNCATE TABLE t_category;
+TRUNCATE TABLE t_brand;
+TRUNCATE TABLE t_role_permission;
+TRUNCATE TABLE t_user_role;
+TRUNCATE TABLE t_permission;
+TRUNCATE TABLE t_role;
+TRUNCATE TABLE t_user_token;
+TRUNCATE TABLE t_user;
+TRUNCATE TABLE t_dept;
 
-(0,'部门_1','DEPT_1',1,1),
-(0,'部门_2','DEPT_2',2,2),
-(0,'部门_3','DEPT_3',3,3),
-(0,'部门_4','DEPT_4',4,4),
-(0,'部门_5','DEPT_5',5,5),
-(0,'部门_6','DEPT_6',6,6),
-(0,'部门_7','DEPT_7',7,7),
-(0,'部门_8','DEPT_8',8,8),
-(0,'部门_9','DEPT_9',9,9),
-(0,'部门_10','DEPT_10',10,10),
-(0,'部门_11','DEPT_11',11,11),
-(0,'部门_12','DEPT_12',12,12),
-(0,'部门_13','DEPT_13',13,13),
-(0,'部门_14','DEPT_14',14,14),
-(0,'部门_15','DEPT_15',15,15),
-(0,'部门_16','DEPT_16',16,16),
-(0,'部门_17','DEPT_17',17,17),
-(0,'部门_18','DEPT_18',18,18),
-(0,'部门_19','DEPT_19',19,19),
-(0,'部门_20','DEPT_20',20,20),
-(0,'部门_21','DEPT_21',21,21),
-(0,'部门_22','DEPT_22',22,22),
-(0,'部门_23','DEPT_23',23,23),
-(0,'部门_24','DEPT_24',24,24),
-(0,'部门_25','DEPT_25',25,25),
-(0,'部门_26','DEPT_26',26,26),
-(0,'部门_27','DEPT_27',27,27),
-(0,'部门_28','DEPT_28',28,28),
-(0,'部门_29','DEPT_29',29,29),
-(0,'部门_30','DEPT_30',30,30),
-(0,'部门_31','DEPT_31',31,31),
-(0,'部门_32','DEPT_32',32,32),
-(0,'部门_33','DEPT_33',33,33),
-(0,'部门_34','DEPT_34',34,34),
-(0,'部门_35','DEPT_35',35,35),
-(0,'部门_36','DEPT_36',36,36),
-(0,'部门_37','DEPT_37',37,37),
-(0,'部门_38','DEPT_38',38,38),
-(0,'部门_39','DEPT_39',39,39),
-(0,'部门_40','DEPT_40',40,40),
-(0,'部门_41','DEPT_41',41,41),
-(0,'部门_42','DEPT_42',42,42),
-(0,'部门_43','DEPT_43',43,43),
-(0,'部门_44','DEPT_44',44,44),
-(0,'部门_45','DEPT_45',45,45),
-(0,'部门_46','DEPT_46',46,46),
-(0,'部门_47','DEPT_47',47,47),
-(0,'部门_48','DEPT_48',48,48),
-(0,'部门_49','DEPT_49',49,49),
-(0,'部门_50','DEPT_50',50,50),
-(0,'部门_51','DEPT_51',51,51),
-(0,'部门_52','DEPT_52',52,52),
-(0,'部门_53','DEPT_53',53,53),
-(0,'部门_54','DEPT_54',54,54),
-(0,'部门_55','DEPT_55',55,55),
-(0,'部门_56','DEPT_56',56,56),
-(0,'部门_57','DEPT_57',57,57),
-(0,'部门_58','DEPT_58',58,58),
-(0,'部门_59','DEPT_59',59,59),
-(0,'部门_60','DEPT_60',60,60);
+-- dept
+INSERT INTO t_dept(id,parent_id,name,code,leader_id,sort,status,deleted,created_by,updated_by)
+VALUES
+(1,0,'システム部','SYS',1,1,1,0,1,1),
+(2,0,'営業部','SALES',2,2,1,0,1,1),
+(3,0,'倉庫部','WH',3,3,1,0,1,1);
 
--- t_user
-INSERT INTO t_user (username,password,dept_id,salt,email,phone) VALUES
+-- user
+INSERT INTO t_user(id,username,password,dept_id,salt,email,phone,avatar,status,deleted,created_by,updated_by)
+VALUES
+(1,'admin',MD5('admin123'),1,'salt_admin','admin@test.com','09000000001','/avatar/admin.png',1,0,1,1),
+(2,'sales01',MD5('sales123'),2,'salt_sales01','sales01@test.com','09000000002','/avatar/sales01.png',1,0,1,1),
+(3,'warehouse01',MD5('wh123'),3,'salt_wh01','warehouse01@test.com','09000000003','/avatar/warehouse01.png',1,0,1,1),
+(4,'viewer01',MD5('viewer123'),1,'salt_viewer','viewer01@test.com','09000000004','/avatar/viewer01.png',1,0,1,1);
 
-('user_1',MD5('pass_1'),1,'salt1','user1@test.com','08000000001'),
-('user_2',MD5('pass_2'),2,'salt2','user2@test.com','08000000002'),
-('user_3',MD5('pass_3'),3,'salt3','user3@test.com','08000000003'),
-('user_4',MD5('pass_4'),4,'salt4','user4@test.com','08000000004'),
-('user_5',MD5('pass_5'),5,'salt5','user5@test.com','08000000005'),
-('user_6',MD5('pass_6'),6,'salt6','user6@test.com','08000000006'),
-('user_7',MD5('pass_7'),7,'salt7','user7@test.com','08000000007'),
-('user_8',MD5('pass_8'),8,'salt8','user8@test.com','08000000008'),
-('user_9',MD5('pass_9'),9,'salt9','user9@test.com','08000000009'),
-('user_10',MD5('pass_10'),10,'salt10','user10@test.com','08000000010'),
-('user_11',MD5('pass_11'),11,'salt11','user11@test.com','08000000011'),
-('user_12',MD5('pass_12'),12,'salt12','user12@test.com','08000000012'),
-('user_13',MD5('pass_13'),13,'salt13','user13@test.com','08000000013'),
-('user_14',MD5('pass_14'),14,'salt14','user14@test.com','08000000014'),
-('user_15',MD5('pass_15'),15,'salt15','user15@test.com','08000000015'),
-('user_16',MD5('pass_16'),16,'salt16','user16@test.com','08000000016'),
-('user_17',MD5('pass_17'),17,'salt17','user17@test.com','08000000017'),
-('user_18',MD5('pass_18'),18,'salt18','user18@test.com','08000000018'),
-('user_19',MD5('pass_19'),19,'salt19','user19@test.com','08000000019'),
-('user_20',MD5('pass_20'),20,'salt20','user20@test.com','08000000020'),
-('user_21',MD5('pass_21'),21,'salt21','user21@test.com','08000000021'),
-('user_22',MD5('pass_22'),22,'salt22','user22@test.com','08000000022'),
-('user_23',MD5('pass_23'),23,'salt23','user23@test.com','08000000023'),
-('user_24',MD5('pass_24'),24,'salt24','user24@test.com','08000000024'),
-('user_25',MD5('pass_25'),25,'salt25','user25@test.com','08000000025'),
-('user_26',MD5('pass_26'),26,'salt26','user26@test.com','08000000026'),
-('user_27',MD5('pass_27'),27,'salt27','user27@test.com','08000000027'),
-('user_28',MD5('pass_28'),28,'salt28','user28@test.com','08000000028'),
-('user_29',MD5('pass_29'),29,'salt29','user29@test.com','08000000029'),
-('user_30',MD5('pass_30'),30,'salt30','user30@test.com','08000000030'),
-('user_31',MD5('pass_31'),31,'salt31','user31@test.com','08000000031'),
-('user_32',MD5('pass_32'),32,'salt32','user32@test.com','08000000032'),
-('user_33',MD5('pass_33'),33,'salt33','user33@test.com','08000000033'),
-('user_34',MD5('pass_34'),34,'salt34','user34@test.com','08000000034'),
-('user_35',MD5('pass_35'),35,'salt35','user35@test.com','08000000035'),
-('user_36',MD5('pass_36'),36,'salt36','user36@test.com','08000000036'),
-('user_37',MD5('pass_37'),37,'salt37','user37@test.com','08000000037'),
-('user_38',MD5('pass_38'),38,'salt38','user38@test.com','08000000038'),
-('user_39',MD5('pass_39'),39,'salt39','user39@test.com','08000000039'),
-('user_40',MD5('pass_40'),40,'salt40','user40@test.com','08000000040'),
-('user_41',MD5('pass_41'),41,'salt41','user41@test.com','08000000041'),
-('user_42',MD5('pass_42'),42,'salt42','user42@test.com','08000000042'),
-('user_43',MD5('pass_43'),43,'salt43','user43@test.com','08000000043'),
-('user_44',MD5('pass_44'),44,'salt44','user44@test.com','08000000044'),
-('user_45',MD5('pass_45'),45,'salt45','user45@test.com','08000000045'),
-('user_46',MD5('pass_46'),46,'salt46','user46@test.com','08000000046'),
-('user_47',MD5('pass_47'),47,'salt47','user47@test.com','08000000047'),
-('user_48',MD5('pass_48'),48,'salt48','user48@test.com','08000000048'),
-('user_49',MD5('pass_49'),49,'salt49','user49@test.com','08000000049'),
-('user_50',MD5('pass_50'),50,'salt50','user50@test.com','08000000050'),
-('user_51',MD5('pass_51'),51,'salt51','user51@test.com','08000000051'),
-('user_52',MD5('pass_52'),52,'salt52','user52@test.com','08000000052'),
-('user_53',MD5('pass_53'),53,'salt53','user53@test.com','08000000053'),
-('user_54',MD5('pass_54'),54,'salt54','user54@test.com','08000000054'),
-('user_55',MD5('pass_55'),55,'salt55','user55@test.com','08000000055'),
-('user_56',MD5('pass_56'),56,'salt56','user56@test.com','08000000056'),
-('user_57',MD5('pass_57'),57,'salt57','user57@test.com','08000000057'),
-('user_58',MD5('pass_58'),58,'salt58','user58@test.com','08000000058'),
-('user_59',MD5('pass_59'),59,'salt59','user59@test.com','08000000059'),
-('user_60',MD5('pass_60'),60,'salt60','user60@test.com','08000000060');
+-- user token
+INSERT INTO t_user_token(id,token,user_id,login_time,expire_time,login_ip,status,deleted,created_by,updated_by)
+VALUES
+(1,'token_admin_001',1,NOW(),DATE_ADD(NOW(),INTERVAL 7 DAY),'127.0.0.1',1,0,1,1),
+(2,'token_sales_001',2,NOW(),DATE_ADD(NOW(),INTERVAL 7 DAY),'127.0.0.1',1,0,1,1);
 
--- t_role
-INSERT INTO t_role (name,code,remark) VALUES
+-- role
+INSERT INTO t_role(id,name,code,remark,status,deleted,created_by,updated_by)
+VALUES
+(1,'管理者','ROLE_ADMIN','全権限',1,0,1,1),
+(2,'営業','ROLE_SALES','申請・顧客管理',1,0,1,1),
+(3,'倉庫','ROLE_WAREHOUSE','在庫管理',1,0,1,1),
+(4,'閲覧者','ROLE_VIEWER','参照のみ',1,0,1,1);
 
-('角色_1','ROLE_1','测试角色'),
-('角色_2','ROLE_2','测试角色'),
-('角色_3','ROLE_3','测试角色'),
-('角色_4','ROLE_4','测试角色'),
-('角色_5','ROLE_5','测试角色'),
-('角色_6','ROLE_6','测试角色'),
-('角色_7','ROLE_7','测试角色'),
-('角色_8','ROLE_8','测试角色'),
-('角色_9','ROLE_9','测试角色'),
-('角色_10','ROLE_10','测试角色'),
-('角色_11','ROLE_11','测试角色'),
-('角色_12','ROLE_12','测试角色'),
-('角色_13','ROLE_13','测试角色'),
-('角色_14','ROLE_14','测试角色'),
-('角色_15','ROLE_15','测试角色'),
-('角色_16','ROLE_16','测试角色'),
-('角色_17','ROLE_17','测试角色'),
-('角色_18','ROLE_18','测试角色'),
-('角色_19','ROLE_19','测试角色'),
-('角色_20','ROLE_20','测试角色'),
-('角色_21','ROLE_21','测试角色'),
-('角色_22','ROLE_22','测试角色'),
-('角色_23','ROLE_23','测试角色'),
-('角色_24','ROLE_24','测试角色'),
-('角色_25','ROLE_25','测试角色'),
-('角色_26','ROLE_26','测试角色'),
-('角色_27','ROLE_27','测试角色'),
-('角色_28','ROLE_28','测试角色'),
-('角色_29','ROLE_29','测试角色'),
-('角色_30','ROLE_30','测试角色'),
-('角色_31','ROLE_31','测试角色'),
-('角色_32','ROLE_32','测试角色'),
-('角色_33','ROLE_33','测试角色'),
-('角色_34','ROLE_34','测试角色'),
-('角色_35','ROLE_35','测试角色'),
-('角色_36','ROLE_36','测试角色'),
-('角色_37','ROLE_37','测试角色'),
-('角色_38','ROLE_38','测试角色'),
-('角色_39','ROLE_39','测试角色'),
-('角色_40','ROLE_40','测试角色'),
-('角色_41','ROLE_41','测试角色'),
-('角色_42','ROLE_42','测试角色'),
-('角色_43','ROLE_43','测试角色'),
-('角色_44','ROLE_44','测试角色'),
-('角色_45','ROLE_45','测试角色'),
-('角色_46','ROLE_46','测试角色'),
-('角色_47','ROLE_47','测试角色'),
-('角色_48','ROLE_48','测试角色'),
-('角色_49','ROLE_49','测试角色'),
-('角色_50','ROLE_50','测试角色'),
-('角色_51','ROLE_51','测试角色'),
-('角色_52','ROLE_52','测试角色'),
-('角色_53','ROLE_53','测试角色'),
-('角色_54','ROLE_54','测试角色'),
-('角色_55','ROLE_55','测试角色'),
-('角色_56','ROLE_56','测试角色'),
-('角色_57','ROLE_57','测试角色'),
-('角色_58','ROLE_58','测试角色'),
-('角色_59','ROLE_59','测试角色'),
-('角色_60','ROLE_60','测试角色');
+-- permission
+INSERT INTO t_permission(id,name,code,module,type,parent_id,path,sort,icon,component,status,deleted,created_by,updated_by)
+VALUES
+(1,'システム管理','PERM_SYS','system',1,0,'/system',1,'setting','system/index',1,0,1,1),
+(2,'ユーザー管理','PERM_USER','user',1,1,'/user',2,'user','user/index',1,0,1,1),
+(3,'商品管理','PERM_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1),
+(4,'在庫管理','PERM_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1),
+(5,'顧客管理','PERM_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1);
 
--- t_permission
-INSERT INTO t_permission (name,code,type) VALUES
+-- user role
+INSERT INTO t_user_role(user_id,role_id,deleted,created_by,updated_by)
+VALUES
+(1,1,0,1,1),(2,2,0,1,1),(3,3,0,1,1),(4,4,0,1,1);
 
-('权限_1','PERM_1',1),
-('权限_2','PERM_2',1),
-('权限_3','PERM_3',1),
-('权限_4','PERM_4',1),
-('权限_5','PERM_5',1),
-('权限_6','PERM_6',1),
-('权限_7','PERM_7',1),
-('权限_8','PERM_8',1),
-('权限_9','PERM_9',1),
-('权限_10','PERM_10',1),
-('权限_11','PERM_11',1),
-('权限_12','PERM_12',1),
-('权限_13','PERM_13',1),
-('权限_14','PERM_14',1),
-('权限_15','PERM_15',1),
-('权限_16','PERM_16',1),
-('权限_17','PERM_17',1),
-('权限_18','PERM_18',1),
-('权限_19','PERM_19',1),
-('权限_20','PERM_20',1),
-('权限_21','PERM_21',1),
-('权限_22','PERM_22',1),
-('权限_23','PERM_23',1),
-('权限_24','PERM_24',1),
-('权限_25','PERM_25',1),
-('权限_26','PERM_26',1),
-('权限_27','PERM_27',1),
-('权限_28','PERM_28',1),
-('权限_29','PERM_29',1),
-('权限_30','PERM_30',1),
-('权限_31','PERM_31',1),
-('权限_32','PERM_32',1),
-('权限_33','PERM_33',1),
-('权限_34','PERM_34',1),
-('权限_35','PERM_35',1),
-('权限_36','PERM_36',1),
-('权限_37','PERM_37',1),
-('权限_38','PERM_38',1),
-('权限_39','PERM_39',1),
-('权限_40','PERM_40',1),
-('权限_41','PERM_41',1),
-('权限_42','PERM_42',1),
-('权限_43','PERM_43',1),
-('权限_44','PERM_44',1),
-('权限_45','PERM_45',1),
-('权限_46','PERM_46',1),
-('权限_47','PERM_47',1),
-('权限_48','PERM_48',1),
-('权限_49','PERM_49',1),
-('权限_50','PERM_50',1),
-('权限_51','PERM_51',1),
-('权限_52','PERM_52',1),
-('权限_53','PERM_53',1),
-('权限_54','PERM_54',1),
-('权限_55','PERM_55',1),
-('权限_56','PERM_56',1),
-('权限_57','PERM_57',1),
-('权限_58','PERM_58',1),
-('权限_59','PERM_59',1),
-('权限_60','PERM_60',1);
+-- role permission
+INSERT INTO t_role_permission(id,role_id,permission_id,deleted,created_by,updated_by)
+VALUES
+(1,1,1,0,1,1),(2,1,2,0,1,1),(3,1,3,0,1,1),(4,1,4,0,1,1),(5,1,5,0,1,1),
+(6,2,5,0,1,1),(7,2,3,0,1,1),
+(8,3,4,0,1,1),
+(9,4,1,0,1,1);
 
--- t_goods
-INSERT INTO t_goods (name,brand_id,series_id,category_id,maker_id) VALUES
+-- master data
+INSERT INTO t_brand(id,name,english_name,image,content,status,deleted,created_by,updated_by)
+VALUES
+(1,'サクラ','SAKURA','/img/brand/sakura.png','日本ブランド',1,0,1,1),
+(2,'富士','FUJI','/img/brand/fuji.png','定番ブランド',1,0,1,1);
 
-('商品_1',2,2,2,2),
-('商品_2',3,3,3,3),
-('商品_3',4,4,4,4),
-('商品_4',5,5,5,5),
-('商品_5',6,6,6,6),
-('商品_6',7,7,7,7),
-('商品_7',8,8,8,8),
-('商品_8',9,9,9,9),
-('商品_9',10,10,10,10),
-('商品_10',1,1,1,1),
-('商品_11',2,2,2,2),
-('商品_12',3,3,3,3),
-('商品_13',4,4,4,4),
-('商品_14',5,5,5,5),
-('商品_15',6,6,6,6),
-('商品_16',7,7,7,7),
-('商品_17',8,8,8,8),
-('商品_18',9,9,9,9),
-('商品_19',10,10,10,10),
-('商品_20',1,1,1,1),
-('商品_21',2,2,2,2),
-('商品_22',3,3,3,3),
-('商品_23',4,4,4,4),
-('商品_24',5,5,5,5),
-('商品_25',6,6,6,6),
-('商品_26',7,7,7,7),
-('商品_27',8,8,8,8),
-('商品_28',9,9,9,9),
-('商品_29',10,10,10,10),
-('商品_30',1,1,1,1),
-('商品_31',2,2,2,2),
-('商品_32',3,3,3,3),
-('商品_33',4,4,4,4),
-('商品_34',5,5,5,5),
-('商品_35',6,6,6,6),
-('商品_36',7,7,7,7),
-('商品_37',8,8,8,8),
-('商品_38',9,9,9,9),
-('商品_39',10,10,10,10),
-('商品_40',1,1,1,1),
-('商品_41',2,2,2,2),
-('商品_42',3,3,3,3),
-('商品_43',4,4,4,4),
-('商品_44',5,5,5,5),
-('商品_45',6,6,6,6),
-('商品_46',7,7,7,7),
-('商品_47',8,8,8,8),
-('商品_48',9,9,9,9),
-('商品_49',10,10,10,10),
-('商品_50',1,1,1,1),
-('商品_51',2,2,2,2),
-('商品_52',3,3,3,3),
-('商品_53',4,4,4,4),
-('商品_54',5,5,5,5),
-('商品_55',6,6,6,6),
-('商品_56',7,7,7,7),
-('商品_57',8,8,8,8),
-('商品_58',9,9,9,9),
-('商品_59',10,10,10,10),
-('商品_60',1,1,1,1);
+INSERT INTO t_category(id,name,status,deleted,created_by,updated_by)
+VALUES
+(1,'食品',1,0,1,1),
+(2,'日用品',1,0,1,1);
 
--- t_goods_sku
-INSERT INTO t_goods_sku (goods_id,sku_code,price) VALUES
+INSERT INTO t_series(id,name,english_name,brand_id,content,status,deleted,created_by,updated_by)
+VALUES
+(1,'春シリーズ','SPRING',1,'春限定',1,0,1,1),
+(2,'標準シリーズ','STANDARD',2,'定番',1,0,1,1);
 
-(1,'SKU_1',20.89),
-(2,'SKU_2',679.39),
-(3,'SKU_3',402.68),
-(4,'SKU_4',987.72),
-(5,'SKU_5',435.78),
-(6,'SKU_6',49.18),
-(7,'SKU_7',481.7),
-(8,'SKU_8',450.02),
-(9,'SKU_9',276.12),
-(10,'SKU_10',493.95),
-(11,'SKU_11',960.1),
-(12,'SKU_12',51.17),
-(13,'SKU_13',807.38),
-(14,'SKU_14',651.93),
-(15,'SKU_15',13.8),
-(16,'SKU_16',303.05),
-(17,'SKU_17',224.73),
-(18,'SKU_18',92.59),
-(19,'SKU_19',849.59),
-(20,'SKU_20',795.29),
-(21,'SKU_21',868.6),
-(22,'SKU_22',139.21),
-(23,'SKU_23',761.59),
-(24,'SKU_24',323.47),
-(25,'SKU_25',177.12),
-(26,'SKU_26',333.59),
-(27,'SKU_27',846.63),
-(28,'SKU_28',379.55),
-(29,'SKU_29',944.64),
-(30,'SKU_30',748.2),
-(31,'SKU_31',100.22),
-(32,'SKU_32',159.64),
-(33,'SKU_33',89.77),
-(34,'SKU_34',435.27),
-(35,'SKU_35',781.92),
-(36,'SKU_36',942.08),
-(37,'SKU_37',239.23),
-(38,'SKU_38',253.77),
-(39,'SKU_39',825.33),
-(40,'SKU_40',141.91),
-(41,'SKU_41',706.39),
-(42,'SKU_42',688.22),
-(43,'SKU_43',268.83),
-(44,'SKU_44',347.92),
-(45,'SKU_45',537.85),
-(46,'SKU_46',607.41),
-(47,'SKU_47',804.42),
-(48,'SKU_48',543.28),
-(49,'SKU_49',367.85),
-(50,'SKU_50',784.44),
-(51,'SKU_51',541.99),
-(52,'SKU_52',267.43),
-(53,'SKU_53',666.94),
-(54,'SKU_54',908.29),
-(55,'SKU_55',608.86),
-(56,'SKU_56',132.1),
-(57,'SKU_57',191.64),
-(58,'SKU_58',486.44),
-(59,'SKU_59',926.98),
-(60,'SKU_60',48.49);
+INSERT INTO t_maker(id,name,status,deleted,created_by,updated_by)
+VALUES
+(1,'東京工場',1,0,1,1),
+(2,'大阪工場',1,0,1,1);
 
--- t_warehouse
-INSERT INTO t_warehouse (name,code) VALUES
+INSERT INTO t_brand_maker_relation(id,brand_id,maker_id,deleted,created_by,updated_by)
+VALUES
+(1,1,1,0,1,1),
+(2,2,2,0,1,1);
 
-('仓库_1','WH_1'),
-('仓库_2','WH_2'),
-('仓库_3','WH_3'),
-('仓库_4','WH_4'),
-('仓库_5','WH_5'),
-('仓库_6','WH_6'),
-('仓库_7','WH_7'),
-('仓库_8','WH_8'),
-('仓库_9','WH_9'),
-('仓库_10','WH_10'),
-('仓库_11','WH_11'),
-('仓库_12','WH_12'),
-('仓库_13','WH_13'),
-('仓库_14','WH_14'),
-('仓库_15','WH_15'),
-('仓库_16','WH_16'),
-('仓库_17','WH_17'),
-('仓库_18','WH_18'),
-('仓库_19','WH_19'),
-('仓库_20','WH_20'),
-('仓库_21','WH_21'),
-('仓库_22','WH_22'),
-('仓库_23','WH_23'),
-('仓库_24','WH_24'),
-('仓库_25','WH_25'),
-('仓库_26','WH_26'),
-('仓库_27','WH_27'),
-('仓库_28','WH_28'),
-('仓库_29','WH_29'),
-('仓库_30','WH_30'),
-('仓库_31','WH_31'),
-('仓库_32','WH_32'),
-('仓库_33','WH_33'),
-('仓库_34','WH_34'),
-('仓库_35','WH_35'),
-('仓库_36','WH_36'),
-('仓库_37','WH_37'),
-('仓库_38','WH_38'),
-('仓库_39','WH_39'),
-('仓库_40','WH_40'),
-('仓库_41','WH_41'),
-('仓库_42','WH_42'),
-('仓库_43','WH_43'),
-('仓库_44','WH_44'),
-('仓库_45','WH_45'),
-('仓库_46','WH_46'),
-('仓库_47','WH_47'),
-('仓库_48','WH_48'),
-('仓库_49','WH_49'),
-('仓库_50','WH_50'),
-('仓库_51','WH_51'),
-('仓库_52','WH_52'),
-('仓库_53','WH_53'),
-('仓库_54','WH_54'),
-('仓库_55','WH_55'),
-('仓库_56','WH_56'),
-('仓库_57','WH_57'),
-('仓库_58','WH_58'),
-('仓库_59','WH_59'),
-('仓库_60','WH_60');
+INSERT INTO t_stock_type(id,name,status,deleted,created_by,updated_by)
+VALUES
+(1,'通常品',1,0,1,1),
+(2,'不良品',1,0,1,1);
 
--- t_stock
-INSERT INTO t_stock (goods_id,goods_name,sku_id,warehouse_id,current_qty,price) VALUES
+INSERT INTO t_warehouse(id,name,code,address,manager_id,status,deleted,created_by,updated_by)
+VALUES
+(1,'東京倉庫','WH-TYO','東京都港区',3,1,0,1,1),
+(2,'大阪倉庫','WH-OSA','大阪市中央区',3,1,0,1,1);
 
-(1,'商品_1',1,2,98,252.12),
-(2,'商品_2',2,3,21,309.84),
-(3,'商品_3',3,4,69,93.4),
-(4,'商品_4',4,5,56,706.53),
-(5,'商品_5',5,6,4,980.45),
-(6,'商品_6',6,7,133,333.88),
-(7,'商品_7',7,8,185,728.82),
-(8,'商品_8',8,9,131,218.71),
-(9,'商品_9',9,10,75,898.82),
-(10,'商品_10',10,1,67,172.04),
-(11,'商品_11',11,2,98,938.15),
-(12,'商品_12',12,3,21,350.6),
-(13,'商品_13',13,4,99,271.46),
-(14,'商品_14',14,5,92,832.64),
-(15,'商品_15',15,6,197,533.09),
-(16,'商品_16',16,7,28,501.46),
-(17,'商品_17',17,8,149,877.81),
-(18,'商品_18',18,9,69,691.36),
-(19,'商品_19',19,10,71,377.06),
-(20,'商品_20',20,1,123,818.63),
-(21,'商品_21',21,2,196,797.35),
-(22,'商品_22',22,3,91,807.48),
-(23,'商品_23',23,4,18,964.22),
-(24,'商品_24',24,5,180,898.84),
-(25,'商品_25',25,6,145,50.8),
-(26,'商品_26',26,7,184,433.98),
-(27,'商品_27',27,8,112,60.2),
-(28,'商品_28',28,9,141,83.85),
-(29,'商品_29',29,10,62,402.56),
-(30,'商品_30',30,1,1,390.77),
-(31,'商品_31',31,2,156,250.77),
-(32,'商品_32',32,3,19,191.71),
-(33,'商品_33',33,4,50,926.79),
-(34,'商品_34',34,5,75,357.41),
-(35,'商品_35',35,6,25,998.69),
-(36,'商品_36',36,7,42,332.22),
-(37,'商品_37',37,8,182,327.77),
-(38,'商品_38',38,9,17,277.45),
-(39,'商品_39',39,10,58,740.91),
-(40,'商品_40',40,1,176,10.2),
-(41,'商品_41',41,2,33,334.92),
-(42,'商品_42',42,3,83,485.6),
-(43,'商品_43',43,4,159,622.01),
-(44,'商品_44',44,5,8,422.98),
-(45,'商品_45',45,6,72,713.22),
-(46,'商品_46',46,7,37,854.45),
-(47,'商品_47',47,8,122,65.75),
-(48,'商品_48',48,9,48,226.44),
-(49,'商品_49',49,10,195,538.71),
-(50,'商品_50',50,1,64,14.18),
-(51,'商品_51',51,2,118,877.07),
-(52,'商品_52',52,3,89,639.62),
-(53,'商品_53',53,4,152,879.52),
-(54,'商品_54',54,5,154,678.23),
-(55,'商品_55',55,6,77,709.31),
-(56,'商品_56',56,7,16,15.86),
-(57,'商品_57',57,8,42,855.93),
-(58,'商品_58',58,9,150,262.01),
-(59,'商品_59',59,10,200,598.38),
-(60,'商品_60',60,1,68,38.39);
+-- goods / sku / spec / image
+INSERT INTO t_goods(id,name,english_name,brand_id,series_id,category_id,maker_id,description,is_hot,sort,status,deleted,created_by,updated_by)
+VALUES
+(1,'抹茶クッキー','Matcha Cookie',1,1,1,1,'人気商品',1,10,1,0,1,1),
+(2,'洗剤A','Detergent A',2,2,2,2,'日用品',0,20,1,0,1,1);
+
+INSERT INTO t_goods_sku(id,goods_id,sku_code,sku_name,price,currency,cost_price,update_price,price_update_time,barcode,weight,volume,status,deleted,created_by,updated_by)
+VALUES
+(1,1,'SKU-MC-001','抹茶クッキー-小',298.00,'JPY',180.00,299.00,NOW(),'4901000000011',0.10,0.30,1,0,1,1),
+(2,1,'SKU-MC-002','抹茶クッキー-大',598.00,'JPY',360.00,599.00,NOW(),'4901000000012',0.20,0.60,1,0,1,1),
+(3,2,'SKU-DT-001','洗剤A-詰替',420.00,'JPY',250.00,425.00,NOW(),'4902000000001',0.50,0.80,1,0,1,1);
+
+INSERT INTO t_goods_sku_spec(id,sku_id,sku_code,spec_id,spec_name,spec_value,sort,deleted,created_by,updated_by)
+VALUES
+(1,1,'SKU-MC-001',1,'容量','100g',1,0,1,1),
+(2,2,'SKU-MC-002',1,'容量','250g',1,0,1,1),
+(3,3,'SKU-DT-001',1,'容量','500ml',1,0,1,1);
+
+INSERT INTO t_goods_image(id,goods_id,sku_id,sku_code,image_url,sort,deleted,created_by,updated_by)
+VALUES
+(1,1,1,'SKU-MC-001','/img/goods/mc-001-main.png',1,0,1,1),
+(2,1,2,'SKU-MC-002','/img/goods/mc-002-main.png',1,0,1,1),
+(3,2,3,'SKU-DT-001','/img/goods/dt-001-main.png',1,0,1,1);
+
+-- stock
+INSERT INTO t_stock(id,goods_id,goods_name,sku_id,sku_code,warehouse_id,current_qty,lock_qty,price,currency,price_update_time,stock_type_id,status,version,deleted,created_by,updated_by)
+VALUES
+(1,1,'抹茶クッキー',1,'SKU-MC-001',1,120,10,298.00,'JPY',NOW(),1,1,0,0,1,1),
+(2,1,'抹茶クッキー',2,'SKU-MC-002',1,80,5,598.00,'JPY',NOW(),1,1,0,0,1,1),
+(3,2,'洗剤A',3,'SKU-DT-001',2,200,20,420.00,'JPY',NOW(),1,1,0,0,1,1);
+
+-- customer / level
+INSERT INTO t_customer_level(id,name,discount,remark,status,deleted,created_by,updated_by)
+VALUES
+(1,'一般',1.0000,'標準価格',1,0,1,1),
+(2,'VIP',0.9000,'優待価格',1,0,1,1);
+
+INSERT INTO t_customer(id,customer_code,name,english_name,contact_person,phone,email,country,city,address,level_id,owner_user_id,owner_dept_id,remark,status,deleted,created_by,updated_by)
+VALUES
+(1,'CUST-001','山田商事','Yamada Trading','山田太郎','0311111111','yamada@test.com','JP','東京','港区1-1-1',1,2,2,'主要顧客',1,0,1,1),
+(2,'CUST-002','大阪物産','Osaka Bussan','佐藤花子','0666666666','osaka@test.com','JP','大阪','中央区2-2-2',2,2,2,'VIP顧客',1,0,1,1);
+
+INSERT INTO t_goods_level_price(id,goods_id,sku_id,sku_code,level_id,price,currency,discount,effective_time,expire_time,status,deleted,created_by,updated_by)
+VALUES
+(1,1,1,'SKU-MC-001',2,268.00,'JPY',0.9000,NOW(),DATE_ADD(NOW(),INTERVAL 365 DAY),1,0,1,1),
+(2,2,3,'SKU-DT-001',2,378.00,'JPY',0.9000,NOW(),DATE_ADD(NOW(),INTERVAL 365 DAY),1,0,1,1);
+
+-- request form / item
+INSERT INTO t_request_form(id,biz_no,user_id,username,dept_id,dept_name,customer_id,customer_name,warehouse_id,total_qty,request_qty,state,approver_id,approve_name,approve_time,approve_remark,deleted,created_by,updated_by)
+VALUES
+(1,'REQ-20260507-001',2,'sales01',2,'営業部',1,'山田商事',1,30,30,2,1,'admin',NOW(),'承認済み',0,2,1),
+(2,'REQ-20260507-002',2,'sales01',2,'営業部',2,'大阪物産',2,20,20,1,NULL,NULL,NULL,NULL,0,2,2);
+
+INSERT INTO t_request_item(id,request_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,warehouse_id,price,currency,discount,request_qty,approve_qty,out_qty,stock_record_id,remark,deleted,created_by,updated_by)
+VALUES
+(1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,298.00,'JPY',1.0000,10,10,10,1,'即納',0,2,1),
+(2,1,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,598.00,'JPY',1.0000,20,20,20,2,'即納',0,2,1),
+(3,2,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',2,420.00,'JPY',0.9000,20,0,0,NULL,'審査待ち',0,2,2);
+
+-- stock order / item / record
+INSERT INTO t_stock_order(id,order_no,order_type,warehouse_id,source_type,source_id,total_qty,stock_type_id,state,requester_id,requester_name,operator_id,operator_name,remark,approver_id,approver_name,approve_time,version,finish_time,deleted,created_by,updated_by)
+VALUES
+(1,'SO-20260507-001',2,1,3,1,30,1,2,2,'sales01',3,'warehouse01','REQ連動',1,'admin',NOW(),1,NOW(),0,3,1),
+(2,'SO-20260507-002',1,2,4,NULL,50,1,2,3,'warehouse01',3,'warehouse01','手動入庫',1,'admin',NOW(),1,NOW(),0,3,1);
+
+INSERT INTO t_stock_order_item(id,order_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,before_qty,change_qty,after_qty,price,currency,remark,deleted,created_by,updated_by)
+VALUES
+(1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',120,-10,110,298.00,'JPY','出庫',0,3,1),
+(2,1,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',80,-20,60,598.00,'JPY','出庫',0,3,1),
+(3,2,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',200,50,250,420.00,'JPY','入庫',0,3,1);
+
+INSERT INTO t_stock_record(id,biz_no,order_id,order_item_id,stock_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,warehouse_id,before_qty,change_qty,after_qty,order_type,source_type,price,currency,price_update_time,customer_id,customer_name,requester_id,requester_name,operator_id,operator_name,remark,deleted,created_by,updated_by,created_name,updated_name)
+VALUES
+(1,'SR-20260507-001',1,1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,120,-10,110,2,3,298.00,'JPY',NOW(),1,'山田商事',2,'sales01',3,'warehouse01','出庫記録',0,3,1,'warehouse01','admin'),
+(2,'SR-20260507-002',1,2,2,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,80,-20,60,2,3,598.00,'JPY',NOW(),1,'山田商事',2,'sales01',3,'warehouse01','出庫記録',0,3,1,'warehouse01','admin'),
+(3,'SR-20260507-003',2,3,3,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',2,200,50,250,1,4,420.00,'JPY',NOW(),NULL,NULL,3,'warehouse01',3,'warehouse01','入庫記録',0,3,1,'warehouse01','admin');
+
+-- price record
+INSERT INTO t_price_record(id,goods_id,goods_name,english_name,sku_id,sku_code,old_price,new_price,currency,discount,price_update_time,operator_id,operator_name,deleted,created_by,updated_by,created_name,updated_name)
+VALUES
+(1,1,'抹茶クッキー','Matcha Cookie',1,'SKU-MC-001',280.00,298.00,'JPY',1.0000,NOW(),1,'admin',0,1,1,'admin','admin'),
+(2,2,'洗剤A','Detergent A',3,'SKU-DT-001',400.00,420.00,'JPY',1.0000,NOW(),1,'admin',0,1,1,'admin','admin');
+
+-- message
+INSERT INTO t_message(id,type,user_id,message,source_id,is_read,state,deleted,created_by,updated_by)
+VALUES
+(1,1,2,'新しい申請が承認されました',1,0,1,0,1,1),
+(2,2,3,'在庫調整を実施してください',2,0,1,0,1,1);
+
+-- config
+INSERT INTO t_config(id,name,`group`,title,tip,type,value,content,deleted,created_by,updated_by)
+VALUES
+(1,'system.theme','ui','テーマ','画面テーマ','string','light','["light","dark"]',0,1,1),
+(2,'stock.warn.threshold','stock','在庫警戒値','在庫不足しきい値','int','20',NULL,0,1,1);
+
+-- operate log
+INSERT INTO t_operate_log(id,user_id,username,module,operation,method,request_url,request_ip,request_param,response_data,status,error_msg,cost_time,deleted,created_by,updated_by,created_name,updated_name)
+VALUES
+(1,1,'admin','schema','GET','GET','/api/schema/menu','127.0.0.1','{}','{"ok":true}',1,NULL,12,0,1,1,'admin','admin'),
+(2,2,'sales01','request','CREATE','POST','/api/requestForm','127.0.0.1','{"bizNo":"REQ-20260507-002"}','{"ok":true}',1,NULL,35,0,2,2,'sales01','sales01');
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
+

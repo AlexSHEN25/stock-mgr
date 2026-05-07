@@ -17,6 +17,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.time.temporal.Temporal;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -164,10 +165,13 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         for (Field field : dto.getClass().getDeclaredFields()) {
             field.setAccessible(true);
             QueryField queryField = field.getAnnotation(QueryField.class);
-            if (queryField == null) continue;
             try {
                 Object value = field.get(dto);
                 if (value == null) continue;
+                if (queryField == null) {
+                    applyDefaultCondition(wrapper, field.getName(), value);
+                    continue;
+                }
                 String column = queryField.column().isEmpty() ? camelToUnderline(field.getName()) : queryField.column();
                 switch (queryField.type()) {
                     case EQ -> wrapper.eq(column, value);
@@ -189,7 +193,44 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                 throw new RuntimeException("构建查询失败", e);
             }
         }
+        buildJoinConditions(dto, wrapper);
         return wrapper;
+    }
+
+    protected <Q> void buildJoinConditions(Q dto, QueryWrapper<T> wrapper) {
+        // 子类按模块覆盖：例如通过名称字段关联其他表进行筛选
+    }
+
+    private void applyDefaultCondition(QueryWrapper<T> wrapper, String fieldName, Object value) {
+        String column = camelToUnderline(fieldName);
+        if (value instanceof String stringValue) {
+            if (!stringValue.isBlank()) {
+                wrapper.like(column, stringValue.trim());
+            }
+            return;
+        }
+        if (value instanceof Enum<?> enumValue) {
+            Object enumDbValue = resolveEnumDbValue(enumValue);
+            if (enumDbValue != null) {
+                wrapper.eq(column, enumDbValue);
+            }
+            return;
+        }
+        if (value instanceof Number || value instanceof Boolean || value instanceof Temporal) {
+            wrapper.eq(column, value);
+        }
+    }
+
+    private Object resolveEnumDbValue(Enum<?> enumValue) {
+        try {
+            Field codeField = findField(enumValue.getClass(), "code");
+            if (codeField != null) {
+                codeField.setAccessible(true);
+                return codeField.get(enumValue);
+            }
+        } catch (Exception ignored) {
+        }
+        return enumValue.name();
     }
 
     /**

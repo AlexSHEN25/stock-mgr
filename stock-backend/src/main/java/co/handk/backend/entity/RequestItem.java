@@ -34,9 +34,9 @@ public class RequestItem extends BaseEntity {
 
     private String categoryName;
 
-    private Long typeId;
+    private Long stockTypeId;
 
-    private String typeName;
+    private String stockTypeName;
 
     private Long makerId;
 

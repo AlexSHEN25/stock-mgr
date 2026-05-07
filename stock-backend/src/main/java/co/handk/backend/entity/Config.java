@@ -1,5 +1,6 @@
 package co.handk.backend.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -9,6 +10,7 @@ public class Config extends BaseEntity {
 
     private String name;
 
+    @TableField("`group`")
     private String group;
 
     private String title;

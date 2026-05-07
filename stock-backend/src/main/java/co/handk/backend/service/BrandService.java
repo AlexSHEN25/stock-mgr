@@ -8,4 +8,7 @@ import org.springframework.validation.annotation.Validated;
 @Service
 @Validated
 public interface BrandService extends BaseService<Brand, BrandVO> {
+
+
+
 }

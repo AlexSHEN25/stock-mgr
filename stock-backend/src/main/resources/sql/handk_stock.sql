@@ -1,4 +1,4 @@
-﻿DROP TABLE IF EXISTS `t_user`;
+DROP TABLE IF EXISTS `t_user`;
 create TABLE `t_user`
 (
     `id`          BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -166,7 +166,7 @@ create TABLE `t_stock`
     `price`             DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
     `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `price_update_time` DATETIME                  DEFAULT NULL COMMENT '价格最后更新时间',
-    `type_id`           BIGINT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
+    `stock_type_id`           BIGINT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
     `status`            TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态',
     `version`           BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '版本控制',
     `deleted`           TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -175,7 +175,7 @@ create TABLE `t_stock`
     `create_time`       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY uk_stock (sku_id, warehouse_id, type_id),
+    UNIQUE KEY uk_stock (sku_id, warehouse_id, stock_type_id),
     KEY idx_goods (goods_id),
     KEY idx_version (version),
     KEY idx_created_by (created_by),
@@ -194,7 +194,7 @@ CREATE TABLE t_stock_order
     `source_type`   TINYINT UNSIGNED NOT NULL COMMENT '来源类型:1订单2退货3请求单4手动',
     `source_id`     BIGINT DEFAULT NULL COMMENT '来源ID',
     `total_qty`     INT(10) NOT NULL DEFAULT 0 COMMENT '总数量',
-    `type_id`       BIGINT UNSIGNED     DEFAULT NULL COMMENT '库存商品分类ID',
+    `stock_type_id`           BIGINT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
     `state`         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据状态:0草稿1审核中2完成3取消',
     `requester_id`  BIGINT UNSIGNED DEFAULT NULL COMMENT '申请人ID',
     `requester_name` VARCHAR(64) DEFAULT NULL COMMENT '申请人',
@@ -241,8 +241,8 @@ CREATE TABLE t_stock_order_item
     `series_name`    VARCHAR(255) DEFAULT NULL COMMENT '系列名称',
     `category_id`    BIGINT UNSIGNED DEFAULT NULL COMMENT '商品类型ID',
     `category_name`  VARCHAR(255) DEFAULT NULL COMMENT '商品类型名称',
-    `type_id`        BIGINT UNSIGNED DEFAULT NULL COMMENT '库存商品分类ID',
-    `type_name`      VARCHAR(255) DEFAULT NULL COMMENT '库存商品分类名称',
+    `stock_type_id`           BIGINT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
+    `stock_type_name`      VARCHAR(255) DEFAULT NULL COMMENT '库存商品分类名称',
     `maker_id`       BIGINT UNSIGNED DEFAULT NULL COMMENT '厂家ID',
     `maker_name`     VARCHAR(255) DEFAULT NULL COMMENT '厂家名称',
 
@@ -265,7 +265,7 @@ CREATE TABLE t_stock_order_item
     KEY `idx_series_id` (`series_id`),
     KEY `idx_category_id` (`category_id`),
     KEY `idx_maker_id` (`maker_id`),
-    KEY idx_type_id(type_id),
+    KEY idx_stock_type_id(stock_type_id),
     KEY idx_created_by (created_by),
     KEY idx_updated_by (updated_by)
 )
@@ -294,8 +294,8 @@ create TABLE `t_stock_record`
 
     `category_id`    BIGINT UNSIGNED        DEFAULT NULL COMMENT '商品类型ID',
     `category_name`   VARCHAR(255)       DEFAULT NULL COMMENT '商品类型名称',
-    `type_id`        BIGINT UNSIGNED        DEFAULT NULL COMMENT '库存商品分类ID',
-    `type_name`      VARCHAR(255)        DEFAULT NULL COMMENT '库存商品分类名称',
+    `stock_type_id`           BIGINT UNSIGNED              DEFAULT NULL COMMENT '库存商品分类ID',
+    `stock_type_name`      VARCHAR(255)        DEFAULT NULL COMMENT '库存商品分类名称',
     `maker_id`       BIGINT UNSIGNED        DEFAULT NULL COMMENT '厂家ID',
     `maker_name`     VARCHAR(255)        DEFAULT NULL COMMENT '厂家名称',
 
@@ -333,7 +333,7 @@ create TABLE `t_stock_record`
     KEY `idx_brand_id` (`brand_id`),
     KEY `idx_series_id` (`series_id`),
     KEY `idx_category_id` (`category_id`),
-    KEY `idx_type_id` (`type_id`),
+    KEY `idx_stock_type_id` (`stock_type_id`),
     KEY idx_created_by (created_by),
     KEY idx_updated_by (updated_by)
 ) ENGINE = InnoDB
@@ -656,8 +656,8 @@ create TABLE `t_request_item`
     `series_name`     VARCHAR(255) DEFAULT NULL COMMENT '系列名称',
     `category_id`         BIGINT UNSIGNED DEFAULT NULL COMMENT '类型ID',
     `category_name`       VARCHAR(255) DEFAULT NULL COMMENT '类型名称',
-    `type_id`         BIGINT UNSIGNED DEFAULT NULL COMMENT '商品分类ID',
-    `type_name`       VARCHAR(255) DEFAULT NULL COMMENT '商品分类名称',
+    `stock_type_id`         BIGINT UNSIGNED DEFAULT NULL COMMENT '商品分类ID',
+    `stock_type_name`       VARCHAR(255) DEFAULT NULL COMMENT '商品分类名称',
     `maker_id`        BIGINT UNSIGNED DEFAULT NULL COMMENT '厂家ID',
     `maker_name`      VARCHAR(255) DEFAULT NULL COMMENT '厂家名称',
 
@@ -681,7 +681,7 @@ create TABLE `t_request_item`
     KEY `idx_brand_id` (`brand_id`),
     KEY `idx_series_id` (`series_id`),
     KEY `idx_category_id` (`category_id`),
-    KEY `idx_type_id` (`type_id`),
+    KEY `idx_type_id` (`stock_type_id`),
     KEY `idx_maker_id` (`maker_id`),
     KEY idx_created_by (created_by),
     KEY idx_updated_by (updated_by)
@@ -848,3 +848,5 @@ create TABLE `t_operate_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='操作日志表';
+
+
