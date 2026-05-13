@@ -1,10 +1,11 @@
 package co.handk.client;
 
+import co.handk.client.controller.LoginController;
+import co.handk.client.controller.MainController;
 import co.handk.client.model.Session;
 import co.handk.client.util.ApiClient;
-import co.handk.client.view.LoginView;
-import co.handk.client.view.MainView;
 import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
@@ -19,9 +20,9 @@ public class MainApp extends Application {
         ApiClient.setLoginTimeoutHandler(() -> {
             Session.clear();
             Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("登录状态");
+            alert.setTitle("登录超时");
             alert.setHeaderText(null);
-            alert.setContentText("login timeout");
+            alert.setContentText("登录已过期，请重新登录");
             alert.showAndWait();
             showLogin();
         });
@@ -29,16 +30,33 @@ public class MainApp extends Application {
     }
 
     public void showLogin() {
-        LoginView view = new LoginView(this);
-        primaryStage.setScene(new Scene(view.getView(), 300, 200));
-        primaryStage.setTitle("登录");
-        primaryStage.show();
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
+            Scene scene = new Scene(loader.load(), 360, 240);
+            LoginController controller = loader.getController();
+            controller.setApp(this);
+
+            primaryStage.setScene(scene);
+            primaryStage.setTitle("库存系统登录");
+            primaryStage.show();
+        } catch (Exception e) {
+            throw new RuntimeException("加载登录页面失败", e);
+        }
     }
 
     public void showMain() {
-        MainView view = new MainView(this);
-        primaryStage.setScene(new Scene(view.getView(), 400, 300));
-        primaryStage.setTitle("主页");
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main.fxml"));
+            Scene scene = new Scene(loader.load(), 1180, 720);
+            MainController controller = loader.getController();
+            controller.setApp(this);
+
+            primaryStage.setScene(scene);
+            primaryStage.setTitle("Stock Admin - JavaFX");
+            primaryStage.show();
+        } catch (Exception e) {
+            throw new RuntimeException("加载主页失败", e);
+        }
     }
 
     public static void main(String[] args) {

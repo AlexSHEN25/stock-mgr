@@ -6,7 +6,6 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- 继承你自己的父工程 -->
     <parent>
         <groupId>co.handk</groupId>
         <artifactId>stock-mgr</artifactId>
@@ -17,20 +16,18 @@
     <packaging>jar</packaging>
 
     <dependencies>
-        <!-- JavaFX 控件 -->
-            <dependency>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-controls</artifactId>
-                <version>21</version>
-            </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>21</version>
+        </dependency>
 
-            <dependency>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-fxml</artifactId>
-                <version>21</version>
-            </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>21</version>
+        </dependency>
 
-        <!-- JSON解析 -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
@@ -45,7 +42,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.example.ui.LoginApp</mainClass>
+                    <mainClass>co.handk.client.MainApp</mainClass>
                 </configuration>
             </plugin>
         </plugins>

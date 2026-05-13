@@ -26,6 +26,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import javax.sql.DataSource;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
@@ -46,6 +47,8 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     private ApplicationContext applicationContext;
     @Autowired(required = false)
     private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    @Autowired(required = false)
+    private DataSource dataSource;
 
     /**
      * ================= 查询 =================
@@ -69,7 +72,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
     @Override
     public <Q> List<V> list(Q dto) {
-        if (hasJoinQueryConfig() && namedParameterJdbcTemplate != null) {
+        if (hasJoinQueryConfig()) {
             List<V> joined = executeJoinList(dto);
             joined.forEach(this::fillStatusDesc);
             fillJoinValues(joined);
@@ -86,7 +89,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
     @Override
     public <Q extends PageQuery> PageResult<V> page(Q dto) {
-        if (hasJoinQueryConfig() && namedParameterJdbcTemplate != null) {
+        if (hasJoinQueryConfig()) {
             return executeJoinPage(dto);
         }
         Page<T> page = new Page<>(dto.getPageNum(), dto.getPageSize());
@@ -398,6 +401,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     }
 
     private <Q extends PageQuery> PageResult<V> executeJoinPage(Q dto) {
+        NamedParameterJdbcTemplate jdbc = getJoinJdbcTemplate();
         String fromSql = buildFromJoinSql();
         String whereSql = buildJoinWhereSql(dto);
         String orderSql = buildJoinOrderSql(dto);
@@ -407,26 +411,27 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         params.addValue("size", dto.getPageSize());
 
         String countSql = "SELECT COUNT(1) " + fromSql + " " + whereSql;
-        Long total = namedParameterJdbcTemplate.queryForObject(countSql, params, Long.class);
+        Long total = jdbc.queryForObject(countSql, params, Long.class);
         if (total == null || total == 0L) {
             return PageResult.build(0L, dto.getPageNum(), dto.getPageSize(), Collections.emptyList());
         }
 
         String pageSql = selectSql + " " + fromSql + " " + whereSql + " " + orderSql + " LIMIT :offset, :size";
-        List<V> list = namedParameterJdbcTemplate.query(pageSql, params, BeanPropertyRowMapper.newInstance(getVoClass()));
+        List<V> list = jdbc.query(pageSql, params, BeanPropertyRowMapper.newInstance(getVoClass()));
         list.forEach(this::fillStatusDesc);
         fillJoinValues(list);
         return PageResult.build(total, dto.getPageNum(), dto.getPageSize(), list);
     }
 
     private <Q> List<V> executeJoinList(Q dto) {
+        NamedParameterJdbcTemplate jdbc = getJoinJdbcTemplate();
         String fromSql = buildFromJoinSql();
         String whereSql = buildJoinWhereSql(dto);
         String selectSql = buildJoinSelectSql();
         MapSqlParameterSource params = buildJoinParams(dto);
         String sql = selectSql + " " + fromSql + " " + whereSql + " ORDER BY "
                 + this.getClass().getAnnotation(JoinQueryConfig.class).baseAlias() + ".update_time DESC";
-        return namedParameterJdbcTemplate.query(sql, params, BeanPropertyRowMapper.newInstance(getVoClass()));
+        return jdbc.query(sql, params, BeanPropertyRowMapper.newInstance(getVoClass()));
     }
 
     private String buildJoinSelectSql() {
@@ -456,15 +461,34 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         for (JoinTable jt : cfg.joins()) {
             sb.append(toJoinKeyword(jt.type())).append(" ")
                     .append(jt.table());
+            String aliasOrTable = jt.alias().isBlank() ? jt.table() : jt.alias();
             if (!jt.alias().isBlank()) {
                 sb.append(" ").append(jt.alias());
             }
-            if (jt.type() != JoinType.CROSS && !jt.on().isBlank()) {
-                sb.append(" ON ").append(jt.on());
+            if (jt.type() != JoinType.CROSS) {
+                String onExpr = jt.on();
+                if (jt.autoDeletedFilter()) {
+                    String deletedExpr = aliasOrTable + "." + jt.deletedColumn() + " = 0";
+                    onExpr = onExpr.isBlank() ? deletedExpr : onExpr + " AND " + deletedExpr;
+                }
+                if (!onExpr.isBlank()) {
+                    sb.append(" ON ").append(onExpr);
+                }
             }
             sb.append(" ");
         }
         return sb.toString().trim();
+    }
+
+    private NamedParameterJdbcTemplate getJoinJdbcTemplate() {
+        if (namedParameterJdbcTemplate != null) {
+            return namedParameterJdbcTemplate;
+        }
+        if (dataSource != null) {
+            namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+            return namedParameterJdbcTemplate;
+        }
+        throw new IllegalStateException("Join query requires DataSource or NamedParameterJdbcTemplate bean.");
     }
 
     private String buildJoinWhereSql(Object dto) {

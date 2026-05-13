@@ -27,5 +27,4 @@ public class GoodsQueryDTO extends PageQuery {
     private String images;
     private String description;
     private Integer isHot;
-    private Long version;
 }

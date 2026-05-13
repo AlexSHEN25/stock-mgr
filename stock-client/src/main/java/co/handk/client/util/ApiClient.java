@@ -6,6 +6,9 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class ApiClient {
 
@@ -17,24 +20,73 @@ public class ApiClient {
     }
 
     public static String post(String path, String json) throws Exception {
-        URL url = new URL(BASE_URL + path);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-        conn.setRequestMethod("POST");
+        HttpURLConnection conn = open(path, "POST");
         conn.setRequestProperty("Content-Type", "application/json");
-
-        String token = Session.getToken();
-        if (token != null) {
-            conn.setRequestProperty("Authorization", "Bearer " + token);
-        }
-
         conn.setDoOutput(true);
 
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(json.getBytes());
+            os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
         return read(conn);
+    }
+
+    public static String put(String path, String json) throws Exception {
+        HttpURLConnection conn = open(path, "PUT");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(json.getBytes(StandardCharsets.UTF_8));
+        }
+
+        return read(conn);
+    }
+
+    public static String get(String path, Map<String, String> queryParams) throws Exception {
+        String fullPath = path + toQueryString(queryParams);
+        HttpURLConnection conn = open(fullPath, "GET");
+        return read(conn);
+    }
+
+    public static String delete(String path) throws Exception {
+        HttpURLConnection conn = open(path, "DELETE");
+        return read(conn);
+    }
+
+    private static HttpURLConnection open(String path, String method) throws Exception {
+        URL url = new URL(BASE_URL + path);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod(method);
+
+        String token = Session.getToken();
+        if (token != null && !token.isBlank()) {
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+        }
+        return conn;
+    }
+
+    private static String toQueryString(Map<String, String> queryParams) {
+        if (queryParams == null || queryParams.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder("?");
+        boolean first = true;
+        for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+            if (entry.getValue() == null || entry.getValue().isBlank()) {
+                continue;
+            }
+            if (!first) {
+                sb.append("&");
+            }
+            first = false;
+            sb.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
+            sb.append("=");
+            sb.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+        }
+
+        return first ? "" : sb.toString();
     }
 
     private static String read(HttpURLConnection conn) throws Exception {
@@ -42,12 +94,13 @@ public class ApiClient {
         if (is == null) {
             throw new IOException("empty response");
         }
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        StringBuilder result = new StringBuilder();
-        String line;
 
-        while ((line = reader.readLine()) != null) {
-            result.append(line);
+        StringBuilder result = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                result.append(line);
+            }
         }
 
         String body = result.toString();
@@ -60,7 +113,7 @@ public class ApiClient {
                 }
             }
         } catch (Exception ignored) {
-            // 非标准JSON响应，忽略统一登录态处理
+            // Ignore non-JSON responses.
         }
         return body;
     }

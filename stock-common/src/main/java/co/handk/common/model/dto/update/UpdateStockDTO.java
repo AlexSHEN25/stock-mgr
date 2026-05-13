@@ -25,6 +25,5 @@ public class UpdateStockDTO {
     private Long stockTypeId;
 
     private StatusEnum status;
-    private Long version;
 }
 

@@ -19,5 +19,14 @@ public @interface JoinTable {
      * Join ON expression, ignored for CROSS JOIN.
      */
     String on() default "";
-}
 
+    /**
+     * Auto append "<alias>.deleted = 0" to ON condition for non CROSS join.
+     */
+    boolean autoDeletedFilter() default true;
+
+    /**
+     * Deleted flag column name used by autoDeletedFilter.
+     */
+    String deletedColumn() default "deleted";
+}

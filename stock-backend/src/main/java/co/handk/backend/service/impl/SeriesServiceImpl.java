@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
         baseTable = "t_series",
         baseAlias = "t",
         joins = {
-                @JoinTable(type = JoinType.LEFT, table = "t_brand", alias = "b", on = "b.id = t.brand_id AND b.deleted = 0")
+                @JoinTable(type = JoinType.LEFT, table = "t_brand", alias = "b", on = "b.id = t.brand_id")
         }
 )
 public class SeriesServiceImpl extends BaseServiceImpl<SeriesMapper, Series, SeriesVO>
