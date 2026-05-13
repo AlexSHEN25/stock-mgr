@@ -2,6 +2,7 @@ package co.handk.common.model.vo;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -16,9 +17,10 @@ public class RequestFormVO extends BaseVO {
     private Long warehouseId;
     private Integer totalQty;
     private Integer requestQty;
+    private BigDecimal totalAmt;
     private Integer state;
     private Long approverId;
-    private String approveName;
+    private String approverName;
     private LocalDateTime approveTime;
     private String approveRemark;
 }

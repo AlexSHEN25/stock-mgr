@@ -2,6 +2,7 @@ package co.handk.common.model.dto.create;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,6 +18,7 @@ public class CreateRequestFormDTO {
     private Long warehouseId;
     private Integer totalQty;
     private Integer requestQty;
+    private BigDecimal totalAmt;
     private Integer state;
     private Long approverId;
     private String approverName;

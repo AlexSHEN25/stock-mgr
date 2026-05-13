@@ -3,6 +3,7 @@ package co.handk.common.model.dto.update;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -20,9 +21,10 @@ public class UpdateRequestFormDTO {
     private Long warehouseId;
     private Integer totalQty;
     private Integer requestQty;
+    private BigDecimal totalAmt;
     private Integer state;
     private Long approverId;
-    private String approveName;
+    private String approverName;
     private LocalDateTime approveTime;
     private String approveRemark;
 }

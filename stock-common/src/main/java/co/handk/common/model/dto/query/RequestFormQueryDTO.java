@@ -3,6 +3,7 @@ package co.handk.common.model.dto.query;
 import co.handk.common.model.PageQuery;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -20,6 +21,7 @@ public class RequestFormQueryDTO extends PageQuery {
     private Long warehouseId;
     private Integer totalQty;
     private Integer requestQty;
+    private BigDecimal totalAmt;
     private Integer state;
     private Long approverId;
     private String approverName;
