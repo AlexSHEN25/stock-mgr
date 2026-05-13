@@ -9,7 +9,6 @@ public class DeptQueryDTO extends PageQuery {
 
     private Long id;
 
-    private Long parentId;
     private String name;
     private String code;
     private Long leaderId;

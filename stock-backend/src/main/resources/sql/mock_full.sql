@@ -1,4 +1,4 @@
-SET NAMES utf8mb4;
+﻿SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- clean
@@ -73,9 +73,9 @@ VALUES
 (5,'顧客管理','PERM_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1);
 
 -- user role
-INSERT INTO t_user_role(user_id,role_id,deleted,created_by,updated_by)
+INSERT INTO t_user_role(id,user_id,role_id,deleted,created_by,updated_by)
 VALUES
-(1,1,0,1,1),(2,2,0,1,1),(3,3,0,1,1),(4,4,0,1,1);
+(1,1,1,0,1,1),(2,2,2,0,1,1),(3,3,3,0,1,1),(4,4,4,0,1,1);
 
 -- role permission
 INSERT INTO t_role_permission(id,role_id,permission_id,deleted,created_by,updated_by)
@@ -169,16 +169,16 @@ VALUES
 (2,2,3,'SKU-DT-001',2,378.00,'JPY',0.9000,NOW(),DATE_ADD(NOW(),INTERVAL 365 DAY),1,0,1,1);
 
 -- request form / item
-INSERT INTO t_request_form(id,biz_no,user_id,username,dept_id,dept_name,customer_id,customer_name,warehouse_id,total_qty,request_qty,state,approver_id,approve_name,approve_time,approve_remark,deleted,created_by,updated_by)
+INSERT INTO t_request_form(id,biz_no,user_id,username,dept_id,dept_name,customer_id,customer_name,warehouse_id,total_qty,request_qty,total_amt,state,approver_id,approver_name,approve_time,approve_remark,deleted,created_by,updated_by)
 VALUES
-(1,'REQ-20260507-001',2,'sales01',2,'営業部',1,'山田商事',1,30,30,2,1,'admin',NOW(),'承認済み',0,2,1),
-(2,'REQ-20260507-002',2,'sales01',2,'営業部',2,'大阪物産',2,20,20,1,NULL,NULL,NULL,NULL,0,2,2);
+(1,'REQ-20260507-001',2,'sales01',2,'営業部',1,'山田商事',1,30,30,10740.00,2,1,'admin',NOW(),'承認済み',0,2,1),
+(2,'REQ-20260507-002',2,'sales01',2,'営業部',2,'大阪物産',2,20,20,7560.00,1,NULL,NULL,NULL,NULL,0,2,2);
 
-INSERT INTO t_request_item(id,request_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,warehouse_id,price,currency,discount,request_qty,approve_qty,out_qty,stock_record_id,remark,deleted,created_by,updated_by)
+INSERT INTO t_request_item(id,request_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,warehouse_id,price,exchange_rate,currency,discount,request_qty,approve_qty,out_qty,total_amt,deposit_amt,deposit_time,stock_record_id,remark,deleted,created_by,updated_by)
 VALUES
-(1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,298.00,'JPY',1.0000,10,10,10,1,'即納',0,2,1),
-(2,1,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,598.00,'JPY',1.0000,20,20,20,2,'即納',0,2,1),
-(3,2,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',2,420.00,'JPY',0.9000,20,0,0,NULL,'審査待ち',0,2,2);
+(1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,298.00,1.000000,'JPY',1.0000,10,10,10,2980.00,0.00,NULL,1,'即納',0,2,1),
+(2,1,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,598.00,1.000000,'JPY',1.0000,20,20,20,11960.00,0.00,NULL,2,'即納',0,2,1),
+(3,2,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',2,420.00,1.000000,'JPY',0.9000,20,0,0,7560.00,500.00,NOW(),NULL,'審査待ち',0,2,2);
 
 -- stock order / item / record
 INSERT INTO t_stock_order(id,order_no,order_type,warehouse_id,source_type,source_id,total_qty,stock_type_id,state,requester_id,requester_name,operator_id,operator_name,remark,approver_id,approver_name,approve_time,version,finish_time,deleted,created_by,updated_by)
@@ -192,17 +192,17 @@ VALUES
 (2,1,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',80,-20,60,598.00,'JPY','出庫',0,3,1),
 (3,2,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',200,50,250,420.00,'JPY','入庫',0,3,1);
 
-INSERT INTO t_stock_record(id,biz_no,order_id,order_item_id,stock_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,warehouse_id,before_qty,change_qty,after_qty,order_type,source_type,price,currency,price_update_time,customer_id,customer_name,requester_id,requester_name,operator_id,operator_name,remark,deleted,created_by,updated_by,created_name,updated_name)
+INSERT INTO t_stock_record(id,biz_no,order_id,order_item_id,stock_id,goods_id,sku_id,sku_code,goods_name,english_name,brand_id,brand_name,series_id,series_name,category_id,category_name,stock_type_id,stock_type_name,maker_id,maker_name,warehouse_id,before_qty,change_qty,after_qty,order_type,source_type,price,currency,price_update_time,customer_id,customer_name,requester_id,requester_name,operator_id,operator_name,remark,deleted,created_by,updated_by)
 VALUES
-(1,'SR-20260507-001',1,1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,120,-10,110,2,3,298.00,'JPY',NOW(),1,'山田商事',2,'sales01',3,'warehouse01','出庫記録',0,3,1,'warehouse01','admin'),
-(2,'SR-20260507-002',1,2,2,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,80,-20,60,2,3,598.00,'JPY',NOW(),1,'山田商事',2,'sales01',3,'warehouse01','出庫記録',0,3,1,'warehouse01','admin'),
-(3,'SR-20260507-003',2,3,3,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',2,200,50,250,1,4,420.00,'JPY',NOW(),NULL,NULL,3,'warehouse01',3,'warehouse01','入庫記録',0,3,1,'warehouse01','admin');
+(1,'SR-20260507-001',1,1,1,1,1,'SKU-MC-001','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,120,-10,110,2,3,298.00,'JPY',NOW(),1,'山田商事',2,'sales01',3,'warehouse01','出庫記録',0,3,1),
+(2,'SR-20260507-002',1,2,2,1,2,'SKU-MC-002','抹茶クッキー','Matcha Cookie',1,'サクラ',1,'春シリーズ',1,'食品',1,'通常品',1,'東京工場',1,80,-20,60,2,3,598.00,'JPY',NOW(),1,'山田商事',2,'sales01',3,'warehouse01','出庫記録',0,3,1),
+(3,'SR-20260507-003',2,3,3,2,3,'SKU-DT-001','洗剤A','Detergent A',2,'富士',2,'標準シリーズ',2,'日用品',1,'通常品',2,'大阪工場',2,200,50,250,1,4,420.00,'JPY',NOW(),NULL,NULL,3,'warehouse01',3,'warehouse01','入庫記録',0,3,1);
 
 -- price record
-INSERT INTO t_price_record(id,goods_id,goods_name,english_name,sku_id,sku_code,old_price,new_price,currency,discount,price_update_time,operator_id,operator_name,deleted,created_by,updated_by,created_name,updated_name)
+INSERT INTO t_price_record(id,goods_id,goods_name,english_name,sku_id,sku_code,old_price,new_price,currency,discount,price_update_time,operator_id,operator_name,deleted,created_by,updated_by)
 VALUES
-(1,1,'抹茶クッキー','Matcha Cookie',1,'SKU-MC-001',280.00,298.00,'JPY',1.0000,NOW(),1,'admin',0,1,1,'admin','admin'),
-(2,2,'洗剤A','Detergent A',3,'SKU-DT-001',400.00,420.00,'JPY',1.0000,NOW(),1,'admin',0,1,1,'admin','admin');
+(1,1,'抹茶クッキー','Matcha Cookie',1,'SKU-MC-001',280.00,298.00,'JPY',1.0000,NOW(),1,'admin',0,1,1),
+(2,2,'洗剤A','Detergent A',3,'SKU-DT-001',400.00,420.00,'JPY',1.0000,NOW(),1,'admin',0,1,1);
 
 -- message
 INSERT INTO t_message(id,type,user_id,message,source_id,is_read,state,deleted,created_by,updated_by)
@@ -217,12 +217,14 @@ VALUES
 (2,'stock.warn.threshold','stock','在庫警戒値','在庫不足しきい値','int','20',NULL,0,1,1);
 
 -- operate log
-INSERT INTO t_operate_log(id,user_id,username,module,operation,method,request_url,request_ip,request_param,response_data,status,error_msg,cost_time,deleted,created_by,updated_by,created_name,updated_name)
+INSERT INTO t_operate_log(id,user_id,username,module,operation,method,request_url,request_ip,request_param,response_data,status,error_msg,cost_time,deleted,created_by,updated_by)
 VALUES
-(1,1,'admin','schema','GET','GET','/api/schema/menu','127.0.0.1','{}','{"ok":true}',1,NULL,12,0,1,1,'admin','admin'),
-(2,2,'sales01','request','CREATE','POST','/api/requestForm','127.0.0.1','{"bizNo":"REQ-20260507-002"}','{"ok":true}',1,NULL,35,0,2,2,'sales01','sales01');
+(1,1,'admin','schema','GET','GET','/api/schema/menu','127.0.0.1','{}','{"ok":true}',1,NULL,12,0,1,1),
+(2,2,'sales01','request','CREATE','POST','/api/requestForm','127.0.0.1','{"bizNo":"REQ-20260507-002"}','{"ok":true}',1,NULL,35,0,2,2);
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+
 
 
 

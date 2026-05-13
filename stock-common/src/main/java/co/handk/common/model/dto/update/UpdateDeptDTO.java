@@ -10,7 +10,6 @@ public class UpdateDeptDTO {
     @NotNull(message = "ID不能为空")
     private Long id;
 
-    private Long parentId;
     private String name;
     private String code;
     private Long leaderId;

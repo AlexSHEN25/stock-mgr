@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS `t_user`;
+﻿DROP TABLE IF EXISTS `t_user`;
 create TABLE `t_user`
 (
     `id`          BIGINT UNSIGNED     NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -120,6 +120,7 @@ COMMENT ='权限表';
 DROP TABLE IF EXISTS `t_user_role`;
 create TABLE `t_user_role`
 (
+    `id`       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
     `user_id`  BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
     `role_id`  BIGINT UNSIGNED NOT NULL COMMENT '角色ID',
     `deleted`     TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -127,7 +128,8 @@ create TABLE `t_user_role`
     `updated_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY(user_id, role_id)
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_role` (`user_id`, `role_id`)
 )
 ENGINE = InnoDB
 DEFAULT CHARSET = utf8mb4
@@ -318,8 +320,6 @@ create TABLE `t_stock_record`
     `deleted`           TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `created_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
     `updated_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
-    `created_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人名称',
-    `updated_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人名称',
     `create_time`       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`       DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -486,8 +486,6 @@ create TABLE `t_price_record`
     `deleted`      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `created_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
     `updated_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
-    `created_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人名称',
-    `updated_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人名称',
     `create_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
      PRIMARY KEY (`id`),
@@ -618,9 +616,10 @@ create TABLE `t_request_form`
     `warehouse_id`    BIGINT UNSIGNED     NOT NULL DEFAULT 0 COMMENT '出库仓库ID',
     `total_qty`       INT(10)          NOT NULL DEFAULT 0 COMMENT '出库总数量',
     `request_qty`     INT(10)          NOT NULL DEFAULT 0 COMMENT '请求书写入数量',
+    `total_amt`       DECIMAL(18,2)    NOT NULL DEFAULT 0.00 COMMENT '总金额',
     `state` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据状态:0草稿1已提交2审核通过3已完成4已驳回5已取消',
     `approver_id`     BIGINT UNSIGNED DEFAULT NULL COMMENT '审核人ID',
-    `approve_name`    VARCHAR(64) DEFAULT NULL COMMENT '审核人',
+    `approver_name`    VARCHAR(64) DEFAULT NULL COMMENT '审核人',
     `approve_time`    DATETIME DEFAULT NULL COMMENT '审核时间',
     `approve_remark`  VARCHAR(255) DEFAULT NULL COMMENT '审核备注',
     `deleted`         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -663,11 +662,15 @@ create TABLE `t_request_item`
 
     `warehouse_id`  BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `price`         DECIMAL(18,2) NOT NULL DEFAULT 0.00 COMMENT '单价',
+    `exchange_rate` DECIMAL(18,6) DEFAULT NULL COMMENT '汇率',
     `currency`      VARCHAR(8) NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `discount`      DECIMAL(5,4)  NOT NULL DEFAULT 1.0000 COMMENT '折扣率',
     `request_qty`   INT(10) NOT NULL DEFAULT 0 COMMENT '申请数量',
     `approve_qty`   INT(10) NOT NULL DEFAULT 0 COMMENT '审核通过数量',
     `out_qty`       INT(10) NOT NULL DEFAULT 0 COMMENT '实际出库数量',
+    `total_amt`     DECIMAL(18,2) DEFAULT NULL COMMENT '总金额',
+    `deposit_amt`   DECIMAL(18,2) DEFAULT NULL COMMENT '定金',
+    `deposit_time`  DATETIME DEFAULT NULL COMMENT '定金时间',
     `stock_record_id` BIGINT UNSIGNED DEFAULT NULL COMMENT '库存流水ID',
     `remark`        VARCHAR(255) DEFAULT NULL COMMENT '备注',
     `deleted`       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -836,8 +839,6 @@ create TABLE `t_operate_log`
     `deleted`       TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `created_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
     `updated_by`        BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
-    `created_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人名称',
-    `updated_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人名称',
     `create_time`   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time`   DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -848,5 +849,6 @@ create TABLE `t_operate_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='操作日志表';
+
 
 

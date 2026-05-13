@@ -4,8 +4,6 @@ import lombok.Data;
 
 @Data
 public class CreateDeptDTO {
-
-    private Long parentId;
     private String name;
     private String code;
     private Long leaderId;
