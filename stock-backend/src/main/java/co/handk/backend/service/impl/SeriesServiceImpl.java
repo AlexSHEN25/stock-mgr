@@ -2,7 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.annotation.JoinQueryConfig;
 import co.handk.backend.annotation.JoinTable;
-import co.handk.backend.annotation.JoinType;
+import co.handk.backend.enums.JoinType;
 import co.handk.backend.entity.Series;
 import co.handk.backend.mapper.SeriesMapper;
 import co.handk.backend.service.SeriesService;

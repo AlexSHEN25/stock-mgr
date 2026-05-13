@@ -4,7 +4,7 @@ import co.handk.backend.annotation.QueryField;
 import co.handk.backend.annotation.UpdateIgnore;
 import co.handk.backend.annotation.JoinQueryConfig;
 import co.handk.backend.annotation.JoinTable;
-import co.handk.backend.annotation.JoinType;
+import co.handk.backend.enums.JoinType;
 import co.handk.backend.entity.BaseEntity;
 import co.handk.backend.service.BaseService;
 import co.handk.common.annotation.JoinSelect;

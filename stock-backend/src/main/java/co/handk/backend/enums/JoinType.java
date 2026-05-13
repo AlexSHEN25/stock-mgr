@@ -1,4 +1,4 @@
-package co.handk.backend.annotation;
+package co.handk.backend.enums;
 
 public enum JoinType {
     INNER,

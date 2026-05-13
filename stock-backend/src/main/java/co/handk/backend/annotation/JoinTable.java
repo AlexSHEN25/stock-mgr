@@ -1,6 +1,7 @@
 package co.handk.backend.annotation;
 
-import java.lang.annotation.ElementType;
+import co.handk.backend.enums.JoinType;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
