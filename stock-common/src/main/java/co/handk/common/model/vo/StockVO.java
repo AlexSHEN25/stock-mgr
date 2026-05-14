@@ -17,7 +17,7 @@ public class StockVO extends BaseVO {
     private BigDecimal price;
     private String currency;
     private LocalDateTime priceUpdateTime;
-    private Integer stockTypeId;
+    private Long stockTypeId;
     private Integer status;
     private String statusDesc;
 }

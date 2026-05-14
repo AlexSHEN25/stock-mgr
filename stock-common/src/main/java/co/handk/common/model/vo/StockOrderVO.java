@@ -12,7 +12,7 @@ public class StockOrderVO extends BaseVO {
     private Integer sourceType;
     private Long sourceId;
     private Integer totalQty;
-    private Integer stockTypeId;
+    private Long stockTypeId;
     private Integer state;
     private Long requesterId;
     private String requesterName;

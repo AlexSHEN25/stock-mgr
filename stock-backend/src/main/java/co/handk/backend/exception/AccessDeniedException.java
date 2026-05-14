@@ -1,10 +1,10 @@
 package co.handk.backend.exception;
 
-public class LoginException extends RuntimeException {
+public class AccessDeniedException extends RuntimeException {
 
     private final String messageKey;
 
-    public LoginException(String messageKey, String message) {
+    public AccessDeniedException(String messageKey, String message) {
         super(message);
         this.messageKey = messageKey;
     }
@@ -13,3 +13,4 @@ public class LoginException extends RuntimeException {
         return messageKey;
     }
 }
+

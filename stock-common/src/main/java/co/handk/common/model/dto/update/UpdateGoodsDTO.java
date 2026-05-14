@@ -11,7 +11,6 @@ public class UpdateGoodsDTO {
 
     private String name;
     private String englishName;
-    private String skuCode;
     private Long seriesId;
     private Long brandId;
     private Long categoryId;

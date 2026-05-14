@@ -12,7 +12,7 @@ public class StockOrderQueryDTO extends PageQuery {
 
     private String orderNo;
     private Integer orderType;
-    private Integer stockTypeId;
+    private Long stockTypeId;
     private Long warehouseId;
     private Integer sourceType;
     private Long sourceId;

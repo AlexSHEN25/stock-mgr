@@ -25,5 +25,6 @@ public class UpdateStockOrderDTO {
     private String remark;
     private Long approverId;
     private String approverName;
+    private LocalDateTime approveTime;
     private LocalDateTime finishTime;
 }

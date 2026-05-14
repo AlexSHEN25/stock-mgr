@@ -468,7 +468,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             if (jt.type() != JoinType.CROSS) {
                 String onExpr = jt.on();
                 if (jt.autoDeletedFilter()) {
-                    String deletedExpr = aliasOrTable + "." + jt.deletedColumn() + " = 0";
+                    String deletedExpr = aliasOrTable + "." + jt.deletedColumn() + " = " + DeleteEnum.UNDELETED.getCode();
                     onExpr = onExpr.isBlank() ? deletedExpr : onExpr + " AND " + deletedExpr;
                 }
                 if (!onExpr.isBlank()) {
@@ -494,7 +494,10 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     private String buildJoinWhereSql(Object dto) {
         JoinQueryConfig cfg = this.getClass().getAnnotation(JoinQueryConfig.class);
         String baseAlias = cfg.baseAlias();
-        StringBuilder where = new StringBuilder("WHERE ").append(baseAlias).append(".deleted = 0");
+        StringBuilder where = new StringBuilder("WHERE ")
+                .append(baseAlias)
+                .append(".deleted = ")
+                .append(DeleteEnum.UNDELETED.getCode());
         if (dto == null) {
             return where.toString();
         }

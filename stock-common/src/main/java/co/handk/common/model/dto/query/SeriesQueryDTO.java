@@ -8,9 +8,9 @@ import lombok.Data;
 public class SeriesQueryDTO extends PageQuery {
 
     private Long id;
-
     private String name;
     private String englishName;
+    private Long brandId;
     private String content;
     private StatusEnum status;
 }

@@ -1,6 +1,7 @@
 package co.handk.backend.config;
 
 import co.handk.backend.interceptor.LoginInterceptor;
+import co.handk.backend.interceptor.PermissionInterceptor;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import jakarta.annotation.Resource;
@@ -14,6 +15,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Resource
     private LoginInterceptor loginInterceptor;
+    @Resource
+    private PermissionInterceptor permissionInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -52,6 +55,30 @@ public class WebConfig implements WebMvcConfigurer {
                         "/config/**",
                         "/operateLog/**"
                 )
+                .excludePathPatterns(
+                        "/user/login",
+                        "/error",
+                        "/",
+                        "/home",
+                        "/index.html",
+                        "/favicon.ico",
+                        "/**/*.css",
+                        "/**/*.js",
+                        "/**/*.map",
+                        "/**/*.png",
+                        "/**/*.jpg",
+                        "/**/*.jpeg",
+                        "/**/*.gif",
+                        "/**/*.svg",
+                        "/**/*.woff",
+                        "/**/*.woff2",
+                        "/**/*.ttf",
+                        "/assets/**",
+                        "/icons/**"
+                );
+
+        registry.addInterceptor(permissionInterceptor)
+                .addPathPatterns("/**")
                 .excludePathPatterns(
                         "/user/login",
                         "/error",

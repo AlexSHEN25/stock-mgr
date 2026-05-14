@@ -58,32 +58,37 @@ VALUES
 -- role
 INSERT INTO t_role(id,name,code,remark,status,deleted,created_by,updated_by)
 VALUES
-(1,'管理者','ROLE_ADMIN','全権限',1,0,1,1),
-(2,'営業','ROLE_SALES','申請・顧客管理',1,0,1,1),
-(3,'倉庫','ROLE_WAREHOUSE','在庫管理',1,0,1,1),
-(4,'閲覧者','ROLE_VIEWER','参照のみ',1,0,1,1);
+(1,'スーパー管理者','ROLE_SUPER_ADMIN','全メニュー・全読写権限',1,0,1,1),
+(2,'一般ユーザー','ROLE_NORMAL_USER','在庫管理・顧客管理（閲覧のみ）',1,0,1,1);
 
 -- permission
 INSERT INTO t_permission(id,name,code,module,type,parent_id,path,sort,icon,component,status,deleted,created_by,updated_by)
 VALUES
-(1,'システム管理','PERM_SYS','system',1,0,'/system',1,'setting','system/index',1,0,1,1),
-(2,'ユーザー管理','PERM_USER','user',1,1,'/user',2,'user','user/index',1,0,1,1),
-(3,'商品管理','PERM_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1),
-(4,'在庫管理','PERM_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1),
-(5,'顧客管理','PERM_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1);
+(1,'システム管理','MENU_SYSTEM','system',1,0,'/system',1,'setting','system/index',1,0,1,1),
+(2,'ユーザー管理','MENU_USER','user',1,1,'/user',2,'user','user/index',1,0,1,1),
+(3,'商品管理','MENU_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1),
+(4,'在庫管理','MENU_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1),
+(5,'顧客管理','MENU_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1),
+(6,'在庫管理-閲覧','DATA_STOCK_READ','stock',2,4,'/api/stock/**',1,'api','',1,0,1,1),
+(7,'在庫管理-編集','DATA_STOCK_WRITE','stock',2,4,'/api/stock/**',2,'api','',1,0,1,1),
+(8,'顧客管理-閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1),
+(9,'顧客管理-編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1);
 
 -- user role
-INSERT INTO t_user_role(id,user_id,role_id,deleted,created_by,updated_by)
+INSERT INTO t_user_role(user_id,role_id,deleted,created_by,updated_by)
 VALUES
-(1,1,1,0,1,1),(2,2,2,0,1,1),(3,3,3,0,1,1),(4,4,4,0,1,1);
+(1,1,0,1,1),
+(2,2,0,1,1),
+(3,2,0,1,1),
+(4,2,0,1,1);
 
 -- role permission
-INSERT INTO t_role_permission(id,role_id,permission_id,deleted,created_by,updated_by)
+INSERT INTO t_role_permission(role_id,permission_id,deleted,created_by,updated_by)
 VALUES
-(1,1,1,0,1,1),(2,1,2,0,1,1),(3,1,3,0,1,1),(4,1,4,0,1,1),(5,1,5,0,1,1),
-(6,2,5,0,1,1),(7,2,3,0,1,1),
-(8,3,4,0,1,1),
-(9,4,1,0,1,1);
+(1,1,0,1,1),(1,2,0,1,1),(1,3,0,1,1),(1,4,0,1,1),(1,5,0,1,1),
+(1,6,0,1,1),(1,7,0,1,1),(1,8,0,1,1),(1,9,0,1,1),
+(2,4,0,1,1),(2,5,0,1,1),
+(2,6,0,1,1),(2,8,0,1,1);
 
 -- master data
 INSERT INTO t_brand(id,name,english_name,image,content,status,deleted,created_by,updated_by)

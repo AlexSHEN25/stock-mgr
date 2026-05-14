@@ -21,7 +21,7 @@ public @interface JoinTable {
     String on() default "";
 
     /**
-     * Auto append "<alias>.deleted = 0" to ON condition for non CROSS join.
+     * Auto append "<alias>.deleted = undeletedCode" to ON condition for non CROSS join.
      */
     boolean autoDeletedFilter() default true;
 

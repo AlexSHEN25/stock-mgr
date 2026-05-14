@@ -36,6 +36,7 @@ public class StockRecordQueryDTO extends PageQuery {
     private Integer changeQty;
     private Integer afterQty;
     private Integer sourceType;
+    private Integer orderType;
     private BigDecimal price;
     private String currency;
     private LocalDateTime priceUpdateTime;
