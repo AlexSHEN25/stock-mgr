@@ -153,7 +153,6 @@ ENGINE = InnoDB
 DEFAULT CHARSET = utf8mb4
 COMMENT ='角色权限关系表';
 
-
 DROP TABLE IF EXISTS `t_stock`;
 create TABLE `t_stock`
 (

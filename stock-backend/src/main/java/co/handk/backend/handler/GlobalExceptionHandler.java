@@ -7,6 +7,7 @@ import co.handk.common.enums.ResultCode;
 import co.handk.common.model.Result;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.validation.BindException;
@@ -49,6 +50,14 @@ public class GlobalExceptionHandler {
         if (e instanceof AccessDeniedException ex) {
             return Result.fail(ResultCode.ERROR, ex.getMessageKey(), i18n(ex.getMessageKey()));
         }
+        if (e instanceof DataAccessException) {
+            String detail = safeMessage(e);
+            return Result.fail(ResultCode.ERROR, MessageKeyConstant.ERROR_RUNTIME, detail);
+        }
+        if (e instanceof RuntimeException) {
+            String detail = safeMessage(e);
+            return Result.fail(ResultCode.ERROR, MessageKeyConstant.ERROR_RUNTIME, detail);
+        }
 
         String messageKey = MessageKeyConstant.ERROR_INTERNAL;
         return Result.fail(ResultCode.ERROR, messageKey, i18n(messageKey));
@@ -57,5 +66,13 @@ public class GlobalExceptionHandler {
     private String i18n(String key) {
         Locale locale = LocaleContextHolder.getLocale();
         return messageSource.getMessage(key, null, key, locale);
+    }
+
+    private String safeMessage(Exception e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            return i18n(MessageKeyConstant.ERROR_INTERNAL);
+        }
+        return message;
     }
 }

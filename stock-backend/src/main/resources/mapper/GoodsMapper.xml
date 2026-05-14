@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="co.handk.backend.mapper.GoodsMapper">
+
+    <sql id="bundleFromAndWhere">
+        FROM t_goods g
+        LEFT JOIN t_goods_sku gs ON gs.goods_id = g.id AND gs.deleted = 0
+        LEFT JOIN t_goods_sku_spec gss ON gss.sku_id = gs.id AND gss.deleted = 0
+        LEFT JOIN t_goods_image gi ON gi.sku_id = gs.id AND gi.deleted = 0
+        LEFT JOIN t_brand b ON b.id = g.brand_id AND b.deleted = 0
+        LEFT JOIN t_series s ON s.id = g.series_id AND s.deleted = 0
+        LEFT JOIN t_category c ON c.id = g.category_id AND c.deleted = 0
+        LEFT JOIN t_maker m ON m.id = g.maker_id AND m.deleted = 0
+        WHERE g.deleted = 0
+        <if test="q != null">
+            <if test="q.goodsId != null">
+                AND g.id = #{q.goodsId}
+            </if>
+            <if test="q.goodsName != null and q.goodsName != ''">
+                AND g.name LIKE CONCAT('%', #{q.goodsName}, '%')
+            </if>
+            <if test="q.goodsEnglishName != null and q.goodsEnglishName != ''">
+                AND g.english_name LIKE CONCAT('%', #{q.goodsEnglishName}, '%')
+            </if>
+            <if test="q.brandId != null">
+                AND g.brand_id = #{q.brandId}
+            </if>
+            <if test="q.seriesId != null">
+                AND g.series_id = #{q.seriesId}
+            </if>
+            <if test="q.categoryId != null">
+                AND g.category_id = #{q.categoryId}
+            </if>
+            <if test="q.makerId != null">
+                AND g.maker_id = #{q.makerId}
+            </if>
+            <if test="q.isHot != null">
+                AND g.is_hot = #{q.isHot}
+            </if>
+            <if test="q.goodsSort != null">
+                AND g.sort = #{q.goodsSort}
+            </if>
+            <if test="q.goodsStatus != null and q.goodsStatus.code != null">
+                AND g.status = #{q.goodsStatus.code}
+            </if>
+            <if test="q.skuId != null">
+                AND gs.id = #{q.skuId}
+            </if>
+            <if test="q.skuCode != null and q.skuCode != ''">
+                AND gs.sku_code LIKE CONCAT('%', #{q.skuCode}, '%')
+            </if>
+            <if test="q.skuName != null and q.skuName != ''">
+                AND gs.sku_name LIKE CONCAT('%', #{q.skuName}, '%')
+            </if>
+            <if test="q.skuStatus != null and q.skuStatus.code != null">
+                AND gs.status = #{q.skuStatus.code}
+            </if>
+            <if test="q.specId != null">
+                AND gss.spec_id = #{q.specId}
+            </if>
+            <if test="q.specName != null and q.specName != ''">
+                AND gss.spec_name LIKE CONCAT('%', #{q.specName}, '%')
+            </if>
+            <if test="q.specValue != null and q.specValue != ''">
+                AND gss.spec_value LIKE CONCAT('%', #{q.specValue}, '%')
+            </if>
+            <if test="q.imageId != null">
+                AND gi.id = #{q.imageId}
+            </if>
+            <if test="q.imageUrl != null and q.imageUrl != ''">
+                AND gi.image_url LIKE CONCAT('%', #{q.imageUrl}, '%')
+            </if>
+        </if>
+    </sql>
+
+    <select id="countBundlePage" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        <include refid="bundleFromAndWhere"/>
+    </select>
+
+    <select id="selectBundlePage" resultType="co.handk.common.model.vo.GoodsBundleVO">
+        SELECT
+        g.id AS id,
+        g.id AS goods_id,
+        g.name AS goods_name,
+        g.english_name AS goods_english_name,
+        g.brand_id AS brand_id,
+        b.name AS brand_name,
+        g.series_id AS series_id,
+        s.name AS series_name,
+        g.category_id AS category_id,
+        c.name AS category_name,
+        g.maker_id AS maker_id,
+        m.name AS maker_name,
+        g.is_hot AS is_hot,
+        g.sort AS goods_sort,
+        g.status AS goods_status,
+        gs.id AS sku_id,
+        gs.sku_code AS sku_code,
+        gs.sku_name AS sku_name,
+        gs.price AS price,
+        gs.currency AS currency,
+        gs.cost_price AS cost_price,
+        gs.update_price AS update_price,
+        gs.price_update_time AS price_update_time,
+        gs.barcode AS barcode,
+        gs.weight AS weight,
+        gs.volume AS volume,
+        gs.status AS sku_status,
+        gss.spec_id AS spec_id,
+        gss.spec_name AS spec_name,
+        gss.spec_value AS spec_value,
+        gss.sort AS spec_sort,
+        gi.id AS image_id,
+        gi.image_url AS image_url,
+        gi.sort AS image_sort
+        <include refid="bundleFromAndWhere"/>
+        ORDER BY g.update_time DESC, gs.update_time DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+</mapper>
+

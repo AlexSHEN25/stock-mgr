@@ -11,5 +11,5 @@ public final class MessageKeyConstant {
     public static final String ERROR_LOGIN_REPLACED = "error.auth.login_replaced";
     public static final String ERROR_NO_PERMISSION = "error.auth.no_permission";
     public static final String ERROR_INTERNAL = "error.internal";
+    public static final String ERROR_RUNTIME = "error.runtime";
 }
-

@@ -44,10 +44,10 @@ VALUES
 -- user
 INSERT INTO t_user(id,username,password,dept_id,salt,email,phone,avatar,status,deleted,created_by,updated_by)
 VALUES
-(1,'admin',MD5('admin123'),1,'salt_admin','admin@test.com','09000000001','/avatar/admin.png',1,0,1,1),
-(2,'sales01',MD5('sales123'),2,'salt_sales01','sales01@test.com','09000000002','/avatar/sales01.png',1,0,1,1),
-(3,'warehouse01',MD5('wh123'),3,'salt_wh01','warehouse01@test.com','09000000003','/avatar/warehouse01.png',1,0,1,1),
-(4,'viewer01',MD5('viewer123'),1,'salt_viewer','viewer01@test.com','09000000004','/avatar/viewer01.png',1,0,1,1);
+(1,'admin',MD5(CONCAT('admin123','salt_admin')),1,'salt_admin','admin@test.com','09000000001','/avatar/admin.png',1,0,1,1),
+(2,'sales01',MD5(CONCAT('sales123','salt_sales01')),2,'salt_sales01','sales01@test.com','09000000002','/avatar/sales01.png',1,0,1,1),
+(3,'warehouse01',MD5(CONCAT('wh123','salt_wh01')),3,'salt_wh01','warehouse01@test.com','09000000003','/avatar/warehouse01.png',1,0,1,1),
+(4,'viewer01',MD5(CONCAT('viewer123','salt_viewer')),1,'salt_viewer','viewer01@test.com','09000000004','/avatar/viewer01.png',1,0,1,1);
 
 -- user token
 INSERT INTO t_user_token(id,token,user_id,login_time,expire_time,login_ip,status,deleted,created_by,updated_by)
@@ -69,26 +69,52 @@ VALUES
 (3,'商品管理','MENU_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1),
 (4,'在庫管理','MENU_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1),
 (5,'顧客管理','MENU_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1),
-(6,'在庫管理-閲覧','DATA_STOCK_READ','stock',2,4,'/api/stock/**',1,'api','',1,0,1,1),
-(7,'在庫管理-編集','DATA_STOCK_WRITE','stock',2,4,'/api/stock/**',2,'api','',1,0,1,1),
-(8,'顧客管理-閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1),
-(9,'顧客管理-編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1);
+(6,'在庫-商品在庫閲覧','DATA_STOCK_READ','stock',2,4,'/api/stock/**',1,'api','',1,0,1,1),
+(7,'在庫-商品在庫編集','DATA_STOCK_WRITE','stock',2,4,'/api/stock/**',2,'api','',1,0,1,1),
+(8,'在庫-在庫区分閲覧','DATA_STOCK_TYPE_READ','stock',2,4,'/api/stockType/**',3,'api','',1,0,1,1),
+(9,'在庫-在庫区分編集','DATA_STOCK_TYPE_WRITE','stock',2,4,'/api/stockType/**',4,'api','',1,0,1,1),
+(10,'在庫-倉庫閲覧','DATA_WAREHOUSE_READ','stock',2,4,'/api/warehouse/**',5,'api','',1,0,1,1),
+(11,'在庫-倉庫編集','DATA_WAREHOUSE_WRITE','stock',2,4,'/api/warehouse/**',6,'api','',1,0,1,1),
+(12,'在庫-伝票閲覧','DATA_STOCK_ORDER_READ','stock',2,4,'/api/stockOrder/**',7,'api','',1,0,1,1),
+(13,'在庫-伝票編集','DATA_STOCK_ORDER_WRITE','stock',2,4,'/api/stockOrder/**',8,'api','',1,0,1,1),
+(14,'在庫-伝票明細閲覧','DATA_STOCK_ORDER_ITEM_READ','stock',2,4,'/api/stockOrderItem/**',9,'api','',1,0,1,1),
+(15,'在庫-伝票明細編集','DATA_STOCK_ORDER_ITEM_WRITE','stock',2,4,'/api/stockOrderItem/**',10,'api','',1,0,1,1),
+(16,'在庫-履歴閲覧','DATA_STOCK_RECORD_READ','stock',2,4,'/api/stockRecord/**',11,'api','',1,0,1,1),
+(17,'在庫-履歴編集','DATA_STOCK_RECORD_WRITE','stock',2,4,'/api/stockRecord/**',12,'api','',1,0,1,1),
+(18,'在庫-価格履歴閲覧','DATA_PRICE_RECORD_READ','stock',2,4,'/api/priceRecord/**',13,'api','',1,0,1,1),
+(19,'在庫-価格履歴編集','DATA_PRICE_RECORD_WRITE','stock',2,4,'/api/priceRecord/**',14,'api','',1,0,1,1),
+(20,'在庫-申請書閲覧','DATA_REQUEST_FORM_READ','stock',2,4,'/api/requestForm/**',15,'api','',1,0,1,1),
+(21,'在庫-申請書編集','DATA_REQUEST_FORM_WRITE','stock',2,4,'/api/requestForm/**',16,'api','',1,0,1,1),
+(22,'在庫-申請明細閲覧','DATA_REQUEST_ITEM_READ','stock',2,4,'/api/requestItem/**',17,'api','',1,0,1,1),
+(23,'在庫-申請明細編集','DATA_REQUEST_ITEM_WRITE','stock',2,4,'/api/requestItem/**',18,'api','',1,0,1,1),
+(24,'顧客-顧客閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1),
+(25,'顧客-顧客編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1),
+(26,'顧客-ランク閲覧','DATA_CUSTOMER_LEVEL_READ','customer',2,5,'/api/customerLevel/**',3,'api','',1,0,1,1),
+(27,'顧客-ランク編集','DATA_CUSTOMER_LEVEL_WRITE','customer',2,5,'/api/customerLevel/**',4,'api','',1,0,1,1),
+(28,'顧客-ランク価格閲覧','DATA_GOODS_LEVEL_PRICE_READ','customer',2,5,'/api/goodsLevelPrice/**',5,'api','',1,0,1,1),
+(29,'顧客-ランク価格編集','DATA_GOODS_LEVEL_PRICE_WRITE','customer',2,5,'/api/goodsLevelPrice/**',6,'api','',1,0,1,1);
 
 -- user role
-INSERT INTO t_user_role(user_id,role_id,deleted,created_by,updated_by)
+INSERT INTO t_user_role(id,user_id,role_id,deleted,created_by,updated_by)
 VALUES
-(1,1,0,1,1),
-(2,2,0,1,1),
-(3,2,0,1,1),
-(4,2,0,1,1);
+(1,1,1,0,1,1),
+(2,2,2,0,1,1),
+(3,3,2,0,1,1),
+(4,4,2,0,1,1);
 
 -- role permission
-INSERT INTO t_role_permission(role_id,permission_id,deleted,created_by,updated_by)
+INSERT INTO t_role_permission(id,role_id,permission_id,deleted,created_by,updated_by)
 VALUES
-(1,1,0,1,1),(1,2,0,1,1),(1,3,0,1,1),(1,4,0,1,1),(1,5,0,1,1),
-(1,6,0,1,1),(1,7,0,1,1),(1,8,0,1,1),(1,9,0,1,1),
-(2,4,0,1,1),(2,5,0,1,1),
-(2,6,0,1,1),(2,8,0,1,1);
+(1,1,1,0,1,1),(2,1,2,0,1,1),(3,1,3,0,1,1),(4,1,4,0,1,1),(5,1,5,0,1,1),
+(6,1,6,0,1,1),(7,1,7,0,1,1),(8,1,8,0,1,1),(9,1,9,0,1,1),(10,1,10,0,1,1),
+(11,1,11,0,1,1),(12,1,12,0,1,1),(13,1,13,0,1,1),(14,1,14,0,1,1),(15,1,15,0,1,1),
+(16,1,16,0,1,1),(17,1,17,0,1,1),(18,1,18,0,1,1),(19,1,19,0,1,1),(20,1,20,0,1,1),
+(21,1,21,0,1,1),(22,1,22,0,1,1),(23,1,23,0,1,1),(24,1,24,0,1,1),(25,1,25,0,1,1),
+(26,1,26,0,1,1),(27,1,27,0,1,1),(28,1,28,0,1,1),(29,1,29,0,1,1),
+(30,2,4,0,1,1),(31,2,5,0,1,1),
+(32,2,6,0,1,1),(33,2,8,0,1,1),(34,2,10,0,1,1),(35,2,12,0,1,1),(36,2,14,0,1,1),
+(37,2,16,0,1,1),(38,2,18,0,1,1),(39,2,20,0,1,1),(40,2,22,0,1,1),
+(41,2,24,0,1,1),(42,2,26,0,1,1),(43,2,28,0,1,1);
 
 -- master data
 INSERT INTO t_brand(id,name,english_name,image,content,status,deleted,created_by,updated_by)

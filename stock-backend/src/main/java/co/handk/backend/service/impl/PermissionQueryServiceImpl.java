@@ -43,13 +43,14 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         if (roleIds.isEmpty()) {
             return Collections.emptySet();
         }
-        List<RolePermission> rolePermissions = rolePermissionMapper.selectList(
+        List<Object> permissionIdObjs = rolePermissionMapper.selectObjs(
                 new QueryWrapper<RolePermission>()
+                        .select("permission_id")
                         .in("role_id", roleIds)
                         .eq("deleted", DeleteEnum.UNDELETED.getCode())
         );
-        List<Long> permissionIds = rolePermissions.stream()
-                .map(RolePermission::getPermissionId)
+        List<Long> permissionIds = permissionIdObjs.stream()
+                .map(obj -> ((Number) obj).longValue())
                 .distinct()
                 .toList();
         if (permissionIds.isEmpty()) {
@@ -91,11 +92,15 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     }
 
     private List<Long> getRoleIds(Long userId) {
-        List<UserRole> userRoles = userRoleMapper.selectList(
+        List<Object> roleIdObjs = userRoleMapper.selectObjs(
                 new QueryWrapper<UserRole>()
+                        .select("role_id")
                         .eq("user_id", userId)
                         .eq("deleted", DeleteEnum.UNDELETED.getCode())
         );
-        return userRoles.stream().map(UserRole::getRoleId).distinct().toList();
+        return roleIdObjs.stream()
+                .map(obj -> ((Number) obj).longValue())
+                .distinct()
+                .toList();
     }
 }

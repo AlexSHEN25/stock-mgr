@@ -3,8 +3,10 @@ package co.handk.backend.controller;
 import co.handk.backend.service.GoodsService;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsDTO;
+import co.handk.common.model.dto.query.GoodsBundleQueryDTO;
 import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsDTO;
+import co.handk.common.model.vo.GoodsBundleVO;
 import co.handk.common.model.vo.GoodsVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -37,6 +39,11 @@ public class GoodsController {
     @GetMapping("/page")
     public PageResult<GoodsVO> page(@Valid GoodsQueryDTO query) {
         return goodsService.page(query);
+    }
+
+    @GetMapping("/bundle/page")
+    public PageResult<GoodsBundleVO> pageBundle(@Valid GoodsBundleQueryDTO query) {
+        return goodsService.pageBundle(query);
     }
 }
 
