@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.StockTypeService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateStockTypeDTO;
-import co.handk.common.model.dto.query.GoodsTypeQueryDTO;
+import co.handk.common.model.dto.query.StockTypeQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockTypeDTO;
-import co.handk.common.model.vo.StockTypeVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +39,11 @@ public class StockTypeController {
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return stockTypeService.deleteByIdLogic(id) > 0;
+        return stockTypeService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
 
     @GetMapping("/page")
-    public PageResult<StockTypeVO> page(@Valid GoodsTypeQueryDTO query) {
+    public PageResult<StockTypeVO> page(@Valid StockTypeQueryDTO query) {
         return stockTypeService.page(query);
     }
 }

@@ -9,6 +9,8 @@ import co.handk.backend.entity.BaseEntity;
 import co.handk.backend.service.BaseService;
 import co.handk.common.annotation.JoinSelect;
 import co.handk.common.annotation.JoinValue;
+import co.handk.common.constant.FieldNameConstant;
+import co.handk.common.constant.NumberConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageQuery;
@@ -55,7 +57,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      */
     @Override
     public T getByIdNotDeleted(Serializable id) {
-        return getOne(new QueryWrapper<T>().eq("id", id).eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        return getOne(new QueryWrapper<T>().eq(FieldNameConstant.COLUMN_ID, id).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()));
     }
 
     @Override
@@ -95,10 +97,10 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         Page<T> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         QueryWrapper<T> wrapper = buildWrapper(dto);
         boolean asc = "asc".equalsIgnoreCase(dto.getSortOrder());
-        if ("createTime".equals(dto.getSortBy())) {
-            wrapper.orderBy(true, asc, "create_time");
+        if (FieldNameConstant.SORT_BY_CREATE_TIME.equals(dto.getSortBy())) {
+            wrapper.orderBy(true, asc, FieldNameConstant.COLUMN_CREATE_TIME);
         } else {
-            wrapper.orderBy(true, asc, "update_time");
+            wrapper.orderBy(true, asc, FieldNameConstant.COLUMN_UPDATE_TIME);
         }
         Page<T> result = this.page(page, wrapper);
         List<V> voList = result.getRecords().stream()
@@ -119,8 +121,8 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             return;
         }
         try {
-            Field statusField = findField(vo.getClass(), "status");
-            Field statusDescField = findField(vo.getClass(), "statusDesc");
+            Field statusField = findField(vo.getClass(), FieldNameConstant.STATUS);
+            Field statusDescField = findField(vo.getClass(), FieldNameConstant.STATUS_DESC);
             if (statusField == null || statusDescField == null) {
                 return;
             }
@@ -166,7 +168,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             throw new RuntimeException("ID不能为空");
         }
         UpdateWrapper<T> wrapper = new UpdateWrapper<>();
-        wrapper.eq("id", entity.getId()).eq("deleted", DeleteEnum.UNDELETED.getCode());
+        wrapper.eq(FieldNameConstant.COLUMN_ID, entity.getId()).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
         buildUpdateSet(entity, wrapper);
         return baseMapper.update(null, wrapper) > DeleteEnum.UNDELETED.getCode();
     }
@@ -177,8 +179,8 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     @Override
     public int deleteByIdLogic(Long id) {
         return baseMapper.update(null, new UpdateWrapper<T>()
-                .eq("id", id).eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .set("deleted", DeleteEnum.DELETED.getCode()));
+                .eq(FieldNameConstant.COLUMN_ID, id).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
+                .set(FieldNameConstant.COLUMN_DELETED, DeleteEnum.DELETED.getCode()));
     }
 
     @Override
@@ -186,14 +188,14 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
         if (ids == null || ids.isEmpty()) return DeleteEnum.UNDELETED.getCode();
 
-        return baseMapper.update(null, new UpdateWrapper<T>().in("id", ids)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .set("deleted", DeleteEnum.DELETED.getCode()));
+        return baseMapper.update(null, new UpdateWrapper<T>().in(FieldNameConstant.COLUMN_ID, ids)
+                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
+                .set(FieldNameConstant.COLUMN_DELETED, DeleteEnum.DELETED.getCode()));
     }
 
     @Override
     public boolean existsById(Long id) {
-        return count(new QueryWrapper<T>().eq("id", id).eq("deleted", DeleteEnum.UNDELETED.getCode())) > 0;
+        return count(new QueryWrapper<T>().eq(FieldNameConstant.COLUMN_ID, id).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())) > NumberConstant.ZERO;
     }
 
     /**
@@ -202,7 +204,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     protected <Q> QueryWrapper<T> buildWrapper(Q dto) {
         QueryWrapper<T> wrapper = new QueryWrapper<>();
         // 全局过滤未删除
-        wrapper.eq("deleted", DeleteEnum.UNDELETED.getCode());
+        wrapper.eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
         if (dto == null) return wrapper;
         for (Field field : dto.getClass().getDeclaredFields()) {
             field.setAccessible(true);
@@ -295,7 +297,10 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                     if (value == null) continue;
                     String fieldName = field.getName();
                     // 这些字段不允许更新
-                    if ("id".equals(fieldName) || "createTime".equals(fieldName) || "createdBy".equals(fieldName) || "deleted".equals(fieldName)) {
+                    if (FieldNameConstant.ID.equals(fieldName)
+                            || FieldNameConstant.CREATE_TIME.equals(fieldName)
+                            || FieldNameConstant.CREATED_BY.equals(fieldName)
+                            || FieldNameConstant.DELETED.equals(fieldName)) {
                         continue;
                     }
                     String column = camelToUnderline(fieldName);
@@ -412,7 +417,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
         String countSql = "SELECT COUNT(1) " + fromSql + " " + whereSql;
         Long total = jdbc.queryForObject(countSql, params, Long.class);
-        if (total == null || total == 0L) {
+        if (total == null || total == NumberConstant.ZERO) {
             return PageResult.build(0L, dto.getPageNum(), dto.getPageSize(), Collections.emptyList());
         }
 
@@ -496,7 +501,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         String baseAlias = cfg.baseAlias();
         StringBuilder where = new StringBuilder("WHERE ")
                 .append(baseAlias)
-                .append(".deleted = ")
+                .append(".").append(FieldNameConstant.COLUMN_DELETED).append(" = ")
                 .append(DeleteEnum.UNDELETED.getCode());
         if (dto == null) {
             return where.toString();
@@ -573,9 +578,9 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     private String buildJoinOrderSql(PageQuery dto) {
         JoinQueryConfig cfg = this.getClass().getAnnotation(JoinQueryConfig.class);
         boolean asc = "asc".equalsIgnoreCase(dto.getSortOrder());
-        String column = "update_time";
-        if ("createTime".equals(dto.getSortBy())) {
-            column = "create_time";
+        String column = FieldNameConstant.COLUMN_UPDATE_TIME;
+        if (FieldNameConstant.SORT_BY_CREATE_TIME.equals(dto.getSortBy())) {
+            column = FieldNameConstant.COLUMN_CREATE_TIME;
         }
         return "ORDER BY " + cfg.baseAlias() + "." + column + (asc ? " ASC" : " DESC");
     }

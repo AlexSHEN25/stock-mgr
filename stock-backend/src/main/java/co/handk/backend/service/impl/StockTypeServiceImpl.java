@@ -8,7 +8,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 @Service
-public class GoodsTypeServiceImpl extends BaseServiceImpl<StockTypeMapper, StockType, StockTypeVO>
+public class StockTypeServiceImpl extends BaseServiceImpl<StockTypeMapper, StockType, StockTypeVO>
         implements StockTypeService {
 
     @Override
@@ -31,3 +31,4 @@ public class GoodsTypeServiceImpl extends BaseServiceImpl<StockTypeMapper, Stock
         return entity;
     }
 }
+

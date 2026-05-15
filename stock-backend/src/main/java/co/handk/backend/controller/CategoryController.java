@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.CategoryService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateCategoryDTO;
 import co.handk.common.model.dto.query.CategoryQueryDTO;
 import co.handk.common.model.dto.update.UpdateCategoryDTO;
-import co.handk.common.model.vo.CategoryVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +38,7 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return categoryService.deleteByIdLogic(id) > 0;
+        return categoryService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
 
     @GetMapping("/page")

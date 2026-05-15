@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.RoleService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateRoleDTO;
 import co.handk.common.model.dto.query.RoleQueryDTO;
 import co.handk.common.model.dto.update.UpdateRoleDTO;
-import co.handk.common.model.vo.RoleVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class RoleController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return roleService.deleteByIdLogic(id) > 0;
+        return roleService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<RoleVO> page(@Valid RoleQueryDTO query) {

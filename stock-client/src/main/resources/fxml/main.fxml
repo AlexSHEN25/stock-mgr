@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
@@ -11,17 +12,21 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="co.handk.client.controller.MainController" prefWidth="1180" prefHeight="720">
     <left>
-        <VBox spacing="8" prefWidth="180" style="-fx-background-color: #f4f6fb;">
+        <VBox spacing="8" prefWidth="220" style="-fx-background-color: #f4f6fb;">
             <padding>
                 <Insets top="12" right="12" bottom="12" left="12"/>
             </padding>
-            <Label fx:id="currentUserLabel" text="当前用户:"/>
-            <Button text="用户管理" maxWidth="1.7976931348623157E308" onAction="#onUserModule"/>
-            <Button text="库存管理" maxWidth="1.7976931348623157E308" onAction="#onStockModule"/>
-            <Button text="仓库管理" maxWidth="1.7976931348623157E308" onAction="#onWarehouseModule"/>
-            <Button text="库存类型" maxWidth="1.7976931348623157E308" onAction="#onStockTypeModule"/>
+            <Label fx:id="currentUserLabel" text="Current User:"/>
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <Label text="Language"/>
+                <ComboBox fx:id="languageCombo" prefWidth="130" onAction="#onLanguageChange"/>
+            </HBox>
+            <Button text="User Management" maxWidth="1.7976931348623157E308" onAction="#onUserModule"/>
+            <Button text="Stock Management" maxWidth="1.7976931348623157E308" onAction="#onStockModule"/>
+            <Button text="Warehouse Management" maxWidth="1.7976931348623157E308" onAction="#onWarehouseModule"/>
+            <Button text="Stock Type" maxWidth="1.7976931348623157E308" onAction="#onStockTypeModule"/>
             <Region VBox.vgrow="ALWAYS"/>
-            <Button text="退出登录" maxWidth="1.7976931348623157E308" onAction="#onLogout"/>
+            <Button text="Logout" maxWidth="1.7976931348623157E308" onAction="#onLogout"/>
         </VBox>
     </left>
     <center>
@@ -29,18 +34,18 @@
             <padding>
                 <Insets top="10" right="10" bottom="10" left="10"/>
             </padding>
-            <Label fx:id="pageTitleLabel" text="用户管理" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+            <Label fx:id="pageTitleLabel" text="User Management" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
             <HBox spacing="8" alignment="CENTER_LEFT">
-                <Button text="刷新" onAction="#onRefresh"/>
-                <Button text="查询" onAction="#onSearch"/>
-                <TextField fx:id="keywordField" promptText="关键词" prefWidth="150"/>
-                <Button text="上一页" onAction="#onPrevPage"/>
-                <Button text="下一页" onAction="#onNextPage"/>
+                <Button text="Refresh" onAction="#onRefresh"/>
+                <Button text="Search" onAction="#onSearch"/>
+                <TextField fx:id="keywordField" promptText="Keyword" prefWidth="150"/>
+                <Button text="Prev" onAction="#onPrevPage"/>
+                <Button text="Next" onAction="#onNextPage"/>
                 <Label fx:id="pageInfoLabel"/>
-                <Button text="新增" onAction="#onAdd"/>
-                <Button text="编辑" onAction="#onEdit"/>
-                <TextField fx:id="deleteIdField" promptText="输入ID删除" prefWidth="120"/>
-                <Button text="删除" onAction="#onDelete"/>
+                <Button text="Add" onAction="#onAdd"/>
+                <Button text="Edit" onAction="#onEdit"/>
+                <TextField fx:id="deleteIdField" promptText="Delete ID" prefWidth="120"/>
+                <Button text="Delete" onAction="#onDelete"/>
             </HBox>
             <TableView fx:id="dataTable" VBox.vgrow="ALWAYS"/>
             <Label fx:id="messageLabel"/>

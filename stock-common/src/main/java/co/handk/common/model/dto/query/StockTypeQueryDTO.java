@@ -5,10 +5,11 @@ import co.handk.common.model.PageQuery;
 import lombok.Data;
 
 @Data
-public class GoodsTypeQueryDTO extends PageQuery {
+public class StockTypeQueryDTO extends PageQuery {
 
     private Long id;
 
     private String name;
     private StatusEnum status;
 }
+

@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.PriceRecordService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreatePriceRecordDTO;
 import co.handk.common.model.dto.query.PriceRecordQueryDTO;
 import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
-import co.handk.common.model.vo.PriceRecordVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class PriceRecordController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return priceRecordService.deleteByIdLogic(id) > 0;
+        return priceRecordService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<PriceRecordVO> page(@Valid PriceRecordQueryDTO query) {

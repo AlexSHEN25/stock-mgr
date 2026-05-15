@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateStockOrderItemDTO;
 import co.handk.common.model.dto.query.StockOrderItemQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockOrderItemDTO;
-import co.handk.common.model.vo.StockOrderItemVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class StockOrderItemController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return stockOrderItemService.deleteByIdLogic(id) > 0;
+        return stockOrderItemService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<StockOrderItemVO> page(@Valid StockOrderItemQueryDTO query) {

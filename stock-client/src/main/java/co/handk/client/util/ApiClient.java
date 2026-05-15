@@ -58,6 +58,9 @@ public class ApiClient {
         URL url = new URL(BASE_URL + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod(method);
+        String language = LanguageConfig.getLanguage();
+        conn.setRequestProperty("Accept-Language", language);
+        conn.setRequestProperty("X-Lang", language);
 
         String token = Session.getToken();
         if (token != null && !token.isBlank()) {

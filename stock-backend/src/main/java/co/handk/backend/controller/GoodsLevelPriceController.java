@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.GoodsLevelPriceService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateGoodsLevelPriceDTO;
 import co.handk.common.model.dto.query.GoodsLevelPriceQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsLevelPriceDTO;
-import co.handk.common.model.vo.GoodsLevelPriceVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +38,7 @@ public class GoodsLevelPriceController {
 
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return goodsLevelPriceService.deleteByIdLogic(id) > 0;
+        return goodsLevelPriceService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
 
     @GetMapping("/page")

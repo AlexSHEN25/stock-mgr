@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.DeptService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateDeptDTO;
 import co.handk.common.model.dto.query.DeptQueryDTO;
 import co.handk.common.model.dto.update.UpdateDeptDTO;
-import co.handk.common.model.vo.DeptVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class DeptController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return deptService.deleteByIdLogic(id) > 0;
+        return deptService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<DeptVO> page(@Valid DeptQueryDTO query) {

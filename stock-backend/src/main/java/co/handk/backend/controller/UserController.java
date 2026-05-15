@@ -3,6 +3,7 @@ package co.handk.backend.controller;
 import co.handk.backend.service.LoginService;
 import co.handk.backend.service.UserService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.dto.create.CreateUserDTO;
 import co.handk.common.model.dto.query.UserQueryDTO;
@@ -37,7 +38,7 @@ public class UserController {
     }
 
     /**
-     * 蛻・｡ｵ譟･隸｢
+     * 陋ｻ繝ｻ・｡・ｵ隴滂ｽ･髫ｸ・｢
      */
     @PostMapping("/page")
     public PageResult<UserVO> page(@RequestBody UserQueryDTO dto) {
@@ -45,7 +46,7 @@ public class UserController {
     }
 
     /**
-     * 蛻苓｡ｨ譟･隸｢・井ｸ榊・鬘ｵ・・
+     * 陋ｻ闍難ｽ｡・ｨ隴滂ｽ･髫ｸ・｢繝ｻ莠包ｽｸ讎翫・鬯假ｽｵ繝ｻ繝ｻ
      */
     @PostMapping("/list")
     public List<UserVO> list(@RequestBody UserQueryDTO dto) {
@@ -53,7 +54,7 @@ public class UserController {
     }
 
     /**
-     * 譬ｹ謐ｮID譟･隸｢
+     * 隴ｬ・ｹ隰撰ｽｮID隴滂ｽ･髫ｸ・｢
      */
     @GetMapping("/{id}")
     public UserVO get(@PathVariable("id") Long id) {
@@ -61,7 +62,7 @@ public class UserController {
     }
 
     /**
-     * 譁ｰ蠅・
+     * 隴・ｽｰ陟・・
      */
     @PostMapping
     public boolean create(@RequestBody CreateUserDTO dto) {
@@ -69,7 +70,7 @@ public class UserController {
     }
 
     /**
-     * 譖ｴ譁ｰ
+     * 隴厄ｽｴ隴・ｽｰ
      */
     @PutMapping("/{id}")
     public boolean update(@RequestBody UpdateUserDTO dto) {
@@ -77,7 +78,7 @@ public class UserController {
     }
 
     /**
-     * 蜊墓擅騾ｻ霎大唖髯､
+     * 陷雁｢捺套鬨ｾ・ｻ髴主､ｧ蜚夜ｫｯ・､
      */
     @DeleteMapping("/{id}")
     public int delete(@PathVariable("id") Long id) {
@@ -85,7 +86,7 @@ public class UserController {
     }
 
     /**
-     * 謇ｹ驥城ｻ霎大唖髯､
+     * 隰・ｽｹ鬩･蝓篠・ｻ髴主､ｧ蜚夜ｫｯ・､
      */
     @DeleteMapping("/batch")
     public int deleteBatch(@RequestBody List<Long> ids) {

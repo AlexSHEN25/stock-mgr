@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.CustomerLevelService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateCustomerLevelDTO;
 import co.handk.common.model.dto.query.CustomerLevelQueryDTO;
 import co.handk.common.model.dto.update.UpdateCustomerLevelDTO;
-import co.handk.common.model.vo.CustomerLevelVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class CustomerLevelController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return customerLevelService.deleteByIdLogic(id) > 0;
+        return customerLevelService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<CustomerLevelVO> page(@Valid CustomerLevelQueryDTO query) {

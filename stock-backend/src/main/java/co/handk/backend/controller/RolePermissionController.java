@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.RolePermissionService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateRolePermissionDTO;
 import co.handk.common.model.dto.query.RolePermissionQueryDTO;
 import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
-import co.handk.common.model.vo.RolePermissionVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class RolePermissionController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return rolePermissionService.deleteByIdLogic(id) > 0;
+        return rolePermissionService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<RolePermissionVO> page(@Valid RolePermissionQueryDTO query) {

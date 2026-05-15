@@ -28,7 +28,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/category/**",
                         "/series/**",
                         "/maker/**",
-                        "/goodsType/**",
+                        "/stockType/**",
                         "/goods/**",
                         "/goodsSku/**",
                         "/goodsSkuSpec/**",

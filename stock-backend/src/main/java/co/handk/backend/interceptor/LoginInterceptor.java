@@ -1,6 +1,7 @@
 package co.handk.backend.interceptor;
 
 import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.constant.SecurityConstant;
 import co.handk.backend.context.UserContext;
 import co.handk.backend.exception.LoginException;
 import co.handk.backend.util.StringRedisUtil;
@@ -30,11 +31,11 @@ public class LoginInterceptor implements HandlerInterceptor {
         }
 
         String auth = request.getHeader("Authorization");
-        if (StringUtils.isBlank(auth) || !auth.startsWith("Bearer ")) {
+        if (StringUtils.isBlank(auth) || !auth.startsWith(SecurityConstant.BEARER_PREFIX)) {
             throw new LoginException(MessageKeyConstant.ERROR_LOGIN_REQUIRED, "login required");
         }
 
-        String token = auth.substring(7).trim();
+        String token = auth.substring(SecurityConstant.BEARER_PREFIX.length()).trim();
         String tokenKey = RedisKey.LOGIN_TOKEN + token;
         String userId = redisUtil.get(tokenKey);
         if (StringUtils.isBlank(userId)) {

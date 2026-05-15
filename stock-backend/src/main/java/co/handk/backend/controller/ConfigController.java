@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.ConfigService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateConfigDTO;
 import co.handk.common.model.dto.query.ConfigQueryDTO;
 import co.handk.common.model.dto.update.UpdateConfigDTO;
-import co.handk.common.model.vo.ConfigVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class ConfigController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return configService.deleteByIdLogic(id) > 0;
+        return configService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<ConfigVO> page(@Valid ConfigQueryDTO query) {

@@ -6,4 +6,6 @@ public interface CommonConstant {
 
      long UPDATE_EXPIRE_TIME = 5L;
 
+     String DEFAULT_CURRENCY_JPY = "JPY";
+
 }

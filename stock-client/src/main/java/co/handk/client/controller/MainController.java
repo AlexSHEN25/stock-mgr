@@ -3,6 +3,7 @@ package co.handk.client.controller;
 import co.handk.client.MainApp;
 import co.handk.client.model.Session;
 import co.handk.client.util.ApiClient;
+import co.handk.client.util.LanguageConfig;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -12,7 +13,9 @@ import javafx.scene.control.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 
 public class MainController {
 
@@ -29,6 +32,8 @@ public class MainController {
     @FXML
     private TextField deleteIdField;
     @FXML
+    private ComboBox<LanguageOption> languageCombo;
+    @FXML
     private TableView<Map<String, Object>> dataTable;
 
     private MainApp app;
@@ -38,21 +43,60 @@ public class MainController {
 
     public void setApp(MainApp app) {
         this.app = app;
-        currentUserLabel.setText("当前用户: " + Session.getUsername());
+        initLanguageCombo();
+        currentUserLabel.setText("Current User: " + Session.getUsername());
+        loadData();
+    }
+
+    private void initLanguageCombo() {
+        languageCombo.getItems().setAll(
+                new LanguageOption("ja-JP", "日本語"),
+                new LanguageOption("zh-CN", "简体中文"),
+                new LanguageOption("en-US", "English")
+        );
+        String configured = LanguageConfig.getLanguage();
+        LanguageOption selected = languageCombo.getItems().stream()
+                .filter(option -> option.code().equalsIgnoreCase(configured))
+                .findFirst()
+                .orElse(languageCombo.getItems().get(0));
+        languageCombo.setValue(selected);
+        languageCombo.setOnAction(event -> onLanguageChange());
+    }
+
+    @FXML
+    private void onLanguageChange() {
+        LanguageOption selected = languageCombo.getValue();
+        if (selected == null) {
+            return;
+        }
+        LanguageConfig.setLanguage(selected.code());
         loadData();
     }
 
     @FXML
-    private void onUserModule() { switchModule("user", "用户管理"); }
-    @FXML
-    private void onStockModule() { switchModule("stock", "库存管理"); }
-    @FXML
-    private void onWarehouseModule() { switchModule("warehouse", "仓库管理"); }
-    @FXML
-    private void onStockTypeModule() { switchModule("stockType", "库存类型"); }
+    private void onUserModule() {
+        switchModule("user", "User Management");
+    }
 
     @FXML
-    private void onRefresh() { loadData(); }
+    private void onStockModule() {
+        switchModule("stock", "Stock Management");
+    }
+
+    @FXML
+    private void onWarehouseModule() {
+        switchModule("warehouse", "Warehouse Management");
+    }
+
+    @FXML
+    private void onStockTypeModule() {
+        switchModule("stockType", "Stock Type Management");
+    }
+
+    @FXML
+    private void onRefresh() {
+        loadData();
+    }
 
     @FXML
     private void onSearch() {
@@ -76,23 +120,23 @@ public class MainController {
 
     @FXML
     private void onAdd() {
-        openFormDialog("新增", false);
+        openFormDialog("Create", false);
     }
 
     @FXML
     private void onEdit() {
         if (dataTable.getSelectionModel().getSelectedItem() == null) {
-            messageLabel.setText("请先选中一条记录再编辑");
+            messageLabel.setText("Please select one row to edit");
             return;
         }
-        openFormDialog("编辑", true);
+        openFormDialog("Edit", true);
     }
 
     @FXML
     private void onDelete() {
         String id = deleteIdField.getText();
         if (id == null || id.isBlank()) {
-            messageLabel.setText("请输入要删除的ID");
+            messageLabel.setText("Please input ID to delete");
             return;
         }
 
@@ -100,13 +144,13 @@ public class MainController {
             String res = ApiClient.delete("/" + currentModule + "/" + id.trim());
             JSONObject json = new JSONObject(res);
             if (json.optInt("code") == 0) {
-                messageLabel.setText("删除成功");
+                messageLabel.setText("Delete success");
                 loadData();
             } else {
-                messageLabel.setText(json.optString("message", "删除失败"));
+                messageLabel.setText(json.optString("message", "Delete failed"));
             }
         } catch (Exception ex) {
-            messageLabel.setText("删除失败: " + ex.getMessage());
+            messageLabel.setText("Delete failed: " + ex.getMessage());
         }
     }
 
@@ -119,10 +163,10 @@ public class MainController {
                 Session.clear();
                 app.showLogin();
             } else {
-                messageLabel.setText(json.optString("message", "退出失败"));
+                messageLabel.setText(json.optString("message", "Logout failed"));
             }
         } catch (Exception ex) {
-            messageLabel.setText("退出失败: " + ex.getMessage());
+            messageLabel.setText("Logout failed: " + ex.getMessage());
         }
     }
 
@@ -141,14 +185,14 @@ public class MainController {
             pane.setContent(loader.load());
 
             Dialog<ButtonType> dialog = new Dialog<>();
-            dialog.setTitle(action + pageTitleLabel.getText());
+            dialog.setTitle(action + " " + pageTitleLabel.getText());
             dialog.getDialogPane().setContent(pane.getContent());
             dialog.getDialogPane().getButtonTypes().clear();
             dialog.show();
 
             ModuleFormController formController = loader.getController();
             Map<String, Object> selected = editMode ? dataTable.getSelectionModel().getSelectedItem() : null;
-            formController.configure(currentModule, action + pageTitleLabel.getText(), editMode, selected);
+            formController.configure(currentModule, action + " " + pageTitleLabel.getText(), editMode, selected);
 
             dialog.setOnHidden(event -> {
                 if (!formController.isSubmitted()) {
@@ -157,7 +201,7 @@ public class MainController {
                 submitForm(editMode, formController.toJson());
             });
         } catch (Exception ex) {
-            messageLabel.setText("打开表单失败: " + ex.getMessage());
+            messageLabel.setText("Open form failed: " + ex.getMessage());
         }
     }
 
@@ -175,13 +219,13 @@ public class MainController {
 
             JSONObject json = new JSONObject(res);
             if (json.optInt("code") == 0) {
-                messageLabel.setText((editMode ? "编辑" : "新增") + "成功");
+                messageLabel.setText((editMode ? "Edit" : "Create") + " success");
                 loadData();
             } else {
-                messageLabel.setText(json.optString("message", (editMode ? "编辑" : "新增") + "失败"));
+                messageLabel.setText(json.optString("message", (editMode ? "Edit" : "Create") + " failed"));
             }
         } catch (Exception ex) {
-            messageLabel.setText("提交失败: " + ex.getMessage());
+            messageLabel.setText("Submit failed: " + ex.getMessage());
         }
     }
 
@@ -210,30 +254,30 @@ public class MainController {
 
             JSONObject wrapper = new JSONObject(res);
             if (wrapper.optInt("code") != 0) {
-                messageLabel.setText(wrapper.optString("message", "查询失败"));
+                messageLabel.setText(wrapper.optString("message", "Query failed"));
                 return;
             }
 
             JSONObject data = wrapper.optJSONObject("data");
             if (data == null) {
-                messageLabel.setText("返回数据为空");
+                messageLabel.setText("Response data invalid");
                 return;
             }
 
             long total = data.optLong("total", 0);
             long totalPages = data.optLong("totalPages", 0);
-            pageInfoLabel.setText(String.format("第 %d 页 / 共 %d 页 / 总计 %d 条", pageNum, totalPages, total));
+            pageInfoLabel.setText(String.format("Page %d / %d, Total %d", pageNum, totalPages, total));
 
             JSONArray records = data.optJSONArray("records");
             buildTable(records == null ? new JSONArray() : records);
-            messageLabel.setText("加载成功");
+            messageLabel.setText("Load success");
 
             if (totalPages > 0 && pageNum > totalPages) {
                 pageNum = (int) totalPages;
                 loadData();
             }
         } catch (Exception ex) {
-            messageLabel.setText("加载失败: " + ex.getMessage());
+            messageLabel.setText("Load failed: " + ex.getMessage());
         }
     }
 
@@ -260,5 +304,12 @@ public class MainController {
             dataTable.getColumns().add(col);
         }
         dataTable.setItems(rows);
+    }
+
+    private record LanguageOption(String code, String label) {
+        @Override
+        public String toString() {
+            return label;
+        }
     }
 }

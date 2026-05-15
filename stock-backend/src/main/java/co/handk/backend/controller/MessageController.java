@@ -1,11 +1,13 @@
 package co.handk.backend.controller;
 
+import co.handk.common.constant.NumberConstant;
+
 import co.handk.backend.service.MessageService;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateMessageDTO;
 import co.handk.common.model.dto.query.MessageQueryDTO;
 import co.handk.common.model.dto.update.UpdateMessageDTO;
-import co.handk.common.model.vo.MessageVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,7 @@ public class MessageController {
     }
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
-        return messageService.deleteByIdLogic(id) > 0;
+        return messageService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
     @GetMapping("/page")
     public PageResult<MessageVO> page(@Valid MessageQueryDTO query) {

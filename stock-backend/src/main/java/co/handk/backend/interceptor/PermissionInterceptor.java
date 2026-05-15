@@ -78,7 +78,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
             return "";
         }
         if (path.startsWith(SecurityConstant.API_PREFIX)) {
-            return path.substring(SecurityConstant.API_PREFIX.length() - 1);
+            return path.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX);
         }
         return path;
     }
