@@ -22,6 +22,8 @@ public class GoodsBundleVO extends BaseVO {
     private Integer isHot;
     private Integer goodsSort;
     private Integer goodsStatus;
+    private String goodsImage;
+    private String goodsContent;
 
     private Long skuId;
     private String skuCode;
@@ -34,15 +36,11 @@ public class GoodsBundleVO extends BaseVO {
     private String barcode;
     private BigDecimal weight;
     private BigDecimal volume;
-    private Integer skuStatus;
 
-    private Long specId;
-    private String specName;
-    private String specValue;
-    private Integer specSort;
 
-    private Long imageId;
-    private String imageUrl;
-    private Integer imageSort;
+    private Long createdBy;
+    private Long updatedBy;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+
 }
-

@@ -22,6 +22,7 @@
                 <ComboBox fx:id="languageCombo" prefWidth="130" onAction="#onLanguageChange"/>
             </HBox>
             <Button text="User Management" maxWidth="1.7976931348623157E308" onAction="#onUserModule"/>
+            <Button text="Goods Management" maxWidth="1.7976931348623157E308" onAction="#onGoodsModule"/>
             <Button text="Stock Management" maxWidth="1.7976931348623157E308" onAction="#onStockModule"/>
             <Button text="Warehouse Management" maxWidth="1.7976931348623157E308" onAction="#onWarehouseModule"/>
             <Button text="Stock Type" maxWidth="1.7976931348623157E308" onAction="#onStockTypeModule"/>

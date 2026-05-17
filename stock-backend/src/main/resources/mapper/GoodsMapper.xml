@@ -7,7 +7,6 @@
     <sql id="bundleFromAndWhere">
         FROM t_goods g
         LEFT JOIN t_goods_sku gs ON gs.goods_id = g.id AND gs.deleted = 0
-        LEFT JOIN t_goods_sku_spec gss ON gss.sku_id = gs.id AND gss.deleted = 0
         LEFT JOIN t_goods_image gi ON gi.sku_id = gs.id AND gi.deleted = 0
         LEFT JOIN t_brand b ON b.id = g.brand_id AND b.deleted = 0
         LEFT JOIN t_series s ON s.id = g.series_id AND s.deleted = 0
@@ -57,15 +56,6 @@
             <if test="q.skuStatus != null and q.skuStatus.code != null">
                 AND gs.status = #{q.skuStatus.code}
             </if>
-            <if test="q.specId != null">
-                AND gss.spec_id = #{q.specId}
-            </if>
-            <if test="q.specName != null and q.specName != ''">
-                AND gss.spec_name LIKE CONCAT('%', #{q.specName}, '%')
-            </if>
-            <if test="q.specValue != null and q.specValue != ''">
-                AND gss.spec_value LIKE CONCAT('%', #{q.specValue}, '%')
-            </if>
             <if test="q.imageId != null">
                 AND gi.id = #{q.imageId}
             </if>
@@ -82,7 +72,6 @@
 
     <select id="selectBundlePage" resultType="co.handk.common.model.vo.GoodsBundleVO">
         SELECT
-        g.id AS id,
         g.id AS goods_id,
         g.name AS goods_name,
         g.english_name AS goods_english_name,
@@ -97,6 +86,11 @@
         g.is_hot AS is_hot,
         g.sort AS goods_sort,
         g.status AS goods_status,
+        g.deleted AS goods_deleted,
+        g.created_by AS goods_created_by,
+        g.updated_by AS goods_updated_by,
+        g.create_time AS goods_create_time,
+        g.update_time AS goods_update_time,
         gs.id AS sku_id,
         gs.sku_code AS sku_code,
         gs.sku_name AS sku_name,
@@ -109,17 +103,22 @@
         gs.weight AS weight,
         gs.volume AS volume,
         gs.status AS sku_status,
-        gss.spec_id AS spec_id,
-        gss.spec_name AS spec_name,
-        gss.spec_value AS spec_value,
-        gss.sort AS spec_sort,
+        gs.deleted AS sku_deleted,
+        gs.created_by AS sku_created_by,
+        gs.updated_by AS sku_updated_by,
+        gs.create_time AS sku_create_time,
+        gs.update_time AS sku_update_time,
         gi.id AS image_id,
         gi.image_url AS image_url,
-        gi.sort AS image_sort
+        gi.sort AS image_sort,
+        gi.deleted AS image_deleted,
+        gi.created_by AS image_created_by,
+        gi.updated_by AS image_updated_by,
+        gi.create_time AS image_create_time,
+        gi.update_time AS image_update_time
         <include refid="bundleFromAndWhere"/>
         ORDER BY g.update_time DESC, gs.update_time DESC
         LIMIT #{offset}, #{size}
     </select>
 
 </mapper>
-

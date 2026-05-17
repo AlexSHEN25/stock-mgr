@@ -11,5 +11,8 @@ public class GoodsWorkbenchDetailVO {
     private List<GoodsSkuSpecVO> specs;
     private List<GoodsImageVO> images;
     private List<GoodsLevelPriceVO> memberPrices;
+    private Long specId;
+    private String specName;
+    private String specValue;
+    private String imageUrl;
 }
-

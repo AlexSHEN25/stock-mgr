@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.create;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -10,6 +11,7 @@ public class CreateGoodsSkuDTO {
 
     private Long goodsId;
 
+    @NotBlank(message = "SKUコードは必須です")
     private String skuCode;
 
     private String skuName;
@@ -30,4 +32,3 @@ public class CreateGoodsSkuDTO {
     private BigDecimal volume;
 
 }
-

@@ -95,6 +95,23 @@ public class GoodsController {
         return goodsService.pageBundle(query);
     }
 
+    @GetMapping("/bundle/sku/{skuId}/specs")
+    public List<GoodsSkuSpecVO> bundleSkuSpecs(@PathVariable("skuId") @NotNull Long skuId) {
+        return goodsSkuSpecService.list(new QueryWrapper<GoodsSkuSpec>()
+                        .eq("sku_id", skuId)
+                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                        .orderByAsc("sort", "id"))
+                .stream().map(spec -> {
+                    GoodsSkuSpecVO vo = new GoodsSkuSpecVO();
+                    org.springframework.beans.BeanUtils.copyProperties(spec, vo);
+                    return vo;
+                }).collect(Collectors.toList());
+    }
+
+    /**
+     * 商品管理统一列表：
+     * 将 SKU / SKU规格 / 商品图片 融合为单表分页返回。
+     */
     @GetMapping("/workbench/{goodsId}")
     public GoodsWorkbenchDetailVO workbenchDetail(@PathVariable("goodsId") @NotNull Long goodsId) {
         GoodsVO goods = goodsService.getVOById(goodsId);
@@ -149,6 +166,15 @@ public class GoodsController {
         detail.setSpecs(specs);
         detail.setImages(images);
         detail.setMemberPrices(memberPrices);
+        if (!specs.isEmpty()) {
+            GoodsSkuSpecVO firstSpec = specs.get(0);
+            detail.setSpecId(firstSpec.getSpecId());
+            detail.setSpecName(firstSpec.getSpecName());
+            detail.setSpecValue(firstSpec.getSpecValue());
+        }
+        if (!images.isEmpty()) {
+            detail.setImageUrl(images.get(0).getImageUrl());
+        }
         return detail;
     }
 

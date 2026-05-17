@@ -79,6 +79,11 @@ public class MainController {
     }
 
     @FXML
+    private void onGoodsModule() {
+        switchModule("goodsManagement", "Goods Management");
+    }
+
+    @FXML
     private void onStockModule() {
         switchModule("stock", "Stock Management");
     }
@@ -247,9 +252,17 @@ public class MainController {
                 params.put("pageSize", String.valueOf(pageSize));
                 String keyword = keywordField.getText();
                 if (keyword != null && !keyword.isBlank()) {
-                    params.put("stock".equals(currentModule) ? "goodsName" : "name", keyword.trim());
+                    if ("goodsManagement".equals(currentModule)) {
+                        params.put("goodsName", keyword.trim());
+                    } else {
+                        params.put("stock".equals(currentModule) ? "goodsName" : "name", keyword.trim());
+                    }
                 }
-                res = ApiClient.get("/" + currentModule + "/page", params);
+                if ("goodsManagement".equals(currentModule)) {
+                    res = ApiClient.get("/goods/bundle/page", params);
+                } else {
+                    res = ApiClient.get("/" + currentModule + "/page", params);
+                }
             }
 
             JSONObject wrapper = new JSONObject(res);

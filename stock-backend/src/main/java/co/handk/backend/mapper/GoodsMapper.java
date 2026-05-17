@@ -17,4 +17,5 @@ public interface GoodsMapper extends BaseMapper<Goods> {
     List<GoodsBundleVO> selectBundlePage(@Param("q") GoodsBundleQueryDTO query,
                                          @Param("offset") long offset,
                                          @Param("size") long size);
+
 }

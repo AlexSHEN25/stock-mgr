@@ -13,4 +13,5 @@ import org.springframework.validation.annotation.Validated;
 public interface GoodsService extends BaseService<Goods, GoodsVO> {
 
     PageResult<GoodsBundleVO> pageBundle(GoodsBundleQueryDTO queryDTO);
+
 }
