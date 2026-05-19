@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="co.handk.backend.mapper.GoodsMapper">
 
-    <sql id="bundleFromAndWhere">
+    <sql id="fromAndWhere">
         FROM t_goods g
         LEFT JOIN t_goods_sku gs ON gs.goods_id = g.id AND gs.deleted = 0
         LEFT JOIN t_goods_image gi ON gi.sku_id = gs.id AND gi.deleted = 0
@@ -14,14 +14,11 @@
         LEFT JOIN t_maker m ON m.id = g.maker_id AND m.deleted = 0
         WHERE g.deleted = 0
         <if test="q != null">
-            <if test="q.goodsId != null">
-                AND g.id = #{q.goodsId}
+            <if test="q.name != null and q.name != ''">
+                AND g.name LIKE CONCAT('%', #{q.name}, '%')
             </if>
-            <if test="q.goodsName != null and q.goodsName != ''">
-                AND g.name LIKE CONCAT('%', #{q.goodsName}, '%')
-            </if>
-            <if test="q.goodsEnglishName != null and q.goodsEnglishName != ''">
-                AND g.english_name LIKE CONCAT('%', #{q.goodsEnglishName}, '%')
+            <if test="q.englishName != null and q.englishName != ''">
+                AND g.english_name LIKE CONCAT('%', #{q.englishName}, '%')
             </if>
             <if test="q.brandId != null">
                 AND g.brand_id = #{q.brandId}
@@ -38,11 +35,11 @@
             <if test="q.isHot != null">
                 AND g.is_hot = #{q.isHot}
             </if>
-            <if test="q.goodsSort != null">
-                AND g.sort = #{q.goodsSort}
+            <if test="q.sort != null">
+                AND g.sort = #{q.sort}
             </if>
-            <if test="q.goodsStatus != null and q.goodsStatus.code != null">
-                AND g.status = #{q.goodsStatus.code}
+            <if test="q.status != null">
+                AND g.status = #{q.status}
             </if>
             <if test="q.skuId != null">
                 AND gs.id = #{q.skuId}
@@ -53,70 +50,55 @@
             <if test="q.skuName != null and q.skuName != ''">
                 AND gs.sku_name LIKE CONCAT('%', #{q.skuName}, '%')
             </if>
-            <if test="q.skuStatus != null and q.skuStatus.code != null">
-                AND gs.status = #{q.skuStatus.code}
-            </if>
-            <if test="q.imageId != null">
-                AND gi.id = #{q.imageId}
-            </if>
-            <if test="q.imageUrl != null and q.imageUrl != ''">
-                AND gi.image_url LIKE CONCAT('%', #{q.imageUrl}, '%')
-            </if>
         </if>
     </sql>
 
-    <select id="countBundlePage" resultType="java.lang.Long">
+    <select id="countGoodsPage" resultType="java.lang.Long">
         SELECT COUNT(1)
-        <include refid="bundleFromAndWhere"/>
+        <include refid="fromAndWhere"/>
     </select>
 
-    <select id="selectBundlePage" resultType="co.handk.common.model.vo.GoodsBundleVO">
+    <select id="selectGoodsPage" resultType="co.handk.common.model.vo.GoodsVO">
         SELECT
-        g.id AS goods_id,
-        g.name AS goods_name,
-        g.english_name AS goods_english_name,
-        g.brand_id AS brand_id,
+        g.id,
+        g.name,
+        g.english_name AS english_name,
+        g.description,
+        g.brand_id,
         b.name AS brand_name,
-        g.series_id AS series_id,
+        g.series_id,
         s.name AS series_name,
-        g.category_id AS category_id,
+        g.category_id,
         c.name AS category_name,
-        g.maker_id AS maker_id,
+        g.maker_id,
         m.name AS maker_name,
-        g.is_hot AS is_hot,
-        g.sort AS goods_sort,
-        g.status AS goods_status,
-        g.deleted AS goods_deleted,
-        g.created_by AS goods_created_by,
-        g.updated_by AS goods_updated_by,
-        g.create_time AS goods_create_time,
-        g.update_time AS goods_update_time,
+        g.is_hot,
+        g.sort,
+        g.status,
+        CASE
+        WHEN g.status = 1 THEN 'Normal'
+        WHEN g.status = 0 THEN 'Disabled'
+        ELSE NULL
+        END AS status_desc,
+        g.deleted,
+        g.created_by,
+        g.updated_by,
+        g.create_time,
+        g.update_time,
         gs.id AS sku_id,
-        gs.sku_code AS sku_code,
-        gs.sku_name AS sku_name,
-        gs.price AS price,
-        gs.currency AS currency,
-        gs.cost_price AS cost_price,
-        gs.update_price AS update_price,
-        gs.price_update_time AS price_update_time,
-        gs.barcode AS barcode,
-        gs.weight AS weight,
-        gs.volume AS volume,
-        gs.status AS sku_status,
-        gs.deleted AS sku_deleted,
-        gs.created_by AS sku_created_by,
-        gs.updated_by AS sku_updated_by,
-        gs.create_time AS sku_create_time,
-        gs.update_time AS sku_update_time,
+        gs.sku_code,
+        gs.sku_name,
+        gs.price,
+        gs.currency,
+        gs.cost_price,
+        gs.update_price,
+        gs.price_update_time,
+        gs.barcode,
+        gs.weight,
+        gs.volume,
         gi.id AS image_id,
-        gi.image_url AS image_url,
-        gi.sort AS image_sort,
-        gi.deleted AS image_deleted,
-        gi.created_by AS image_created_by,
-        gi.updated_by AS image_updated_by,
-        gi.create_time AS image_create_time,
-        gi.update_time AS image_update_time
-        <include refid="bundleFromAndWhere"/>
+        gi.image_url AS image_url
+        <include refid="fromAndWhere"/>
         ORDER BY g.update_time DESC, gs.update_time DESC
         LIMIT #{offset}, #{size}
     </select>

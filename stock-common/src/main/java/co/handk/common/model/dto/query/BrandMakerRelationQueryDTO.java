@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class BrandMakerRelationQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long brandId;
 

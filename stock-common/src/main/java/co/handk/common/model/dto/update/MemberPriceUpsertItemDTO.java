@@ -10,18 +10,18 @@ import java.time.LocalDateTime;
 public class MemberPriceUpsertItemDTO {
     private Long id;
 
-    @NotNull(message = "商品IDは必須です")
+    @NotNull(message = "商品は必須項目です")
     private Long goodsId;
 
-    @NotNull(message = "SKU IDは必須です")
+    @NotNull(message = "SKUは必須項目です")
     private Long skuId;
 
     private String skuCode;
 
-    @NotNull(message = "会員ランクIDは必須です")
+    @NotNull(message = "会員ランクは必須項目です")
     private Long levelId;
 
-    @NotNull(message = "価格は必須です")
+    @NotNull(message = "価格は必須項目です")
     private BigDecimal price;
 
     private String currency;

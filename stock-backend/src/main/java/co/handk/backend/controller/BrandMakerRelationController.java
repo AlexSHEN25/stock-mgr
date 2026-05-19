@@ -1,5 +1,7 @@
 package co.handk.backend.controller;
 
+import jakarta.validation.constraints.NotNull;
+
 import co.handk.common.constant.NumberConstant;
 
 import co.handk.backend.service.BrandMakerRelationService;
@@ -9,10 +11,12 @@ import co.handk.common.model.dto.create.CreateBrandMakerRelationDTO;
 import co.handk.common.model.dto.query.BrandMakerRelationQueryDTO;
 import co.handk.common.model.dto.update.UpdateBrandMakerRelationDTO;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @Validated
@@ -41,9 +45,15 @@ public class BrandMakerRelationController {
         return brandMakerRelationService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
 
+    @DeleteMapping("/batch")
+    public Boolean deleteBatch(@RequestBody @NotNull List<Long> ids) {
+        return brandMakerRelationService.deleteBatchLogic(ids) > NumberConstant.ZERO;
+    }
+
     @GetMapping("/page")
     public PageResult<BrandMakerRelationVO> page(@Valid BrandMakerRelationQueryDTO query) {
         return brandMakerRelationService.page(query);
     }
 }
+
 

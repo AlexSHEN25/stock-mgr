@@ -12,5 +12,6 @@ import org.springframework.validation.annotation.Validated;
 public interface LoginService {
 
     LoginVO login(@NotNull LoginDTO dto);
+
     LogoutVO logout();
 }

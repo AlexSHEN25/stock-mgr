@@ -20,6 +20,8 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 public class PermissionInterceptor implements HandlerInterceptor {
+    private static final String NO_PERMISSION_MESSAGE = "no permission";
+    private static final String EMPTY = "";
 
     private final PermissionQueryService permissionQueryService;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -40,12 +42,12 @@ public class PermissionInterceptor implements HandlerInterceptor {
         String uri = normalizePath(request.getRequestURI());
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
-            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, "no permission");
+            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, NO_PERMISSION_MESSAGE);
         }
 
         Set<String> codes = permissionQueryService.getPermissionCodes(userId);
         if (!codes.contains(requiredCode)) {
-            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, "no permission");
+            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, NO_PERMISSION_MESSAGE);
         }
         return true;
     }
@@ -53,6 +55,10 @@ public class PermissionInterceptor implements HandlerInterceptor {
     private String resolveRequiredPermission(String uri, String method) {
         boolean read = HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method);
         List<Permission> dataPermissions = permissionQueryService.getEnabledDataPermissions();
+        String altUri = uri;
+        if (uri != null && uri.startsWith(SecurityConstant.API_PREFIX)) {
+            altUri = uri.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX);
+        }
 
         for (Permission permission : dataPermissions) {
             String path = permission.getPath();
@@ -60,7 +66,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
             if (path == null || path.isBlank() || code == null || code.isBlank()) {
                 continue;
             }
-            if (!pathMatcher.match(path, uri)) {
+            if (!pathMatcher.match(path, uri) && !pathMatcher.match(path, altUri)) {
                 continue;
             }
             if (read && code.endsWith(SecurityConstant.PERMISSION_SUFFIX_READ)) {
@@ -75,10 +81,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
 
     private String normalizePath(String path) {
         if (path == null || path.isBlank()) {
-            return "";
-        }
-        if (path.startsWith(SecurityConstant.API_PREFIX)) {
-            return path.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX);
+            return EMPTY;
         }
         return path;
     }

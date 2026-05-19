@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.create;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -7,8 +8,11 @@ import java.math.BigDecimal;
 @Data
 public class CreateRequestItemDTO {
 
+    @NotNull(message = "申請IDは必須項目です")
     private Long requestId;
+    @NotNull(message = "商品は必須項目です")
     private Long goodsId;
+    @NotNull(message = "SKUは必須項目です")
     private Long skuId;
     private String skuCode;
     private String goodsName;

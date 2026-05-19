@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Data
 public class RequestFormQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String bizNo;
     private Long userId;

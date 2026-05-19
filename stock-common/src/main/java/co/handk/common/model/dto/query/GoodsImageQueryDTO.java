@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class GoodsImageQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long goodsId;
 

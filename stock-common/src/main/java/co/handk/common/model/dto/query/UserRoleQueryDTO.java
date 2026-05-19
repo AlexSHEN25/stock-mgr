@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class UserRoleQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long userId;
     private Long roleId;

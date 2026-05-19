@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class CustomerQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String customerCode;
     private String name;

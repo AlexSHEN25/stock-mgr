@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 @Data
 public class CustomerLevelQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String name;
     private BigDecimal discount;

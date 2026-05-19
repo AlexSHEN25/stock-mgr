@@ -2,9 +2,12 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.Goods;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.query.GoodsBundleQueryDTO;
-import co.handk.common.model.vo.GoodsBundleVO;
+import co.handk.common.model.dto.create.CreateGoodsDTO;
+import co.handk.common.model.dto.query.GoodsQueryDTO;
+import co.handk.common.model.dto.update.UpdateGoodsDTO;
 import co.handk.common.model.vo.GoodsVO;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -12,6 +15,13 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public interface GoodsService extends BaseService<Goods, GoodsVO> {
 
-    PageResult<GoodsBundleVO> pageBundle(GoodsBundleQueryDTO queryDTO);
+    Boolean saveGoods(CreateGoodsDTO dto);
 
+    GoodsVO getGoodsById(@NotNull Long id);
+
+    Boolean updateGoods(@NotNull @Valid UpdateGoodsDTO dto);
+
+    int deleteGoodsById(@NotNull Long id);
+
+    PageResult<GoodsVO> pageGoods(@Valid GoodsQueryDTO query);
 }

@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class StockTypeQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String name;
     private StatusEnum status;

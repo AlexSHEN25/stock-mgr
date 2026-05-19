@@ -3,7 +3,6 @@ package co.handk.backend.controller;
 import co.handk.backend.service.LoginService;
 import co.handk.backend.service.UserService;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.dto.create.CreateUserDTO;
 import co.handk.common.model.dto.query.UserQueryDTO;
@@ -24,7 +23,6 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
-
     private final LoginService loginService;
 
     @PostMapping("/login")
@@ -38,7 +36,7 @@ public class UserController {
     }
 
     /**
-     * 陋ｻ繝ｻ・｡・ｵ隴滂ｽ･髫ｸ・｢
+     * Paged query.
      */
     @PostMapping("/page")
     public PageResult<UserVO> page(@RequestBody UserQueryDTO dto) {
@@ -46,7 +44,7 @@ public class UserController {
     }
 
     /**
-     * 陋ｻ闍難ｽ｡・ｨ隴滂ｽ･髫ｸ・｢繝ｻ莠包ｽｸ讎翫・鬯假ｽｵ繝ｻ繝ｻ
+     * List query.
      */
     @PostMapping("/list")
     public List<UserVO> list(@RequestBody UserQueryDTO dto) {
@@ -54,7 +52,7 @@ public class UserController {
     }
 
     /**
-     * 隴ｬ・ｹ隰撰ｽｮID隴滂ｽ･髫ｸ・｢
+     * Query by id.
      */
     @GetMapping("/{id}")
     public UserVO get(@PathVariable("id") Long id) {
@@ -62,7 +60,7 @@ public class UserController {
     }
 
     /**
-     * 隴・ｽｰ陟・・
+     * Create user.
      */
     @PostMapping
     public boolean create(@RequestBody CreateUserDTO dto) {
@@ -70,7 +68,7 @@ public class UserController {
     }
 
     /**
-     * 隴厄ｽｴ隴・ｽｰ
+     * Update user.
      */
     @PutMapping("/{id}")
     public boolean update(@RequestBody UpdateUserDTO dto) {
@@ -78,7 +76,7 @@ public class UserController {
     }
 
     /**
-     * 陷雁｢捺套鬨ｾ・ｻ髴主､ｧ蜚夜ｫｯ・､
+     * Logical delete by id.
      */
     @DeleteMapping("/{id}")
     public int delete(@PathVariable("id") Long id) {
@@ -86,7 +84,7 @@ public class UserController {
     }
 
     /**
-     * 隰・ｽｹ鬩･蝓篠・ｻ髴主､ｧ蜚夜ｫｯ・､
+     * Batch logical delete.
      */
     @DeleteMapping("/batch")
     public int deleteBatch(@RequestBody List<Long> ids) {

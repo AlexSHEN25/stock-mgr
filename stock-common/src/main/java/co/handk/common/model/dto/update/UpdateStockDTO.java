@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.update;
 
+import jakarta.validation.constraints.NotBlank;
 import co.handk.common.enums.StatusEnum;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -9,11 +10,14 @@ import java.time.LocalDateTime;
 
 @Data
 public class UpdateStockDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "IDは必須項目です")
     private Long id;
 
+    @NotNull(message = "商品は必須項目です")
     private Integer goodsId;
+    @NotBlank(message = "商品名は必須項目です")
     private String goodsName;
+    @NotNull(message = "SKUは必須項目です")
     private Long skuId;
     private String skuCode;
     private Integer warehouseId;

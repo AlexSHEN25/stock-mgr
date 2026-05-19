@@ -6,11 +6,18 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.GridPane;
 import org.json.JSONObject;
 
 import java.math.BigDecimal;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 public class ModuleFormController {
 
@@ -23,6 +30,11 @@ public class ModuleFormController {
     @FXML private TextField emailField;
     @FXML private TextField phoneField;
     @FXML private TextField nameField;
+    @FXML private TextField englishNameField;
+    @FXML private TextField brandIdField;
+    @FXML private TextField seriesIdField;
+    @FXML private TextField categoryIdField;
+    @FXML private TextField makerIdField;
     @FXML private TextField codeField;
     @FXML private TextField addressField;
     @FXML private TextField managerIdField;
@@ -37,12 +49,13 @@ public class ModuleFormController {
     @FXML private TextField currencyField;
     @FXML private TextField stockTypeIdField;
     @FXML private ComboBox<String> statusCombo;
+    @FXML private TextArea rawJsonArea;
     @FXML private Button saveButton;
 
     private boolean submitted;
     private String module;
     private boolean editMode;
-
+    private JSONObject sourceJson;
     private final Map<String, TextField> fields = new LinkedHashMap<>();
 
     @FXML
@@ -54,6 +67,11 @@ public class ModuleFormController {
         fields.put("email", emailField);
         fields.put("phone", phoneField);
         fields.put("name", nameField);
+        fields.put("englishName", englishNameField);
+        fields.put("brandId", brandIdField);
+        fields.put("seriesId", seriesIdField);
+        fields.put("categoryId", categoryIdField);
+        fields.put("makerId", makerIdField);
         fields.put("code", codeField);
         fields.put("address", addressField);
         fields.put("managerId", managerIdField);
@@ -68,18 +86,19 @@ public class ModuleFormController {
         fields.put("currency", currencyField);
         fields.put("stockTypeId", stockTypeIdField);
 
-        statusCombo.setItems(FXCollections.observableArrayList("启用", "禁用"));
+        statusCombo.setItems(FXCollections.observableArrayList("有効", "無効"));
     }
 
     public void configure(String module, String title, boolean editMode, Map<String, Object> source) {
         this.module = module;
         this.editMode = editMode;
+        this.sourceJson = new JSONObject();
         titleLabel.setText(title);
 
         Set<String> visibleKeys = visibleKeysByModule(module, editMode);
         fields.forEach((key, field) -> {
             boolean visible = visibleKeys.contains(key);
-            Node label = findLabelForField(field);
+            Node label = findLabelForNode(field);
             field.setVisible(visible);
             field.setManaged(visible);
             if (label != null) {
@@ -99,8 +118,9 @@ public class ModuleFormController {
 
         if (source != null) {
             source.forEach((k, v) -> {
+                sourceJson.put(k, v);
                 if ("status".equals(k) && v != null) {
-                    statusCombo.setValue("ENABLE".equalsIgnoreCase(String.valueOf(v)) ? "启用" : "禁用");
+                    statusCombo.setValue("ENABLE".equalsIgnoreCase(String.valueOf(v)) ? "有効" : "無効");
                     return;
                 }
                 TextField field = fields.get(k);
@@ -110,14 +130,29 @@ public class ModuleFormController {
             });
         } else {
             applyDefaultTemplate(module);
+            sourceJson = toJsonFromForm();
         }
+
+        rawJsonArea.setText(sourceJson.toString(2));
     }
 
     public boolean isSubmitted() {
         return submitted;
     }
 
+    public void markCanceled() {
+        submitted = false;
+    }
+
     public JSONObject toJson() {
+        String raw = rawJsonArea.getText();
+        if (raw != null && !raw.isBlank()) {
+            return new JSONObject(raw);
+        }
+        return toJsonFromForm();
+    }
+
+    private JSONObject toJsonFromForm() {
         JSONObject dto = new JSONObject();
 
         switch (module) {
@@ -128,6 +163,16 @@ public class ModuleFormController {
                 putIfNotBlank(dto, "password", passwordField, s -> s);
                 putIfNotBlank(dto, "email", emailField, s -> s);
                 putIfNotBlank(dto, "phone", phoneField, s -> s);
+                putStatus(dto);
+            }
+            case "goods" -> {
+                putIfNotBlank(dto, "id", idField, Long::parseLong);
+                putIfNotBlank(dto, "name", nameField, s -> s);
+                putIfNotBlank(dto, "englishName", englishNameField, s -> s);
+                putIfNotBlank(dto, "brandId", brandIdField, Long::parseLong);
+                putIfNotBlank(dto, "seriesId", seriesIdField, Long::parseLong);
+                putIfNotBlank(dto, "categoryId", categoryIdField, Long::parseLong);
+                putIfNotBlank(dto, "makerId", makerIdField, Long::parseLong);
                 putStatus(dto);
             }
             case "stock" -> {
@@ -158,6 +203,12 @@ public class ModuleFormController {
                 putStatus(dto);
             }
             default -> {
+                fields.forEach((k, f) -> {
+                    if (f.getText() != null && !f.getText().isBlank()) {
+                        dto.put(k, f.getText().trim());
+                    }
+                });
+                putStatus(dto);
             }
         }
         return dto;
@@ -169,13 +220,13 @@ public class ModuleFormController {
         try {
             JSONObject dto = toJson();
             if (editMode && !dto.has("id")) {
-                errorLabel.setText("编辑模式必须填写ID");
+                errorLabel.setText("編集時は id が必須です。");
                 return;
             }
             submitted = true;
             saveButton.getScene().getWindow().hide();
         } catch (Exception ex) {
-            errorLabel.setText("输入格式错误: " + ex.getMessage());
+            errorLabel.setText("JSON 解析エラー: " + ex.getMessage());
         }
     }
 
@@ -191,25 +242,32 @@ public class ModuleFormController {
             deptIdField.setText("1");
             passwordField.setText("123456");
             emailField.setText("new_user@example.com");
-            phoneField.setText("13800000000");
+            phoneField.setText("09000000000");
+        } else if ("goods".equals(module)) {
+            nameField.setText("サンプル商品");
+            englishNameField.setText("Sample Goods");
+            brandIdField.setText("1");
+            seriesIdField.setText("1");
+            categoryIdField.setText("1");
+            makerIdField.setText("1");
         } else if ("stock".equals(module)) {
             goodsIdField.setText("1");
-            goodsNameField.setText("sample goods");
+            goodsNameField.setText("サンプル商品");
             skuIdField.setText("1");
             skuCodeField.setText("SKU-001");
             warehouseIdField.setText("1");
             currentQtyField.setText("100");
             lockQtyField.setText("0");
             priceField.setText("10.5");
-            currencyField.setText("CNY");
+            currencyField.setText("JPY");
             stockTypeIdField.setText("1");
         } else if ("warehouse".equals(module)) {
-            nameField.setText("sample warehouse");
+            nameField.setText("サンプル倉庫");
             codeField.setText("WH-001");
-            addressField.setText("sample address");
+            addressField.setText("Tokyo");
             managerIdField.setText("1");
         } else if ("stockType".equals(module)) {
-            nameField.setText("normal");
+            nameField.setText("サンプル在庫区分");
         }
     }
 
@@ -218,7 +276,7 @@ public class ModuleFormController {
         if (statusText == null || statusText.isBlank()) {
             return;
         }
-        dto.put("status", "启用".equals(statusText) ? "ENABLE" : "DISABLE");
+        dto.put("status", "有効".equals(statusText) ? "ENABLE" : "DISABLE");
     }
 
     private interface Parser {
@@ -241,30 +299,26 @@ public class ModuleFormController {
 
         switch (module) {
             case "user" -> Collections.addAll(keys, "username", "deptId", "password", "email", "phone");
+            case "goods" -> Collections.addAll(keys, "name", "englishName", "brandId", "seriesId", "categoryId", "makerId");
             case "stock" -> Collections.addAll(keys, "goodsId", "goodsName", "skuId", "skuCode", "warehouseId", "currentQty", "lockQty", "price", "currency", "stockTypeId");
             case "warehouse" -> Collections.addAll(keys, "name", "code", "address", "managerId");
             case "stockType" -> keys.add("name");
-            default -> {
-            }
+            default -> keys.addAll(fields.keySet());
         }
         return keys;
-    }
-
-    private Node findLabelForField(TextField field) {
-        return findLabelForNode(field);
     }
 
     private Node findLabelForNode(Node node) {
         if (node == null || node.getParent() == null) {
             return null;
         }
-        Integer row = javafx.scene.layout.GridPane.getRowIndex(node);
+        Integer row = GridPane.getRowIndex(node);
         if (row == null) {
             row = 0;
         }
         for (Node n : node.getParent().getChildrenUnmodifiable()) {
-            Integer nRow = javafx.scene.layout.GridPane.getRowIndex(n);
-            Integer nCol = javafx.scene.layout.GridPane.getColumnIndex(n);
+            Integer nRow = GridPane.getRowIndex(n);
+            Integer nCol = GridPane.getColumnIndex(n);
             if (Objects.equals(nRow, row) && Objects.equals(nCol, 0)) {
                 return n;
             }

@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 public class UpdateCustomerDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "IDは必須項目です")
     private Long id;
 
     private String customerCode;

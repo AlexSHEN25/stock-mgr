@@ -68,8 +68,7 @@ public class DeptServiceImpl extends BaseServiceImpl<DeptMapper, Dept, DeptVO>
         Long leaderId = queryDTO.getLeaderId();
         StatusEnum status = queryDTO.getStatus();
 
-        wrapper.eq(queryDTO.getId() != null, "id", queryDTO.getId())
-                .like(StringUtils.hasText(name), "name", name == null ? null : name.trim())
+        wrapper.like(StringUtils.hasText(name), "name", name == null ? null : name.trim())
                 .like(StringUtils.hasText(code), "code", code == null ? null : code.trim())
                 .eq(leaderId != null, "leader_id", leaderId)
                 .eq(queryDTO.getSort() != null, "sort", queryDTO.getSort())

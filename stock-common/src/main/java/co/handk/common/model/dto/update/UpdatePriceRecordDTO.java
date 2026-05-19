@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.update;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -8,12 +9,15 @@ import java.time.LocalDateTime;
 
 @Data
 public class UpdatePriceRecordDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "IDは必須項目です")
     private Long id;
 
+    @NotNull(message = "商品は必須項目です")
     private Long goodsId;
+    @NotBlank(message = "商品名は必須項目です")
     private String goodsName;
     private String englishName;
+    @NotNull(message = "SKUは必須項目です")
     private Long skuId;
     private String skuCode;
     private BigDecimal oldPrice;
@@ -21,7 +25,9 @@ public class UpdatePriceRecordDTO {
     private String currency;
     private BigDecimal discount;
     private LocalDateTime priceUpdateTime;
+    @NotNull(message = "操作者IDは必須項目です")
     private Long operatorId;
+    @NotBlank(message = "操作者名は必須項目です")
     private String operatorName;
 }
 

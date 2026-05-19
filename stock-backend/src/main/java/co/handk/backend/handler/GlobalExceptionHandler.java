@@ -7,9 +7,8 @@ import co.handk.common.enums.ResultCode;
 import co.handk.common.model.Result;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataAccessException;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.dao.DataAccessException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +20,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
+    private static final Locale JAPANESE_LOCALE = Locale.JAPAN;
     private final MessageSource messageSource;
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class, ConstraintViolationException.class})
@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
             return Result.fail(ResultCode.LOGIN_TIME_OUT, ex.getMessageKey(), i18n(ex.getMessageKey()));
         }
         if (e instanceof AccessDeniedException ex) {
-            return Result.fail(ResultCode.ERROR, ex.getMessageKey(), i18n(ex.getMessageKey()));
+            return Result.fail(ResultCode.FORBIDDEN, ex.getMessageKey(), i18n(ex.getMessageKey()));
         }
         if (e instanceof DataAccessException) {
             String detail = safeMessage(e);
@@ -64,8 +64,7 @@ public class GlobalExceptionHandler {
     }
 
     private String i18n(String key) {
-        Locale locale = LocaleContextHolder.getLocale();
-        return messageSource.getMessage(key, null, key, locale);
+        return messageSource.getMessage(key, null, key, JAPANESE_LOCALE);
     }
 
     private String safeMessage(Exception e) {

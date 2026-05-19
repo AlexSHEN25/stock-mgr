@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Data
 public class StockQueryDTO extends PageQuery {
 
-    private Long id;
     private Long goodsId;
     private String goodsName;
     private String skuCode;

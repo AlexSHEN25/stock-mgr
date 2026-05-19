@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 @Data
 public class RequestItemQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long requestId;
     private Long goodsId;

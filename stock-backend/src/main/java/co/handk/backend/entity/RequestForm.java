@@ -1,5 +1,6 @@
 package co.handk.backend.entity;
 
+import co.handk.backend.annotation.UpdateIgnore;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -10,6 +11,7 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class RequestForm extends BaseEntity {
 
+    @UpdateIgnore
     private String bizNo;
 
     private Long userId;

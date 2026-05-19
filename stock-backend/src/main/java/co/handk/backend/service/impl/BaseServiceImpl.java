@@ -1,11 +1,11 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.annotation.QueryField;
-import co.handk.backend.annotation.UpdateIgnore;
 import co.handk.backend.annotation.JoinQueryConfig;
 import co.handk.backend.annotation.JoinTable;
-import co.handk.backend.enums.JoinType;
+import co.handk.backend.annotation.QueryField;
+import co.handk.backend.annotation.UpdateIgnore;
 import co.handk.backend.entity.BaseEntity;
+import co.handk.backend.enums.JoinType;
 import co.handk.backend.service.BaseService;
 import co.handk.common.annotation.JoinSelect;
 import co.handk.common.annotation.JoinValue;
@@ -22,24 +22,19 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ResolvableType;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.ResolvableType;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import javax.sql.DataSource;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.time.temporal.Temporal;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity, V extends BaseVO>
@@ -154,6 +149,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      * ================= 新增 =================
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
         return save(toEntity(dto));
     }
@@ -162,10 +158,11 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      * ================= 更新（仅更新非 null 字段） =================
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public <U> boolean updateByDto(U dto) {
         T entity = toEntity(dto);
         if (entity.getId() == null) {
-            throw new RuntimeException("ID不能为空");
+            throw new RuntimeException("IDは必須です");
         }
         UpdateWrapper<T> wrapper = new UpdateWrapper<>();
         wrapper.eq(FieldNameConstant.COLUMN_ID, entity.getId()).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
@@ -177,6 +174,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      * ================= 逻辑删除 =================
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deleteByIdLogic(Long id) {
         return baseMapper.update(null, new UpdateWrapper<T>()
                 .eq(FieldNameConstant.COLUMN_ID, id).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
@@ -184,6 +182,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deleteBatchLogic(List<Long> ids) {
 
         if (ids == null || ids.isEmpty()) return DeleteEnum.UNDELETED.getCode();
@@ -234,7 +233,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                 }
 
             } catch (Exception e) {
-                throw new RuntimeException("构建查询失败", e);
+                throw new RuntimeException("検索条件の構築に失敗しました", e);
             }
         }
         buildJoinConditions(dto, wrapper);
@@ -306,7 +305,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                     String column = camelToUnderline(fieldName);
                     wrapper.set(column, value);
                 } catch (Exception e) {
-                    throw new RuntimeException("构建 update set 失败", e);
+                    throw new RuntimeException("更新項目の構築に失敗しました", e);
                 }
             }
             clazz = clazz.getSuperclass(); // 关键：支持 BaseEntity
@@ -521,13 +520,15 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                 if (queryField != null) {
                     switch (queryField.type()) {
                         case EQ -> where.append(" AND ").append(column).append(" = :").append(param);
-                        case LIKE -> where.append(" AND ").append(column).append(" LIKE CONCAT('%', :").append(param).append(", '%')");
+                        case LIKE ->
+                                where.append(" AND ").append(column).append(" LIKE CONCAT('%', :").append(param).append(", '%')");
                         case GT -> where.append(" AND ").append(column).append(" > :").append(param);
                         case GE -> where.append(" AND ").append(column).append(" >= :").append(param);
                         case LT -> where.append(" AND ").append(column).append(" < :").append(param);
                         case LE -> where.append(" AND ").append(column).append(" <= :").append(param);
                         case IN -> where.append(" AND ").append(column).append(" IN (:").append(param).append(")");
-                        case BETWEEN -> where.append(" AND ").append(column).append(" BETWEEN :").append(param).append("_0 AND :").append(param).append("_1");
+                        case BETWEEN ->
+                                where.append(" AND ").append(column).append(" BETWEEN :").append(param).append("_0 AND :").append(param).append("_1");
                     }
                     continue;
                 }

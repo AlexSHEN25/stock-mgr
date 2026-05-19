@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Data
 public class UserTokenQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String token;
     private Long userId;
