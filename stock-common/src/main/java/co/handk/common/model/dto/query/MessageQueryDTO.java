@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class MessageQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Integer type;
     private Long userId;

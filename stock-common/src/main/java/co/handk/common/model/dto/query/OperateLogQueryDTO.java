@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class OperateLogQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long userId;
     private String username;

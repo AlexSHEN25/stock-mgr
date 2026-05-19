@@ -1,5 +1,7 @@
 package co.handk.backend.controller;
 
+import jakarta.validation.constraints.NotNull;
+
 import co.handk.common.constant.NumberConstant;
 
 import co.handk.backend.service.GoodsSkuService;
@@ -9,10 +11,12 @@ import co.handk.common.model.dto.create.CreateGoodsSkuDTO;
 import co.handk.common.model.dto.query.GoodsSkuQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsSkuDTO;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @Validated
@@ -41,9 +45,15 @@ public class GoodsSkuController {
         return goodsSkuService.deleteByIdLogic(id) > NumberConstant.ZERO;
     }
 
+    @DeleteMapping("/batch")
+    public Boolean deleteBatch(@RequestBody @NotNull List<Long> ids) {
+        return goodsSkuService.deleteBatchLogic(ids) > NumberConstant.ZERO;
+    }
+
     @GetMapping("/page")
     public PageResult<GoodsSkuVO> page(@Valid GoodsSkuQueryDTO query) {
         return goodsSkuService.page(query);
     }
 }
+
 

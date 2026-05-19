@@ -1,85 +1,109 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.ComboBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.GridPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="co.handk.client.controller.ModuleFormController" spacing="10" prefWidth="520">
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="co.handk.client.controller.ModuleFormController" spacing="10" prefWidth="620" style="-fx-background-color:#f9fafb;">
     <padding>
-        <Insets top="10" right="10" bottom="10" left="10"/>
+        <Insets top="12" right="12" bottom="12" left="12"/>
     </padding>
-    <Label fx:id="titleLabel" text="表单" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-    <GridPane hgap="8" vgap="8">
-        <Label text="ID" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="idField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-        <Label text="用户名" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextField fx:id="usernameField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+    <Label fx:id="titleLabel" text="编辑表单" style="-fx-font-size:16px;-fx-font-weight:bold;"/>
 
-        <Label text="部门ID" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <TextField fx:id="deptIdField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+    <TitledPane text="标准表单" expanded="true">
+        <content>
+            <GridPane hgap="8" vgap="8" style="-fx-padding:8;">
+                <Label text="ID" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="idField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-        <Label text="密码" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="passwordField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                <Label text="用户名" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <TextField fx:id="usernameField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
-        <Label text="邮箱" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="emailField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                <Label text="部门ID" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                <TextField fx:id="deptIdField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-        <Label text="手机号" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <TextField fx:id="phoneField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+                <Label text="密码" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                <TextField fx:id="passwordField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
 
-        <Label text="名称" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-        <TextField fx:id="nameField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+                <Label text="邮箱" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                <TextField fx:id="emailField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
 
-        <Label text="编码" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
-        <TextField fx:id="codeField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+                <Label text="手机号" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+                <TextField fx:id="phoneField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
 
-        <Label text="地址" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-        <TextField fx:id="addressField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+                <Label text="名称" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+                <TextField fx:id="nameField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
 
-        <Label text="负责人ID" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
-        <TextField fx:id="managerIdField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+                <Label text="英文名" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+                <TextField fx:id="englishNameField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
 
-        <Label text="商品ID" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
-        <TextField fx:id="goodsIdField" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+                <Label text="品牌ID" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+                <TextField fx:id="brandIdField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
 
-        <Label text="商品名" GridPane.rowIndex="11" GridPane.columnIndex="0"/>
-        <TextField fx:id="goodsNameField" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
+                <Label text="系列ID" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
+                <TextField fx:id="seriesIdField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
 
-        <Label text="SKU ID" GridPane.rowIndex="12" GridPane.columnIndex="0"/>
-        <TextField fx:id="skuIdField" GridPane.rowIndex="12" GridPane.columnIndex="1"/>
+                <Label text="分类ID" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
+                <TextField fx:id="categoryIdField" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
 
-        <Label text="SKU 编码" GridPane.rowIndex="13" GridPane.columnIndex="0"/>
-        <TextField fx:id="skuCodeField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
+                <Label text="制造商ID" GridPane.rowIndex="11" GridPane.columnIndex="0"/>
+                <TextField fx:id="makerIdField" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
 
-        <Label text="仓库ID" GridPane.rowIndex="14" GridPane.columnIndex="0"/>
-        <TextField fx:id="warehouseIdField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
+                <Label text="编码" GridPane.rowIndex="12" GridPane.columnIndex="0"/>
+                <TextField fx:id="codeField" GridPane.rowIndex="12" GridPane.columnIndex="1"/>
 
-        <Label text="现有库存" GridPane.rowIndex="15" GridPane.columnIndex="0"/>
-        <TextField fx:id="currentQtyField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
+                <Label text="地址" GridPane.rowIndex="13" GridPane.columnIndex="0"/>
+                <TextField fx:id="addressField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
 
-        <Label text="锁定库存" GridPane.rowIndex="16" GridPane.columnIndex="0"/>
-        <TextField fx:id="lockQtyField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
+                <Label text="负责人ID" GridPane.rowIndex="14" GridPane.columnIndex="0"/>
+                <TextField fx:id="managerIdField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
 
-        <Label text="价格" GridPane.rowIndex="17" GridPane.columnIndex="0"/>
-        <TextField fx:id="priceField" GridPane.rowIndex="17" GridPane.columnIndex="1"/>
+                <Label text="商品ID" GridPane.rowIndex="15" GridPane.columnIndex="0"/>
+                <TextField fx:id="goodsIdField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
 
-        <Label text="币种" GridPane.rowIndex="18" GridPane.columnIndex="0"/>
-        <TextField fx:id="currencyField" GridPane.rowIndex="18" GridPane.columnIndex="1"/>
+                <Label text="商品名" GridPane.rowIndex="16" GridPane.columnIndex="0"/>
+                <TextField fx:id="goodsNameField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
 
-        <Label text="库存类型ID" GridPane.rowIndex="19" GridPane.columnIndex="0"/>
-        <TextField fx:id="stockTypeIdField" GridPane.rowIndex="19" GridPane.columnIndex="1"/>
+                <Label text="SKU ID" GridPane.rowIndex="17" GridPane.columnIndex="0"/>
+                <TextField fx:id="skuIdField" GridPane.rowIndex="17" GridPane.columnIndex="1"/>
 
-        <Label text="状态" GridPane.rowIndex="20" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="statusCombo" GridPane.rowIndex="20" GridPane.columnIndex="1" prefWidth="220"/>
-    </GridPane>
-    <Label fx:id="errorLabel" style="-fx-text-fill: #c62828;"/>
+                <Label text="SKU 编码" GridPane.rowIndex="18" GridPane.columnIndex="0"/>
+                <TextField fx:id="skuCodeField" GridPane.rowIndex="18" GridPane.columnIndex="1"/>
+
+                <Label text="仓库ID" GridPane.rowIndex="19" GridPane.columnIndex="0"/>
+                <TextField fx:id="warehouseIdField" GridPane.rowIndex="19" GridPane.columnIndex="1"/>
+
+                <Label text="现有库存" GridPane.rowIndex="20" GridPane.columnIndex="0"/>
+                <TextField fx:id="currentQtyField" GridPane.rowIndex="20" GridPane.columnIndex="1"/>
+
+                <Label text="锁定库存" GridPane.rowIndex="21" GridPane.columnIndex="0"/>
+                <TextField fx:id="lockQtyField" GridPane.rowIndex="21" GridPane.columnIndex="1"/>
+
+                <Label text="价格" GridPane.rowIndex="22" GridPane.columnIndex="0"/>
+                <TextField fx:id="priceField" GridPane.rowIndex="22" GridPane.columnIndex="1"/>
+
+                <Label text="币种" GridPane.rowIndex="23" GridPane.columnIndex="0"/>
+                <TextField fx:id="currencyField" GridPane.rowIndex="23" GridPane.columnIndex="1"/>
+
+                <Label text="库存类型ID" GridPane.rowIndex="24" GridPane.columnIndex="0"/>
+                <TextField fx:id="stockTypeIdField" GridPane.rowIndex="24" GridPane.columnIndex="1"/>
+
+                <Label text="状态" GridPane.rowIndex="25" GridPane.columnIndex="0"/>
+                <ComboBox fx:id="statusCombo" GridPane.rowIndex="25" GridPane.columnIndex="1" prefWidth="220"/>
+            </GridPane>
+        </content>
+    </TitledPane>
+
+    <TitledPane text="原始 JSON（所有模块兜底）" expanded="false">
+        <content>
+            <TextArea fx:id="rawJsonArea" prefRowCount="12" wrapText="false"/>
+        </content>
+    </TitledPane>
+
+    <Label fx:id="errorLabel" style="-fx-text-fill:#dc2626;"/>
+
     <HBox spacing="8">
-        <Button fx:id="saveButton" text="保存" onAction="#onSave"/>
+        <Button fx:id="saveButton" text="保存" onAction="#onSave" style="-fx-background-color:#2563eb;-fx-text-fill:white;"/>
         <Button text="取消" onAction="#onCancel"/>
     </HBox>
 </VBox>

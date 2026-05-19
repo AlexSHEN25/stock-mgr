@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.update;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -7,12 +8,16 @@ import java.time.LocalDateTime;
 
 @Data
 public class UpdateStockOrderDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "IDは必須項目です")
     private Long id;
 
+    @NotBlank(message = "伝票番号は必須項目です")
     private String orderNo;
+    @NotNull(message = "入出庫種別は必須項目です")
     private Integer orderType;
+    @NotNull(message = "倉庫は必須項目です")
     private Long warehouseId;
+    @NotNull(message = "入出庫ソースは必須項目です")
     private Integer sourceType;
     private Long sourceId;
     private Integer totalQty;

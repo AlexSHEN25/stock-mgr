@@ -7,6 +7,6 @@ import org.springframework.validation.annotation.Validated;
 
 @Service
 @Validated
-public interface UserService extends BaseService<User, UserVO>{
+public interface UserService extends BaseService<User, UserVO> {
 
 }

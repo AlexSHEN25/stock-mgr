@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 @Data
 public class StockOrderQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String orderNo;
     private Integer orderType;

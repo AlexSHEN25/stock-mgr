@@ -9,10 +9,32 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ApiClient {
 
-    private static final String BASE_URL = "http://localhost:8080";
+    private static final String BASE_URL = "http://localhost:8080/api";
+    private static final String METHOD_POST = "POST";
+    private static final String METHOD_PUT = "PUT";
+    private static final String METHOD_GET = "GET";
+    private static final String METHOD_DELETE = "DELETE";
+    private static final String HEADER_CONTENT_TYPE = "Content-Type";
+    private static final String HEADER_ACCEPT_LANGUAGE = "Accept-Language";
+    private static final String HEADER_X_LANG = "X-Lang";
+    private static final String LANG_JA_JP = "ja-JP";
+    private static final String HEADER_AUTHORIZATION = "Authorization";
+    private static final String CONTENT_TYPE_JSON = "application/json";
+    private static final String AUTH_BEARER_PREFIX = "Bearer ";
+    private static final int HTTP_BAD_REQUEST = 400;
+    private static final int LOGIN_TIMEOUT_CODE = 401;
+    private static final String JSON_CODE = "code";
+    private static final String EMPTY_RESPONSE_MESSAGE = "empty response";
+    private static final String QUERY_PREFIX = "?";
+    private static final String QUERY_SEPARATOR = "&";
+    private static final String QUERY_ASSIGN = "=";
+    private static final String EMPTY = "";
+    private static final String DEBUG_FLAG = "stock.client.http.debug";
+    private static final AtomicBoolean LOGIN_TIMEOUT_HANDLED = new AtomicBoolean(false);
     private static Runnable loginTimeoutHandler;
 
     public static void setLoginTimeoutHandler(Runnable handler) {
@@ -20,82 +42,108 @@ public class ApiClient {
     }
 
     public static String post(String path, String json) throws Exception {
-        HttpURLConnection conn = open(path, "POST");
-        conn.setRequestProperty("Content-Type", "application/json");
+        String normalizedPath = normalizePath(path);
+        HttpURLConnection conn = open(normalizedPath, METHOD_POST);
+        conn.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
         conn.setDoOutput(true);
+
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_POST, normalizedPath, json, conn);
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        return read(conn);
+        return read(conn, start, METHOD_POST, normalizedPath);
     }
 
     public static String put(String path, String json) throws Exception {
-        HttpURLConnection conn = open(path, "PUT");
-        conn.setRequestProperty("Content-Type", "application/json");
+        String normalizedPath = normalizePath(path);
+        HttpURLConnection conn = open(normalizedPath, METHOD_PUT);
+        conn.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
         conn.setDoOutput(true);
+
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_PUT, normalizedPath, json, conn);
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        return read(conn);
+        return read(conn, start, METHOD_PUT, normalizedPath);
     }
 
     public static String get(String path, Map<String, String> queryParams) throws Exception {
-        String fullPath = path + toQueryString(queryParams);
-        HttpURLConnection conn = open(fullPath, "GET");
-        return read(conn);
+        String normalizedPath = normalizePath(path);
+        String fullPath = normalizedPath + toQueryString(queryParams);
+        HttpURLConnection conn = open(fullPath, METHOD_GET);
+
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_GET, fullPath, EMPTY, conn);
+        return read(conn, start, METHOD_GET, fullPath);
     }
 
     public static String delete(String path) throws Exception {
-        HttpURLConnection conn = open(path, "DELETE");
-        return read(conn);
+        String normalizedPath = normalizePath(path);
+        HttpURLConnection conn = open(normalizedPath, METHOD_DELETE);
+
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_DELETE, normalizedPath, EMPTY, conn);
+        return read(conn, start, METHOD_DELETE, normalizedPath);
     }
 
     private static HttpURLConnection open(String path, String method) throws Exception {
         URL url = new URL(BASE_URL + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod(method);
-        String language = LanguageConfig.getLanguage();
-        conn.setRequestProperty("Accept-Language", language);
-        conn.setRequestProperty("X-Lang", language);
+        conn.setRequestProperty(HEADER_ACCEPT_LANGUAGE, LANG_JA_JP);
+        conn.setRequestProperty(HEADER_X_LANG, LANG_JA_JP);
 
         String token = Session.getToken();
         if (token != null && !token.isBlank()) {
-            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty(HEADER_AUTHORIZATION, AUTH_BEARER_PREFIX + token);
         }
         return conn;
     }
 
+    private static String normalizePath(String path) {
+        if (path == null || path.isBlank()) {
+            return path;
+        }
+        String normalized = path;
+        normalized = normalized.replace("/goodsManagement/", "/goods/");
+        normalized = normalized.replace("/goods/management/page", "/goods/page");
+        return normalized;
+    }
+
     private static String toQueryString(Map<String, String> queryParams) {
         if (queryParams == null || queryParams.isEmpty()) {
-            return "";
+            return EMPTY;
         }
 
-        StringBuilder sb = new StringBuilder("?");
+        StringBuilder sb = new StringBuilder(QUERY_PREFIX);
         boolean first = true;
         for (Map.Entry<String, String> entry : queryParams.entrySet()) {
             if (entry.getValue() == null || entry.getValue().isBlank()) {
                 continue;
             }
             if (!first) {
-                sb.append("&");
+                sb.append(QUERY_SEPARATOR);
             }
             first = false;
             sb.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
-            sb.append("=");
+            sb.append(QUERY_ASSIGN);
             sb.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
         }
 
-        return first ? "" : sb.toString();
+        return first ? EMPTY : sb.toString();
     }
 
-    private static String read(HttpURLConnection conn) throws Exception {
-        InputStream is = conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream();
+    private static String read(HttpURLConnection conn, long start, String method, String path) throws Exception {
+        int status = conn.getResponseCode();
+        InputStream is = status >= HTTP_BAD_REQUEST ? conn.getErrorStream() : conn.getInputStream();
         if (is == null) {
-            throw new IOException("empty response");
+            throw new IOException(EMPTY_RESPONSE_MESSAGE);
         }
 
         StringBuilder result = new StringBuilder();
@@ -107,11 +155,16 @@ public class ApiClient {
         }
 
         String body = result.toString();
+        debugResponse(method, path, status, System.currentTimeMillis() - start, body);
+
         try {
             JSONObject json = new JSONObject(body);
-            if (json.optInt("code") == 401) {
+            if (json.optInt(JSON_CODE) == LOGIN_TIMEOUT_CODE) {
+                if (isDebugEnabled()) {
+                    System.out.println("[AUTH] 401 received, messageKey=" + json.optString("messageKey") + ", message=" + json.optString("message"));
+                }
                 Session.clear();
-                if (loginTimeoutHandler != null) {
+                if (loginTimeoutHandler != null && LOGIN_TIMEOUT_HANDLED.compareAndSet(false, true)) {
                     loginTimeoutHandler.run();
                 }
             }
@@ -119,5 +172,37 @@ public class ApiClient {
             // Ignore non-JSON responses.
         }
         return body;
+    }
+
+    private static void debugRequest(String method, String path, String body, HttpURLConnection conn) {
+        if (!isDebugEnabled()) {
+            return;
+        }
+        String auth = conn.getRequestProperty(HEADER_AUTHORIZATION);
+        String maskedAuth = (auth == null || auth.isBlank()) ? "" : AUTH_BEARER_PREFIX + "***";
+        System.out.println("[HTTP-REQ] " + method + " " + BASE_URL + path);
+        System.out.println("[HTTP-REQ] headers={" + HEADER_ACCEPT_LANGUAGE + "=" + conn.getRequestProperty(HEADER_ACCEPT_LANGUAGE)
+                + ", " + HEADER_X_LANG + "=" + conn.getRequestProperty(HEADER_X_LANG)
+                + ", " + HEADER_CONTENT_TYPE + "=" + conn.getRequestProperty(HEADER_CONTENT_TYPE)
+                + ", " + HEADER_AUTHORIZATION + "=" + maskedAuth + "}");
+        if (body != null && !body.isBlank()) {
+            System.out.println("[HTTP-REQ] body=" + body);
+        }
+    }
+
+    private static void debugResponse(String method, String path, int status, long costMs, String body) {
+        if (!isDebugEnabled()) {
+            return;
+        }
+        System.out.println("[HTTP-RES] " + method + " " + BASE_URL + path + " status=" + status + " cost=" + costMs + "ms");
+        System.out.println("[HTTP-RES] body=" + body);
+    }
+
+    private static boolean isDebugEnabled() {
+        return "true".equalsIgnoreCase(System.getProperty(DEBUG_FLAG));
+    }
+
+    public static void resetLoginTimeoutHandled() {
+        LOGIN_TIMEOUT_HANDLED.set(false);
     }
 }

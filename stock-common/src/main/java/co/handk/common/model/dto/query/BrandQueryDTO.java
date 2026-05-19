@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class BrandQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String name;
     private String englishName;

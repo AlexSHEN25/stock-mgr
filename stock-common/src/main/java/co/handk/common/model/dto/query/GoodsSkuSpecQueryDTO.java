@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class GoodsSkuSpecQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long skuId;
 

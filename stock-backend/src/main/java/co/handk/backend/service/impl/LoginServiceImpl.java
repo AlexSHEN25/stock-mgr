@@ -44,25 +44,22 @@ public class LoginServiceImpl implements LoginService {
                 DeleteEnum.UNDELETED.getCode()
         );
         if (Objects.isNull(user)) {
-            throw new RuntimeException("用户不存在");
+            throw new RuntimeException("ユーザーが存在しません");
         }
         String rawPassword = dto.getPassword();
         String encryptPwd = PasswordUtil.encrypt(rawPassword, user.getSalt());
         if (!user.getPassword().equals(encryptPwd)) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new RuntimeException("ユーザー名またはパスワードが正しくありません");
         }
         Long userId = user.getId();
         String userKey = RedisKey.LOGIN_USER + userId;
-        // 单点登录
         String oldToken = stringRedisUtil.get(userKey);
         if (StringUtils.isNotBlank(oldToken)) {
             stringRedisUtil.delete(RedisKey.LOGIN_TOKEN + oldToken);
             stringRedisUtil.delete(userKey);
         }
-        // 生成token
         String token = TokenUtil.generateToken();
         String tokenKey = RedisKey.LOGIN_TOKEN + token;
-        // 写入Redis
         stringRedisUtil.set(tokenKey, userId.toString(), CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
         stringRedisUtil.set(userKey, token, CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
         LoginVO vo = new LoginVO();
@@ -75,19 +72,15 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public LogoutVO logout() {
         Long userId = UserContext.getUserId();
-        // 幂等设计：没登录也返回成功
         if (Objects.isNull(userId)) {
             return LogoutVO.success(null);
         }
         String userKey = RedisKey.LOGIN_USER + userId;
-        // 1. 获取当前 token
         String token = stringRedisUtil.get(userKey);
-        // 2. 删除 tokenKey
         if (StringUtils.isNotBlank(token)) {
             String tokenKey = RedisKey.LOGIN_TOKEN + token;
             stringRedisUtil.delete(tokenKey);
         }
-        // 3. 删除 userKey
         stringRedisUtil.delete(userKey);
         return LogoutVO.success(userId);
     }

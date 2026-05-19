@@ -7,11 +7,14 @@ import java.math.BigDecimal;
 
 @Data
 public class UpdateRequestItemDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "IDは必須項目です")
     private Long id;
 
+    @NotNull(message = "申請IDは必須項目です")
     private Long requestId;
+    @NotNull(message = "商品は必須項目です")
     private Long goodsId;
+    @NotNull(message = "SKUは必須項目です")
     private Long skuId;
     private String skuCode;
     private String goodsName;

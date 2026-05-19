@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 @Data
 public class GoodsLevelPriceQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long goodsId;
 

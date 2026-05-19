@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
             return Result.fail(ResultCode.LOGIN_TIME_OUT, ex.getMessageKey(), i18n(ex.getMessageKey()));
         }
         if (e instanceof AccessDeniedException ex) {
-            return Result.fail(ResultCode.ERROR, ex.getMessageKey(), i18n(ex.getMessageKey()));
+            return Result.fail(ResultCode.FORBIDDEN, ex.getMessageKey(), i18n(ex.getMessageKey()));
         }
         if (e instanceof DataAccessException) {
             String detail = safeMessage(e);

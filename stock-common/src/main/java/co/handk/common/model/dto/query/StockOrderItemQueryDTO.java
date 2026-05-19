@@ -8,7 +8,6 @@ import java.math.BigDecimal;
 @Data
 public class StockOrderItemQueryDTO extends PageQuery {
 
-    private Long id;
 
     private Long orderId;
     private Long goodsId;

@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 public class ConfigQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String name;
     private String group;

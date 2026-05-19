@@ -1,0 +1,11 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Backend Debug" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="stock-backend" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="co.handk.backend.StockBackendApplication" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

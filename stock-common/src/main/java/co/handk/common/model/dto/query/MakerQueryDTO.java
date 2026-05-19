@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class MakerQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String name;
     private StatusEnum status;

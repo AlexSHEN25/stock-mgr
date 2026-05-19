@@ -5,9 +5,11 @@ import lombok.Data;
 
 @Data
 public class UpdateRolePermissionDTO {
-    @NotNull(message = "ID不能为空")
+    @NotNull(message = "IDは必須項目です")
     private Long id;
 
+    @NotNull(message = "ロールIDは必須項目です")
     private Long roleId;
+    @NotNull(message = "権限IDは必須項目です")
     private Long permissionId;
 }

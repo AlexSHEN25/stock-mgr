@@ -2,10 +2,10 @@ package co.handk.common.constant;
 
 public interface CommonConstant {
 
-     long EXPIRE_TIME = 30L;
+    long EXPIRE_TIME = 30L;
 
-     long UPDATE_EXPIRE_TIME = 5L;
+    long UPDATE_EXPIRE_TIME = 5L;
 
-     String DEFAULT_CURRENCY_JPY = "JPY";
+    String DEFAULT_CURRENCY_JPY = "JPY";
 
 }

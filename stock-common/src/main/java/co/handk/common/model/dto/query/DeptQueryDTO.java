@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class DeptQueryDTO extends PageQuery {
 
-    private Long id;
 
     private String name;
     private String code;

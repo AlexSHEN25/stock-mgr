@@ -8,7 +8,8 @@ public enum ResultCode {
     SUCCESS(200, "success", "result.success"),
     ERROR(500, "server error", "result.error"),
     VALIDATE_ERROR(400, "param error", "result.validate_error"),
-    LOGIN_TIME_OUT(401, "login timeout", "result.login_timeout");
+    LOGIN_TIME_OUT(401, "login timeout", "result.login_timeout"),
+    FORBIDDEN(403, "forbidden", "result.forbidden");
 
     private final Integer code;
     private final String message;

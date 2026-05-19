@@ -16,8 +16,6 @@ public class StringRedisUtil {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    // ================= 基础 String =================
-
     public void set(String key, String value) {
         stringRedisTemplate.opsForValue().set(key, value);
     }
@@ -42,29 +40,26 @@ public class StringRedisUtil {
         return stringRedisTemplate.getExpire(key, unit);
     }
 
-    // ================= JSON 封装 =================
-
     public <T> void setJson(String key, T value, long timeout, TimeUnit unit) {
         try {
             String json = mapper.writeValueAsString(value);
             stringRedisTemplate.opsForValue().set(key, json, timeout, unit);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSON序列化失败", e);
+            throw new RuntimeException("JSONシリアライズに失敗しました", e);
         }
     }
 
     public <T> T getJson(String key, Class<T> clazz) {
         String json = stringRedisTemplate.opsForValue().get(key);
-        if (json == null) return null;
-
+        if (json == null) {
+            return null;
+        }
         try {
             return mapper.readValue(json, clazz);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSON反序列化失败", e);
+            throw new RuntimeException("JSONデシリアライズに失敗しました", e);
         }
     }
-
-    // ================= 原子操作 =================
 
     public Long increment(String key, long delta) {
         return stringRedisTemplate.opsForValue().increment(key, delta);
