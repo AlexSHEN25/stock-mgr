@@ -3,6 +3,7 @@ package co.handk.backend.service;
 import co.handk.backend.entity.RequestForm;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.vo.RequestFormVO;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -13,4 +14,6 @@ public interface RequestFormService extends BaseService<RequestForm, RequestForm
     Long createFromOutbound(CreateRequestFromOutboundDTO dto);
 
     Long reapplyInbound(Long requestId);
+
+    void downloadBDeptRequestForm(Long requestId, HttpServletResponse response);
 }

@@ -11,6 +11,7 @@ import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
 import co.handk.common.model.dto.query.RequestFormQueryDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +65,11 @@ public class RequestFormController {
     @GetMapping("/page")
     public PageResult<RequestFormVO> page(@Valid RequestFormQueryDTO query) {
         return requestFormService.page(query);
+    }
+
+    @GetMapping({"/{id}/download", "/download/{id}"})
+    public void download(@PathVariable("id") @NotNull Long id, HttpServletResponse response) {
+        requestFormService.downloadBDeptRequestForm(id, response);
     }
 }
 
