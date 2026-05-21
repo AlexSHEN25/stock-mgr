@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.create;
 
+import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 
 @Data
@@ -18,4 +19,6 @@ public class CreateCustomerDTO {
     private Long ownerUserId;
     private Long ownerDeptId;
     private String remark;
+    private StatusEnum status;
+
 }

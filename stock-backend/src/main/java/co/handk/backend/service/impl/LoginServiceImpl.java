@@ -44,12 +44,12 @@ public class LoginServiceImpl implements LoginService {
                 DeleteEnum.UNDELETED.getCode()
         );
         if (Objects.isNull(user)) {
-            throw new RuntimeException("ユーザーが存在しません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "ユーザーが存在しません");
         }
         String rawPassword = dto.getPassword();
         String encryptPwd = PasswordUtil.encrypt(rawPassword, user.getSalt());
         if (!user.getPassword().equals(encryptPwd)) {
-            throw new RuntimeException("ユーザー名またはパスワードが正しくありません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "ユーザー名またはパスワードが正しくありません");
         }
         Long userId = user.getId();
         String userKey = RedisKey.LOGIN_USER + userId;
@@ -85,3 +85,4 @@ public class LoginServiceImpl implements LoginService {
         return LogoutVO.success(userId);
     }
 }
+

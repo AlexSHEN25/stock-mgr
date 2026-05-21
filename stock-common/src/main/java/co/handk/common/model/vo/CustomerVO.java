@@ -1,5 +1,6 @@
 package co.handk.common.model.vo;
 
+import co.handk.common.annotation.JoinValue;
 import lombok.Data;
 
 @Data
@@ -14,8 +15,10 @@ public class CustomerVO extends BaseVO {
     private String city;
     private String address;
     private Integer levelId;
+    @JoinValue(sourceField = "levelId", serviceBean = "customerLevelServiceImpl", targetField = "name")
     private String levelName;
     private Long ownerUserId;
+    @JoinValue(sourceField = "ownerUserId", serviceBean = "userServiceImpl", targetField = "username")
     private String ownerUserName;
     private Long ownerDeptId;
     private String remark;

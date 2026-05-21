@@ -1,6 +1,7 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.User;
+import co.handk.common.model.dto.update.ChangePasswordDTO;
 import co.handk.common.model.vo.UserVO;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -9,4 +10,5 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public interface UserService extends BaseService<User, UserVO> {
 
+    boolean changePassword(Long userId, ChangePasswordDTO dto);
 }

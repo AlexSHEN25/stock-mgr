@@ -1,7 +1,7 @@
 package co.handk.common.model.dto.update;
 
-import jakarta.validation.constraints.NotBlank;
 import co.handk.common.enums.StatusEnum;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -10,15 +10,18 @@ import java.time.LocalDateTime;
 
 @Data
 public class UpdateStockDTO {
-    @NotNull(message = "IDは必須項目です")
+    @NotNull(message = "IDは必須です")
     private Long id;
 
-    @NotNull(message = "商品は必須項目です")
+    @NotNull(message = "商品IDは必須です")
     private Integer goodsId;
-    @NotBlank(message = "商品名は必須項目です")
+
+    @NotBlank(message = "商品名は必須です")
     private String goodsName;
-    @NotNull(message = "SKUは必須項目です")
+
+    @NotNull(message = "SKU IDは必須です")
     private Long skuId;
+
     private String skuCode;
     private Integer warehouseId;
     private Integer currentQty;
@@ -27,7 +30,8 @@ public class UpdateStockDTO {
     private String currency;
     private LocalDateTime priceUpdateTime;
     private Long stockTypeId;
-
     private StatusEnum status;
-}
 
+    @NotNull(message = "versionは必須です")
+    private Long version;
+}

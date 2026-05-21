@@ -26,7 +26,7 @@ public class StockController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockDTO dto) {
-        throw new RuntimeException("在庫登録は入庫処理から実行してください");
+        throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫登録は入庫処理から実行してください");
     }
 
     @GetMapping("/{id}")
@@ -36,7 +36,7 @@ public class StockController {
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateStockDTO dto) {
-        throw new RuntimeException("在庫更新は入出庫処理から実行してください");
+        throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫更新は入出庫処理から実行してください");
     }
 
     @PostMapping("/inbound")
@@ -71,3 +71,4 @@ public class StockController {
         return stockService.page(query);
     }
 }
+

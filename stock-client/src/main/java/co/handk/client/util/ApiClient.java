@@ -8,10 +8,14 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ApiClient {
+    private static final Logger LOGGER = Logger.getLogger(ApiClient.class.getName());
 
     private static final String BASE_URL = "http://localhost:8080/api";
     private static final String METHOD_POST = "POST";
@@ -36,6 +40,12 @@ public class ApiClient {
     private static final String DEBUG_FLAG = "stock.client.http.debug";
     private static final AtomicBoolean LOGIN_TIMEOUT_HANDLED = new AtomicBoolean(false);
     private static Runnable loginTimeoutHandler;
+    private static final Map<String, String> PATH_ALIASES = new LinkedHashMap<>();
+
+    static {
+        PATH_ALIASES.put("/goodsManagement/", "/goods/");
+        PATH_ALIASES.put("/goods/management/page", "/goods/page");
+    }
 
     public static void setLoginTimeoutHandler(Runnable handler) {
         loginTimeoutHandler = handler;
@@ -92,6 +102,31 @@ public class ApiClient {
         return read(conn, start, METHOD_DELETE, normalizedPath);
     }
 
+    public static byte[] getBytes(String path) throws Exception {
+        String normalizedPath = normalizePath(path);
+        HttpURLConnection conn = open(normalizedPath, METHOD_GET);
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_GET, normalizedPath, EMPTY, conn);
+        int status = conn.getResponseCode();
+        InputStream is = status >= HTTP_BAD_REQUEST ? conn.getErrorStream() : conn.getInputStream();
+        if (is == null) {
+            throw new IOException(EMPTY_RESPONSE_MESSAGE);
+        }
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int len;
+        while ((len = is.read(buffer)) > 0) {
+            bos.write(buffer, 0, len);
+        }
+        byte[] bytes = bos.toByteArray();
+        debugResponse(METHOD_GET, normalizedPath, status, System.currentTimeMillis() - start, "binary(" + bytes.length + ")");
+        if (status >= HTTP_BAD_REQUEST) {
+            String body = new String(bytes, StandardCharsets.UTF_8);
+            throw new IOException(body.isBlank() ? ("HTTP " + status) : body);
+        }
+        return bytes;
+    }
+
     private static HttpURLConnection open(String path, String method) throws Exception {
         URL url = new URL(BASE_URL + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -111,8 +146,9 @@ public class ApiClient {
             return path;
         }
         String normalized = path;
-        normalized = normalized.replace("/goodsManagement/", "/goods/");
-        normalized = normalized.replace("/goods/management/page", "/goods/page");
+        for (Map.Entry<String, String> entry : PATH_ALIASES.entrySet()) {
+            normalized = normalized.replace(entry.getKey(), entry.getValue());
+        }
         return normalized;
     }
 
@@ -168,8 +204,8 @@ public class ApiClient {
                     loginTimeoutHandler.run();
                 }
             }
-        } catch (Exception ignored) {
-            // Ignore non-JSON responses.
+        } catch (Exception ex) {
+            LOGGER.log(Level.FINE, "Non-JSON response, skip auth code parsing. body=" + body, ex);
         }
         return body;
     }

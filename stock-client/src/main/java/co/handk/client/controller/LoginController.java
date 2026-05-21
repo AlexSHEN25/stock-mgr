@@ -1,6 +1,8 @@
 package co.handk.client.controller;
 
 import co.handk.client.MainApp;
+import co.handk.client.constant.AppConstants.ApiPath;
+import co.handk.client.constant.UiText;
 import co.handk.client.model.Session;
 import co.handk.client.util.ApiClient;
 import javafx.fxml.FXML;
@@ -31,6 +33,7 @@ public class LoginController {
     public void setApp(MainApp app) {
         this.app = app;
         loadRememberedCredentials();
+        usernameField.requestFocus();
     }
 
     @FXML
@@ -40,14 +43,14 @@ public class LoginController {
             loginDto.put("username", usernameField.getText());
             loginDto.put("password", passwordField.getText());
 
-            String res = ApiClient.post("/user/login", loginDto.toString());
+            String res = ApiClient.post(ApiPath.USER_LOGIN, loginDto.toString());
             JSONObject json = new JSONObject(res);
 
             if (isLoginSuccess(json)) {
                 JSONObject data = extractLoginData(json);
                 String token = data.optString("token", "");
                 if (token.isBlank()) {
-                    messageLabel.setText("ログイン失敗: トークンが取得できません");
+                    messageLabel.setText(UiText.MSG_LOGIN_TOKEN_EMPTY);
                     return;
                 }
                 saveRememberedCredentials();
@@ -59,7 +62,7 @@ public class LoginController {
                 messageLabel.setText(msg);
             }
         } catch (Exception ex) {
-            messageLabel.setText("リクエスト失敗: " + ex.getMessage());
+            messageLabel.setText(UiText.MSG_REQUEST_FAILED_PREFIX + ex.getMessage());
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("ログイン失敗");
             alert.setHeaderText(null);

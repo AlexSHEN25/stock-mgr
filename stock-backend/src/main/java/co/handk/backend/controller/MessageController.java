@@ -40,6 +40,21 @@ public class MessageController {
         return messageService.updateByDto(dto);
     }
 
+    @PutMapping("/read/{id}")
+    public Boolean read(@PathVariable("id") @NotNull Long id) {
+        return messageService.read(id);
+    }
+
+    @PutMapping("/read-all")
+    public Integer readAll() {
+        return messageService.readAllCurrentUser();
+    }
+
+    @GetMapping("/count")
+    public Long count(@RequestParam(value = "isRead", required = false) Integer isRead) {
+        return messageService.countByReadStatus(isRead);
+    }
+
     @DeleteMapping("/{id}")
     public Boolean delete(@PathVariable("id") @NotNull Long id) {
         return messageService.deleteByIdLogic(id) > NumberConstant.ZERO;

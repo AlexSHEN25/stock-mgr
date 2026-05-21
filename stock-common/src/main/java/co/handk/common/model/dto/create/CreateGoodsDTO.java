@@ -11,16 +11,16 @@ import java.time.LocalDateTime;
 @Data
 public class CreateGoodsDTO {
 
-    @NotBlank(message = "名称は必須項目です")
+    @NotBlank(message = "必須項目です")
     private String name;
     private String englishName;
-    @NotNull(message = "ブランドは必須項目です")
+    @NotNull(message = "必須項目です")
     private Long brandId;
-    @NotNull(message = "シリーズは必須項目です")
+    @NotNull(message = "必須項目です")
     private Long seriesId;
-    @NotNull(message = "カテゴリは必須項目です")
+    @NotNull(message = "必須項目です")
     private Long categoryId;
-    @NotNull(message = "メーカーは必須項目です")
+    @NotNull(message = "必須項目です")
     private Long makerId;
     private String description;
     private Integer isHot;
@@ -37,6 +37,7 @@ public class CreateGoodsDTO {
     private BigDecimal weight;
     private BigDecimal volume;
     private StatusEnum skuStatus;
+    private Long imageId;
     private String imageUrl;
     private Integer imageSort;
     private StatusEnum status;

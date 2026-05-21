@@ -1,109 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="co.handk.client.controller.ModuleFormController" spacing="10" prefWidth="620" style="-fx-background-color:#f9fafb;">
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="co.handk.client.controller.ModuleFormController"
+      spacing="10" prefWidth="760" styleClass="form-root">
     <padding>
         <Insets top="12" right="12" bottom="12" left="12"/>
     </padding>
 
-    <Label fx:id="titleLabel" text="編集フォーム" style="-fx-font-size:16px;-fx-font-weight:bold;"/>
+    <Label fx:id="titleLabel" text="編集フォーム" styleClass="form-title"/>
 
-    <TitledPane text="基本フォーム" expanded="true">
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
         <content>
-            <GridPane hgap="8" vgap="8" style="-fx-padding:8;">
-                <Label text="ID" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                <TextField fx:id="idField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
-
-                <Label text="ユーザー名" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-                <TextField fx:id="usernameField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
-
-                <Label text="部署ID" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-                <TextField fx:id="deptIdField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
-
-                <Label text="パスワード" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-                <TextField fx:id="passwordField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
-
-                <Label text="メール" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-                <TextField fx:id="emailField" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
-
-                <Label text="電話" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-                <TextField fx:id="phoneField" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
-
-                <Label text="名称" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-                <TextField fx:id="nameField" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
-
-                <Label text="英語名" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
-                <TextField fx:id="englishNameField" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
-
-                <Label text="ブランドID" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
-                <TextField fx:id="brandIdField" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
-
-                <Label text="シリーズID" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
-                <TextField fx:id="seriesIdField" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
-
-                <Label text="カテゴリID" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
-                <TextField fx:id="categoryIdField" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
-
-                <Label text="メーカーID" GridPane.rowIndex="11" GridPane.columnIndex="0"/>
-                <TextField fx:id="makerIdField" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
-
-                <Label text="コード" GridPane.rowIndex="12" GridPane.columnIndex="0"/>
-                <TextField fx:id="codeField" GridPane.rowIndex="12" GridPane.columnIndex="1"/>
-
-                <Label text="住所" GridPane.rowIndex="13" GridPane.columnIndex="0"/>
-                <TextField fx:id="addressField" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
-
-                <Label text="管理者ID" GridPane.rowIndex="14" GridPane.columnIndex="0"/>
-                <TextField fx:id="managerIdField" GridPane.rowIndex="14" GridPane.columnIndex="1"/>
-
-                <Label text="商品ID" GridPane.rowIndex="15" GridPane.columnIndex="0"/>
-                <TextField fx:id="goodsIdField" GridPane.rowIndex="15" GridPane.columnIndex="1"/>
-
-                <Label text="商品名" GridPane.rowIndex="16" GridPane.columnIndex="0"/>
-                <TextField fx:id="goodsNameField" GridPane.rowIndex="16" GridPane.columnIndex="1"/>
-
-                <Label text="SKU ID" GridPane.rowIndex="17" GridPane.columnIndex="0"/>
-                <TextField fx:id="skuIdField" GridPane.rowIndex="17" GridPane.columnIndex="1"/>
-
-                <Label text="SKUコード" GridPane.rowIndex="18" GridPane.columnIndex="0"/>
-                <TextField fx:id="skuCodeField" GridPane.rowIndex="18" GridPane.columnIndex="1"/>
-
-                <Label text="倉庫ID" GridPane.rowIndex="19" GridPane.columnIndex="0"/>
-                <TextField fx:id="warehouseIdField" GridPane.rowIndex="19" GridPane.columnIndex="1"/>
-
-                <Label text="現在数量" GridPane.rowIndex="20" GridPane.columnIndex="0"/>
-                <TextField fx:id="currentQtyField" GridPane.rowIndex="20" GridPane.columnIndex="1"/>
-
-                <Label text="ロック数量" GridPane.rowIndex="21" GridPane.columnIndex="0"/>
-                <TextField fx:id="lockQtyField" GridPane.rowIndex="21" GridPane.columnIndex="1"/>
-
-                <Label text="価格" GridPane.rowIndex="22" GridPane.columnIndex="0"/>
-                <TextField fx:id="priceField" GridPane.rowIndex="22" GridPane.columnIndex="1"/>
-
-                <Label text="通貨" GridPane.rowIndex="23" GridPane.columnIndex="0"/>
-                <TextField fx:id="currencyField" GridPane.rowIndex="23" GridPane.columnIndex="1"/>
-
-                <Label text="在庫区分ID" GridPane.rowIndex="24" GridPane.columnIndex="0"/>
-                <TextField fx:id="stockTypeIdField" GridPane.rowIndex="24" GridPane.columnIndex="1"/>
-
-                <Label text="状態" GridPane.rowIndex="25" GridPane.columnIndex="0"/>
-                <ComboBox fx:id="statusCombo" GridPane.rowIndex="25" GridPane.columnIndex="1" prefWidth="220"/>
-            </GridPane>
+            <GridPane fx:id="dynamicFormGrid" hgap="8" vgap="8" style="-fx-padding: 8;"/>
         </content>
-    </TitledPane>
+    </ScrollPane>
 
-    <TitledPane text="JSON（高度編集）" expanded="false">
-        <content>
-            <TextArea fx:id="rawJsonArea" prefRowCount="12" wrapText="false"/>
-        </content>
-    </TitledPane>
+    <Label text="JSON"/>
+    <TextArea fx:id="rawJsonArea" prefRowCount="8" VBox.vgrow="ALWAYS"/>
 
-    <Label fx:id="errorLabel" style="-fx-text-fill:#dc2626;"/>
+    <Label fx:id="errorLabel" styleClass="error-label" wrapText="true"/>
 
     <HBox spacing="8">
-        <Button fx:id="saveButton" text="保存" onAction="#onSave" style="-fx-background-color:#2563eb;-fx-text-fill:white;"/>
+        <Button fx:id="saveButton" text="保存" onAction="#onSave" styleClass="primary-btn"/>
         <Button text="キャンセル" onAction="#onCancel"/>
     </HBox>
 </VBox>

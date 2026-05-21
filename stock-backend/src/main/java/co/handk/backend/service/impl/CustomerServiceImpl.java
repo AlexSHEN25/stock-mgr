@@ -100,7 +100,8 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             return;
         }
         if (!userId.equals(customer.getOwnerUserId())) {
-            throw new RuntimeException("この顧客データにアクセスする権限がありません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "この顧客データにアクセスする権限がありません");
         }
     }
 }
+

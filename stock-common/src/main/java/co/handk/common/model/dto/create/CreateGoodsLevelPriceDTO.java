@@ -1,6 +1,7 @@
 package co.handk.common.model.dto.create;
 
 import jakarta.validation.constraints.NotNull;
+import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -9,18 +10,18 @@ import java.time.LocalDateTime;
 @Data
 public class CreateGoodsLevelPriceDTO {
 
-    @NotNull(message = "商品は必須項目です")
+    @NotNull(message = "必須項目です")
     private Long goodsId;
 
-    @NotNull(message = "SKUは必須項目です")
+    @NotNull(message = "必須項目です")
     private Long skuId;
 
     private String skuCode;
 
-    @NotNull(message = "会員ランクは必須項目です")
+    @NotNull(message = "必須項目です")
     private Long levelId;
 
-    @NotNull(message = "価格は必須項目です")
+    @NotNull(message = "必須項目です")
     private BigDecimal price;
 
     private String currency;
@@ -30,5 +31,7 @@ public class CreateGoodsLevelPriceDTO {
     private LocalDateTime effectiveTime;
 
     private LocalDateTime expireTime;
+
+    private StatusEnum status;
 
 }

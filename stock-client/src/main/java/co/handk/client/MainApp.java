@@ -23,7 +23,7 @@ public class MainApp extends Application {
             Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle("ログイン失効");
             alert.setHeaderText(null);
-            alert.setContentText("ログイン状態が失効しました。再ログインしてください。");
+            alert.setContentText("ログイン状態が失効しました。再度ログインしてください。");
             alert.showAndWait();
             showLogin();
         });
@@ -40,9 +40,11 @@ public class MainApp extends Application {
 
             primaryStage.setScene(scene);
             primaryStage.setTitle("在庫管理ログイン");
+            primaryStage.setMinWidth(760);
+            primaryStage.setMinHeight(560);
             primaryStage.show();
         } catch (Exception e) {
-            throw new RuntimeException("ログイン画面の読み込みに失敗しました。", e);
+            throw new RuntimeException("ログイン画面の読み込みに失敗しました", e);
         }
     }
 
@@ -55,6 +57,8 @@ public class MainApp extends Application {
 
             primaryStage.setScene(scene);
             primaryStage.setTitle("Stock Admin - JavaFX");
+            primaryStage.setMinWidth(1120);
+            primaryStage.setMinHeight(700);
             primaryStage.show();
 
             Platform.runLater(() -> {
@@ -62,14 +66,14 @@ public class MainApp extends Application {
                     controller.setApp(this);
                 } catch (Exception ex) {
                     Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("メイン画面初期化エラー");
+                    alert.setTitle("メイン画面エラー");
                     alert.setHeaderText(null);
                     alert.setContentText(ex.getMessage());
                     alert.showAndWait();
                 }
             });
         } catch (Exception e) {
-            throw new RuntimeException("メイン画面の読み込みに失敗しました。", e);
+            throw new RuntimeException("メイン画面の読み込みに失敗しました", e);
         }
     }
 

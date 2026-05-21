@@ -1,9 +1,14 @@
 package co.handk.client.controller;
 
 import co.handk.client.MainApp;
+import co.handk.client.constant.UiText;
 import co.handk.client.model.Session;
+import co.handk.client.service.ModuleDataService;
+import co.handk.client.service.TableActionService;
+import co.handk.client.service.UiFeedbackService;
 import co.handk.client.util.ApiClient;
 import co.handk.client.util.ModuleMeta;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -13,34 +18,47 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static co.handk.client.constant.AppConstants.ApiPath;
+import static co.handk.client.constant.AppConstants.Field;
+import static co.handk.client.constant.AppConstants.Module;
 
 public class MainController {
 
     private static final String SELECTED_KEY = "__selected";
+    private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     @FXML private Label currentUserLabel;
     @FXML private Label pageTitleLabel;
@@ -51,10 +69,13 @@ public class MainController {
     @FXML private FlowPane queryFieldsPane;
 
     private MainApp app;
-    private String currentModule = "user";
+    private String currentModule = Module.USER;
     private int pageNum = 1;
     private final int pageSize = 10;
     private final Map<String, Control> queryControls = new LinkedHashMap<>();
+    private final ModuleDataService dataService = new ModuleDataService();
+    private final TableActionService tableActionService = new TableActionService();
+    private final UiFeedbackService uiFeedback = new UiFeedbackService();
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
 
@@ -67,6 +88,8 @@ public class MainController {
         dataTable.setTableMenuButtonVisible(true);
         dataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         rebuildQueryFields();
+        messageLabel.setText("左メニューからモジュールを選択し、検索後に操作してください。");
+        Platform.runLater(this::focusFirstQueryField);
         loadData();
     }
 
@@ -114,45 +137,41 @@ public class MainController {
     private void onInlineEdit() {
         Map<String, Object> selected = currentWorkingRow();
         if (selected == null) {
-            messageLabel.setText("先に行を選択してください。");
+            messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
             return;
         }
         inlineEditingRow = selected;
         inlineBackup = new LinkedHashMap<>(selected);
         inlineBackup.remove(SELECTED_KEY);
-        messageLabel.setText("選択行のインライン編集を開始しました。");
+        messageLabel.setText(UiText.MSG_INLINE_EDIT_STARTED);
     }
 
     @FXML
     private void onInlineSave() {
         if (inlineEditingRow == null) {
-            messageLabel.setText("インライン編集対象がありません。");
+            messageLabel.setText(UiText.MSG_INLINE_EDIT_NONE);
             return;
         }
         try {
             JSONObject dto = normalizeRowForUpdate(inlineEditingRow);
-            String id = String.valueOf(dto.get("id"));
-            String res = "user".equals(currentModule)
-                    ? ApiClient.put("/user/" + id, dto.toString())
-                    : ApiClient.put("/" + currentModule, dto.toString());
-            JSONObject json = new JSONObject(res);
-            if (isSuccess(json)) {
-                messageLabel.setText("インライン更新が完了しました。");
+            JSONObject json = dataService.save(currentModule, true, dto);
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText(UiText.MSG_INLINE_UPDATE_SUCCESS);
                 inlineEditingRow = null;
                 inlineBackup = null;
                 loadData();
             } else {
-                messageLabel.setText(json.optString("message", "インライン更新に失敗しました。"));
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_INLINE_UPDATE_FAILED));
             }
         } catch (Exception ex) {
-            messageLabel.setText("更新に失敗しました: " + ex.getMessage());
+            messageLabel.setText(UiText.MSG_UPDATE_FAILED + ex.getMessage());
         }
     }
 
     @FXML
     private void onInlineCancel() {
         if (inlineEditingRow == null || inlineBackup == null) {
-            messageLabel.setText("インライン編集対象がありません。");
+            messageLabel.setText(UiText.MSG_INLINE_EDIT_NONE);
             return;
         }
         SimpleBooleanProperty selectedProperty = selectedProperty(inlineEditingRow);
@@ -162,13 +181,13 @@ public class MainController {
         inlineEditingRow = null;
         inlineBackup = null;
         dataTable.refresh();
-        messageLabel.setText("インライン編集を取り消しました。");
+        messageLabel.setText(UiText.MSG_INLINE_CANCELLED);
     }
 
     @FXML
     private void onEdit() {
         if (currentWorkingRow() == null) {
-            messageLabel.setText("先に行を選択してください。");
+            messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
             return;
         }
         openFormDialog("編集", true);
@@ -178,26 +197,20 @@ public class MainController {
     private void onBatchDelete() {
         List<Map<String, Object>> checkedRows = checkedRows();
         if (checkedRows.isEmpty()) {
-            messageLabel.setText("削除する行にチェックを入れてください。");
+            messageLabel.setText(UiText.MSG_BATCH_DELETE_CHECK);
             return;
         }
 
-        int ok = 0;
+        List<String> ids = new ArrayList<>();
         for (Map<String, Object> row : checkedRows) {
-            String id = resolveRecordId(row);
-            if (id == null || id.isBlank()) {
-                continue;
-            }
-            try {
-                String res = ApiClient.delete("/" + currentModule + "/" + id);
-                JSONObject json = new JSONObject(res);
-                if (isSuccess(json)) {
-                    ok++;
-                }
-            } catch (Exception ignored) {
-            }
+            ids.add(resolveRecordId(row));
         }
-        messageLabel.setText("一括削除完了: 成功 " + ok + " 件");
+        if (!confirm("一括削除確認", ids.size() + "件を削除します。よろしいですか？")) {
+            messageLabel.setText("一括削除をキャンセルしました。");
+            return;
+        }
+        int ok = tableActionService.batchDelete(currentModule, ids);
+        messageLabel.setText(String.format(UiText.MSG_BATCH_DELETE_DONE, ok));
         loadData();
     }
 
@@ -205,44 +218,50 @@ public class MainController {
     private void onDelete() {
         String id = deleteIdField.getText();
         if (id == null || id.isBlank()) {
-            messageLabel.setText("IDを入力してください。");
+            messageLabel.setText(UiText.MSG_DELETE_ID_REQUIRED);
             return;
         }
 
         try {
-            String res = ApiClient.delete("/" + currentModule + "/" + id.trim());
-            JSONObject json = new JSONObject(res);
-            if (isSuccess(json)) {
-                messageLabel.setText("削除に成功しました。");
+            if (!confirm("削除確認", "ID " + id.trim() + " を削除します。よろしいですか？")) {
+                messageLabel.setText("削除をキャンセルしました。");
+                return;
+            }
+            JSONObject json = tableActionService.deleteOne(currentModule, id.trim());
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText(UiText.MSG_DELETE_SUCCESS);
                 loadData();
             } else {
-                messageLabel.setText(json.optString("message", "削除に失敗しました。"));
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_DELETE_FAILED));
             }
         } catch (Exception ex) {
-            messageLabel.setText("削除に失敗しました: " + ex.getMessage());
+            messageLabel.setText(uiFeedback.deleteFailed(ex));
         }
     }
 
     @FXML
     private void onLogout() {
+        if (!confirm("ログアウト確認", "ログアウトします。よろしいですか？")) {
+            return;
+        }
         try {
-            String res = ApiClient.post("/user/logout", "{}");
+            String res = ApiClient.post(ApiPath.USER_LOGOUT, "{}");
             JSONObject json = new JSONObject(res);
-            if (isSuccess(json)) {
+            if (uiFeedback.isSuccess(json)) {
                 Session.clear();
                 app.showLogin();
             } else {
-                messageLabel.setText(json.optString("message", "ログアウトに失敗しました。"));
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_LOGOUT_FAILED));
             }
         } catch (Exception ex) {
-            messageLabel.setText("ログアウトに失敗しました: " + ex.getMessage());
+            messageLabel.setText(uiFeedback.logoutFailed(ex));
         }
     }
 
     private String resolveRecordId(Map<String, Object> row) {
-        Object id = row.get("id");
+        Object id = row.get(Field.ID);
         if (id == null) {
-            id = row.get("skuId");
+            id = row.get(Field.SKU_ID);
         }
         return id == null ? "" : String.valueOf(id);
     }
@@ -272,13 +291,17 @@ public class MainController {
             queryFieldsPane.getChildren().add(control);
             queryControls.put(field, control);
         }
+        Platform.runLater(this::focusFirstQueryField);
     }
 
     private Control createControl(String field) {
         ModuleMeta.FieldType type = ModuleMeta.fieldType(currentModule, field);
-        if ("status".equals(field) || type == ModuleMeta.FieldType.SELECT) {
+        if (type == ModuleMeta.FieldType.SELECT) {
             ComboBox<Option> combo = new ComboBox<>();
-            combo.getItems().addAll(new Option("有効", "1"), new Option("無効", "0"));
+            List<ModuleMeta.Option> options = ModuleMeta.selectOptions(currentModule, field);
+            for (ModuleMeta.Option option : options) {
+                combo.getItems().add(new Option(option.label, option.value));
+            }
             return combo;
         }
 
@@ -303,19 +326,7 @@ public class MainController {
     private List<Option> fetchRelationOptions(String module) {
         List<Option> options = new ArrayList<>();
         try {
-            String res;
-            if ("user".equals(module)) {
-                JSONObject body = new JSONObject();
-                body.put("pageNum", 1);
-                body.put("pageSize", 50);
-                res = ApiClient.post("/user/page", body.toString());
-            } else {
-                Map<String, String> params = new LinkedHashMap<>();
-                params.put("pageNum", "1");
-                params.put("pageSize", "50");
-                res = ApiClient.get("/" + module + "/page", params);
-            }
-            JSONObject wrapper = new JSONObject(res);
+            JSONObject wrapper = dataService.fetchPage(module, 1, 50, Map.of());
             JSONObject data = wrapper.optJSONObject("data");
             if (data == null) {
                 return options;
@@ -330,7 +341,8 @@ public class MainController {
                 String label = r.optString("name", r.optString("username", r.optString("code", "ID:" + id)));
                 options.add(new Option(label, id));
             }
-        } catch (Exception ignored) {
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load relation options failed. module=" + module, ex);
         }
         return options;
     }
@@ -398,31 +410,21 @@ public class MainController {
             }
             submitForm(editMode, formController.toJson());
         } catch (Exception ex) {
-            messageLabel.setText("フォーム表示に失敗しました: " + ex.getMessage());
+            messageLabel.setText(uiFeedback.formOpenFailed(ex));
         }
     }
 
     private void submitForm(boolean editMode, JSONObject dto) {
         try {
-            String res;
-            if (editMode) {
-                String id = String.valueOf(dto.get("id"));
-                res = "user".equals(currentModule)
-                        ? ApiClient.put("/user/" + id, dto.toString())
-                        : ApiClient.put("/" + currentModule, dto.toString());
-            } else {
-                res = ApiClient.post("/" + currentModule, dto.toString());
-            }
-
-            JSONObject json = new JSONObject(res);
-            if (isSuccess(json)) {
-                messageLabel.setText(editMode ? "更新に成功しました。" : "作成に成功しました。");
+            JSONObject json = dataService.save(currentModule, editMode, dto);
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText(uiFeedback.saveSuccess(editMode));
                 loadData();
             } else {
-                messageLabel.setText(json.optString("message", editMode ? "更新に失敗しました。" : "作成に失敗しました。"));
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_SAVE_FAILED));
             }
         } catch (Exception ex) {
-            messageLabel.setText("保存に失敗しました: " + ex.getMessage());
+            messageLabel.setText(uiFeedback.saveFailed(ex));
         }
     }
 
@@ -464,54 +466,38 @@ public class MainController {
         return dto;
     }
 
-    private boolean isSuccess(JSONObject json) {
-        int code = json.optInt("code", -1);
-        return code == 200 || code == 0;
-    }
-
     private void loadData() {
         try {
-            String res;
-            if ("user".equals(currentModule)) {
-                JSONObject body = new JSONObject();
-                body.put("pageNum", pageNum);
-                body.put("pageSize", pageSize);
-                buildQueryParams().forEach(body::put);
-                res = ApiClient.post("/user/page", body.toString());
-            } else {
-                Map<String, String> params = new LinkedHashMap<>();
-                params.put("pageNum", String.valueOf(pageNum));
-                params.put("pageSize", String.valueOf(pageSize));
-                params.putAll(buildQueryParams());
-                res = ApiClient.get("/" + currentModule + "/page", params);
-            }
-
-            JSONObject wrapper = new JSONObject(res);
-            if (!isSuccess(wrapper)) {
-                messageLabel.setText(wrapper.optString("message", "読み込みに失敗しました。"));
+            JSONObject wrapper = dataService.fetchPage(currentModule, pageNum, pageSize, buildQueryParams());
+            if (!uiFeedback.isSuccess(wrapper)) {
+                messageLabel.setText(uiFeedback.resolveMessage(wrapper, UiText.MSG_LOAD_FAILED));
                 return;
             }
 
             JSONObject data = wrapper.optJSONObject("data");
             if (data == null) {
-                messageLabel.setText("レスポンスのデータが空です。");
+                messageLabel.setText(UiText.MSG_RESPONSE_DATA_EMPTY);
                 return;
             }
 
             long total = data.optLong("total", 0);
             long totalPages = data.optLong("totalPages", 0);
-            pageInfoLabel.setText(String.format("%d / %d ページ, 合計 %d 件", pageNum, totalPages, total));
+            pageInfoLabel.setText(String.format("%d / %d ページ, 全 %d 件", pageNum, totalPages, total));
 
             JSONArray records = data.optJSONArray("records");
             buildTable(records == null ? new JSONArray() : records);
-            messageLabel.setText("読み込み成功");
+            if (records == null || records.isEmpty()) {
+                messageLabel.setText("該当データがありません。条件を変更して再検索してください。");
+            } else {
+                messageLabel.setText(UiText.MSG_LOAD_SUCCESS);
+            }
 
             if (totalPages > 0 && pageNum > totalPages) {
                 pageNum = (int) totalPages;
                 loadData();
             }
         } catch (Exception ex) {
-            messageLabel.setText("読み込みに失敗しました: " + ex.getMessage());
+            messageLabel.setText(uiFeedback.loadFailed(ex));
         }
     }
 
@@ -534,35 +520,90 @@ public class MainController {
         }
 
         dataTable.getColumns().add(createSelectColumn(rows));
-        for (String key : orderedKeys(keys)) {
+        for (String key : ModuleMeta.orderedColumns(currentModule, keys)) {
+            if (!keys.contains(key)) {
+                continue;
+            }
             dataTable.getColumns().add(createTextColumn(key));
         }
-        if ("stockOrder".equals(currentModule)) {
-            dataTable.getColumns().add(createDetailActionColumn());
+        if (Module.STOCK_ORDER.equals(currentModule)) {
+            dataTable.getColumns().add(createDetailActionColumn("入出庫明細", Module.STOCK_ORDER_ITEM, Field.ORDER_ID));
         }
-
+        if (Module.REQUEST_FORM.equals(currentModule)) {
+            dataTable.getColumns().add(createDetailActionColumn("申請明細", Module.REQUEST_ITEM, Field.REQUEST_ID));
+            dataTable.getColumns().add(createDownloadActionColumn());
+        }
         dataTable.setItems(rows);
     }
 
-    private TableColumn<Map<String, Object>, Void> createDetailActionColumn() {
-        TableColumn<Map<String, Object>, Void> col = new TableColumn<>("明細");
-        col.setPrefWidth(90);
+    private TableColumn<Map<String, Object>, Void> createDownloadActionColumn() {
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>("ダウンロード");
+        col.setPrefWidth(120);
         col.setSortable(false);
         col.setReorderable(false);
         col.setCellFactory(param -> new TableCell<>() {
-            private final Button btn = new Button("明細");
+            private final Button btn = new Button("ダウンロード");
             {
                 btn.setOnAction(event -> {
                     Map<String, Object> row = getTableView().getItems().get(getIndex());
-                    Object orderId = row.get("id");
-                    if (orderId == null) {
-                        messageLabel.setText("伝票IDが取得できません");
+                    Object id = row.get(Field.ID);
+                    if (id == null) {
+                        messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
                         return;
                     }
-                    switchModule("stockOrderItem", "入出庫明細");
-                    Control control = queryControls.get("orderId");
+                    downloadRequestForm(String.valueOf(id));
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btn);
+            }
+        });
+        return col;
+    }
+
+    private void downloadRequestForm(String id) {
+        try {
+            byte[] bytes = tableActionService.downloadRequestForm(id);
+
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("保存先を選択");
+            chooser.setInitialFileName("request_" + id + ".xlsx");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx"));
+            Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+            File target = chooser.showSaveDialog(owner);
+            if (target == null) {
+                return;
+            }
+            try (FileOutputStream fos = new FileOutputStream(target)) {
+                fos.write(bytes);
+            }
+            messageLabel.setText(UiText.MSG_DOWNLOAD_DONE);
+        } catch (Exception ex) {
+            messageLabel.setText(uiFeedback.downloadFailed(ex));
+        }
+    }
+
+    private TableColumn<Map<String, Object>, Void> createDetailActionColumn(String title, String targetModule, String filterField) {
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>(title);
+        col.setPrefWidth(100);
+        col.setSortable(false);
+        col.setReorderable(false);
+        col.setCellFactory(param -> new TableCell<>() {
+            private final Button btn = new Button(title);
+            {
+                btn.setOnAction(event -> {
+                    Map<String, Object> row = getTableView().getItems().get(getIndex());
+                    Object id = row.get(Field.ID);
+                    if (id == null) {
+                        messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
+                        return;
+                    }
+                    switchModule(targetModule, title);
+                    Control control = queryControls.get(filterField);
                     if (control instanceof TextField tf) {
-                        tf.setText(String.valueOf(orderId));
+                        tf.setText(String.valueOf(id));
                     }
                     pageNum = 1;
                     loadData();
@@ -601,14 +642,16 @@ public class MainController {
         col.setCellFactory(TextFieldTableCell.forTableColumn());
         col.setCellValueFactory(cell -> {
             Object v = cell.getValue().getOrDefault(key, "");
-            if ("status".equals(key)) {
-                String s = String.valueOf(v);
-                if ("1".equals(s) || "ENABLE".equalsIgnoreCase(s)) {
-                    return new SimpleStringProperty("有効");
+            if (Field.STATUS.equals(key)) {
+                String normalized = normalizeEnumValue(String.valueOf(v));
+                ModuleMeta.Option opt = ModuleMeta.optionByValue(currentModule, key, normalized);
+                if (opt != null) {
+                    return new SimpleStringProperty(opt.label);
                 }
-                if ("0".equals(s) || "DISABLE".equalsIgnoreCase(s)) {
-                    return new SimpleStringProperty("無効");
-                }
+            }
+            ModuleMeta.Option option = ModuleMeta.optionByValue(currentModule, key, String.valueOf(v));
+            if (option != null) {
+                return new SimpleStringProperty(option.label);
             }
             return new SimpleStringProperty(String.valueOf(v));
         });
@@ -618,14 +661,9 @@ public class MainController {
                 return;
             }
             String val = evt.getNewValue();
-            if ("status".equals(key)) {
-                if ("有効".equals(val) || "1".equals(val) || "ENABLE".equalsIgnoreCase(val)) {
-                    row.put(key, "ENABLE");
-                } else if ("無効".equals(val) || "0".equals(val) || "DISABLE".equalsIgnoreCase(val)) {
-                    row.put(key, "DISABLE");
-                } else {
-                    row.put(key, val);
-                }
+            if (ModuleMeta.fieldType(currentModule, key) == ModuleMeta.FieldType.SELECT) {
+                ModuleMeta.Option byLabel = ModuleMeta.optionByLabel(currentModule, key, val);
+                row.put(key, byLabel != null ? byLabel.value : normalizeEnumValue(val));
             } else {
                 row.put(key, val);
             }
@@ -634,24 +672,21 @@ public class MainController {
         return col;
     }
 
-    private List<String> orderedKeys(LinkedHashSet<String> keys) {
-        List<String> ordered = new ArrayList<>();
-        if (keys.contains("id")) {
-            ordered.add("id");
+    private String normalizeEnumValue(String value) {
+        if (value == null) {
+            return "";
         }
-        if (keys.contains("skuId")) {
-            ordered.add("skuId");
+        if ("ENABLE".equalsIgnoreCase(value)) {
+            return "1";
         }
-        for (String key : keys) {
-            if (!"id".equals(key) && !"skuId".equals(key) && !SELECTED_KEY.equals(key)) {
-                ordered.add(key);
-            }
+        if ("DISABLE".equalsIgnoreCase(value)) {
+            return "0";
         }
-        return ordered;
+        return value;
     }
 
     private String columnTitle(String key) {
-        if ("id".equals(key) || "skuId".equals(key)) {
+        if (Field.ID.equals(key) || Field.SKU_ID.equals(key)) {
             return "ID";
         }
         return ModuleMeta.normalizeTitle(key);
@@ -687,6 +722,24 @@ public class MainController {
         }
         List<Map<String, Object>> checkedRows = checkedRows();
         return checkedRows.isEmpty() ? null : checkedRows.get(0);
+    }
+
+    private void focusFirstQueryField() {
+        for (Control control : queryControls.values()) {
+            if (!control.isDisabled() && control.isVisible()) {
+                control.requestFocus();
+                return;
+            }
+        }
+    }
+
+    private boolean confirm(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
     }
 
     private static final class Option {

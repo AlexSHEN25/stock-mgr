@@ -11,5 +11,5 @@ public final class SecurityConstant {
     public static final String BEARER_PREFIX = "Bearer ";
     public static final String API_PREFIX = "/api/";
     public static final int API_PREFIX_KEEP_LEADING_SLASH_INDEX = API_PREFIX.length() - 1;
-    public static final String NO_PERMISSION_MESSAGE = "無権限アクセス";
+    public static final String NO_PERMISSION_MESSAGE = "権限がありません";
 }

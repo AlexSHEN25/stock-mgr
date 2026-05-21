@@ -2,6 +2,7 @@ package co.handk.common.model.dto.create;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -10,10 +11,10 @@ import java.time.LocalDateTime;
 @Data
 public class CreateGoodsSkuDTO {
 
-    @NotNull(message = "商品は必須項目です")
+    @NotNull(message = "必須項目です")
     private Long goodsId;
 
-    @NotBlank(message = "SKUコードは必須項目です")
+    @NotBlank(message = "必須項目です")
     private String skuCode;
 
     private String skuName;
@@ -32,5 +33,7 @@ public class CreateGoodsSkuDTO {
     private BigDecimal weight;
 
     private BigDecimal volume;
+
+    private StatusEnum status;
 
 }

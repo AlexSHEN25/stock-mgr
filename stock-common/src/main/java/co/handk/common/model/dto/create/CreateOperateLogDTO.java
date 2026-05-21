@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.create;
 
+import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 
 @Data
@@ -16,4 +17,6 @@ public class CreateOperateLogDTO {
     private String responseData;
     private String errorMsg;
     private Integer costTime;
+    private StatusEnum status;
+
 }

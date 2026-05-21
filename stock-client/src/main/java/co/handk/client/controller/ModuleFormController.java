@@ -1,139 +1,59 @@
 package co.handk.client.controller;
 
-import javafx.collections.FXCollections;
+import co.handk.client.constant.ModuleEndpointStrategy;
+import co.handk.client.constant.UiText;
+import co.handk.client.service.DependencyResolver;
+import co.handk.client.service.ModuleDataService;
+import co.handk.client.util.ApiClient;
+import co.handk.client.util.ModuleMeta;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.math.BigDecimal;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ModuleFormController {
 
+    private static final Logger LOGGER = Logger.getLogger(ModuleFormController.class.getName());
+
     @FXML private Label titleLabel;
     @FXML private Label errorLabel;
-    @FXML private TextField idField;
-    @FXML private TextField usernameField;
-    @FXML private TextField deptIdField;
-    @FXML private TextField passwordField;
-    @FXML private TextField emailField;
-    @FXML private TextField phoneField;
-    @FXML private TextField nameField;
-    @FXML private TextField englishNameField;
-    @FXML private TextField brandIdField;
-    @FXML private TextField seriesIdField;
-    @FXML private TextField categoryIdField;
-    @FXML private TextField makerIdField;
-    @FXML private TextField codeField;
-    @FXML private TextField addressField;
-    @FXML private TextField managerIdField;
-    @FXML private TextField goodsIdField;
-    @FXML private TextField goodsNameField;
-    @FXML private TextField skuIdField;
-    @FXML private TextField skuCodeField;
-    @FXML private TextField warehouseIdField;
-    @FXML private TextField currentQtyField;
-    @FXML private TextField lockQtyField;
-    @FXML private TextField priceField;
-    @FXML private TextField currencyField;
-    @FXML private TextField stockTypeIdField;
-    @FXML private ComboBox<String> statusCombo;
+    @FXML private GridPane dynamicFormGrid;
     @FXML private TextArea rawJsonArea;
     @FXML private Button saveButton;
 
     private boolean submitted;
     private String module;
     private boolean editMode;
-    private JSONObject sourceJson;
-    private final Map<String, TextField> fields = new LinkedHashMap<>();
-
-    @FXML
-    private void initialize() {
-        fields.put("id", idField);
-        fields.put("username", usernameField);
-        fields.put("deptId", deptIdField);
-        fields.put("password", passwordField);
-        fields.put("email", emailField);
-        fields.put("phone", phoneField);
-        fields.put("name", nameField);
-        fields.put("englishName", englishNameField);
-        fields.put("brandId", brandIdField);
-        fields.put("seriesId", seriesIdField);
-        fields.put("categoryId", categoryIdField);
-        fields.put("makerId", makerIdField);
-        fields.put("code", codeField);
-        fields.put("address", addressField);
-        fields.put("managerId", managerIdField);
-        fields.put("goodsId", goodsIdField);
-        fields.put("goodsName", goodsNameField);
-        fields.put("skuId", skuIdField);
-        fields.put("skuCode", skuCodeField);
-        fields.put("warehouseId", warehouseIdField);
-        fields.put("currentQty", currentQtyField);
-        fields.put("lockQty", lockQtyField);
-        fields.put("price", priceField);
-        fields.put("currency", currencyField);
-        fields.put("stockTypeId", stockTypeIdField);
-
-        statusCombo.setItems(FXCollections.observableArrayList("有効", "無効"));
-    }
+    private final Map<String, Control> controls = new LinkedHashMap<>();
+    private Map<String, Object> sourceValues = Map.of();
+    private final ModuleDataService dataService = new ModuleDataService();
+    private final DependencyResolver dependencyResolver = new DependencyResolver();
 
     public void configure(String module, String title, boolean editMode, Map<String, Object> source) {
         this.module = module;
         this.editMode = editMode;
-        this.sourceJson = new JSONObject();
-        titleLabel.setText(title);
+        this.sourceValues = source == null ? Map.of() : source;
+        this.titleLabel.setText(title);
 
-        Set<String> visibleKeys = visibleKeysByModule(module, editMode);
-        fields.forEach((key, field) -> {
-            boolean visible = visibleKeys.contains(key);
-            Node label = findLabelForNode(field);
-            field.setVisible(visible);
-            field.setManaged(visible);
-            if (label != null) {
-                label.setVisible(visible);
-                label.setManaged(visible);
-            }
-        });
-
-        boolean showStatus = visibleKeys.contains("status");
-        Node statusLabel = findLabelForNode(statusCombo);
-        statusCombo.setVisible(showStatus);
-        statusCombo.setManaged(showStatus);
-        if (statusLabel != null) {
-            statusLabel.setVisible(showStatus);
-            statusLabel.setManaged(showStatus);
-        }
-
-        if (source != null) {
-            source.forEach((k, v) -> {
-                sourceJson.put(k, v);
-                if ("status".equals(k) && v != null) {
-                    statusCombo.setValue("ENABLE".equalsIgnoreCase(String.valueOf(v)) ? "有効" : "無効");
-                    return;
-                }
-                TextField field = fields.get(k);
-                if (field != null && v != null) {
-                    field.setText(String.valueOf(v));
-                }
-            });
-        } else {
-            applyDefaultTemplate(module);
-            sourceJson = toJsonFromForm();
-        }
-
-        rawJsonArea.setText(sourceJson.toString(2));
+        buildDynamicControls(module, editMode);
+        bindDependencyRules();
+        fillValues(source);
+        rawJsonArea.setText(toJsonFromControls().toString(2));
     }
 
     public boolean isSubmitted() {
@@ -149,69 +69,7 @@ public class ModuleFormController {
         if (raw != null && !raw.isBlank()) {
             return new JSONObject(raw);
         }
-        return toJsonFromForm();
-    }
-
-    private JSONObject toJsonFromForm() {
-        JSONObject dto = new JSONObject();
-
-        switch (module) {
-            case "user" -> {
-                putIfNotBlank(dto, "id", idField, Long::parseLong);
-                putIfNotBlank(dto, "username", usernameField, s -> s);
-                putIfNotBlank(dto, "deptId", deptIdField, Long::parseLong);
-                putIfNotBlank(dto, "password", passwordField, s -> s);
-                putIfNotBlank(dto, "email", emailField, s -> s);
-                putIfNotBlank(dto, "phone", phoneField, s -> s);
-                putStatus(dto);
-            }
-            case "goods" -> {
-                putIfNotBlank(dto, "id", idField, Long::parseLong);
-                putIfNotBlank(dto, "name", nameField, s -> s);
-                putIfNotBlank(dto, "englishName", englishNameField, s -> s);
-                putIfNotBlank(dto, "brandId", brandIdField, Long::parseLong);
-                putIfNotBlank(dto, "seriesId", seriesIdField, Long::parseLong);
-                putIfNotBlank(dto, "categoryId", categoryIdField, Long::parseLong);
-                putIfNotBlank(dto, "makerId", makerIdField, Long::parseLong);
-                putStatus(dto);
-            }
-            case "stock" -> {
-                putIfNotBlank(dto, "id", idField, Long::parseLong);
-                putIfNotBlank(dto, "goodsId", goodsIdField, Integer::parseInt);
-                putIfNotBlank(dto, "goodsName", goodsNameField, s -> s);
-                putIfNotBlank(dto, "skuId", skuIdField, Long::parseLong);
-                putIfNotBlank(dto, "skuCode", skuCodeField, s -> s);
-                putIfNotBlank(dto, "warehouseId", warehouseIdField, Integer::parseInt);
-                putIfNotBlank(dto, "currentQty", currentQtyField, Integer::parseInt);
-                putIfNotBlank(dto, "lockQty", lockQtyField, Integer::parseInt);
-                putIfNotBlank(dto, "price", priceField, BigDecimal::new);
-                putIfNotBlank(dto, "currency", currencyField, s -> s);
-                putIfNotBlank(dto, "stockTypeId", stockTypeIdField, Long::parseLong);
-                putStatus(dto);
-            }
-            case "warehouse" -> {
-                putIfNotBlank(dto, "id", idField, Long::parseLong);
-                putIfNotBlank(dto, "name", nameField, s -> s);
-                putIfNotBlank(dto, "code", codeField, s -> s);
-                putIfNotBlank(dto, "address", addressField, s -> s);
-                putIfNotBlank(dto, "managerId", managerIdField, Long::parseLong);
-                putStatus(dto);
-            }
-            case "stockType" -> {
-                putIfNotBlank(dto, "id", idField, Long::parseLong);
-                putIfNotBlank(dto, "name", nameField, s -> s);
-                putStatus(dto);
-            }
-            default -> {
-                fields.forEach((k, f) -> {
-                    if (f.getText() != null && !f.getText().isBlank()) {
-                        dto.put(k, f.getText().trim());
-                    }
-                });
-                putStatus(dto);
-            }
-        }
-        return dto;
+        return toJsonFromControls();
     }
 
     @FXML
@@ -220,13 +78,23 @@ public class ModuleFormController {
         try {
             JSONObject dto = toJson();
             if (editMode && !dto.has("id")) {
-                errorLabel.setText("編集時は id が必須です。");
+                errorLabel.setText(UiText.MSG_EDIT_ID_REQUIRED);
                 return;
+            }
+            for (String field : ModuleMeta.formFields(module)) {
+                if (!ModuleMeta.isRequiredFormField(module, field)) {
+                    continue;
+                }
+                Object v = dto.opt(field);
+                if (v == null || (v instanceof String s && s.isBlank())) {
+                    errorLabel.setText(ModuleMeta.normalizeTitle(field) + UiText.MSG_REQUIRED_SUFFIX);
+                    return;
+                }
             }
             submitted = true;
             saveButton.getScene().getWindow().hide();
         } catch (Exception ex) {
-            errorLabel.setText("JSON 解析エラー: " + ex.getMessage());
+            errorLabel.setText(UiText.MSG_JSON_PARSE_FAIL + ex.getMessage());
         }
     }
 
@@ -236,93 +104,197 @@ public class ModuleFormController {
         saveButton.getScene().getWindow().hide();
     }
 
-    private void applyDefaultTemplate(String module) {
-        if ("user".equals(module)) {
-            usernameField.setText("new_user");
-            deptIdField.setText("1");
-            passwordField.setText("123456");
-            emailField.setText("new_user@example.com");
-            phoneField.setText("09000000000");
-        } else if ("goods".equals(module)) {
-            nameField.setText("サンプル商品");
-            englishNameField.setText("Sample Goods");
-            brandIdField.setText("1");
-            seriesIdField.setText("1");
-            categoryIdField.setText("1");
-            makerIdField.setText("1");
-        } else if ("stock".equals(module)) {
-            goodsIdField.setText("1");
-            goodsNameField.setText("サンプル商品");
-            skuIdField.setText("1");
-            skuCodeField.setText("SKU-001");
-            warehouseIdField.setText("1");
-            currentQtyField.setText("100");
-            lockQtyField.setText("0");
-            priceField.setText("10.5");
-            currencyField.setText("JPY");
-            stockTypeIdField.setText("1");
-        } else if ("warehouse".equals(module)) {
-            nameField.setText("サンプル倉庫");
-            codeField.setText("WH-001");
-            addressField.setText("Tokyo");
-            managerIdField.setText("1");
-        } else if ("stockType".equals(module)) {
-            nameField.setText("サンプル在庫区分");
-        }
-    }
+    private void buildDynamicControls(String module, boolean editMode) {
+        dynamicFormGrid.getChildren().clear();
+        controls.clear();
 
-    private void putStatus(JSONObject dto) {
-        String statusText = statusCombo.getValue();
-        if (statusText == null || statusText.isBlank()) {
-            return;
-        }
-        dto.put("status", "有効".equals(statusText) ? "ENABLE" : "DISABLE");
-    }
-
-    private interface Parser {
-        Object parse(String s);
-    }
-
-    private void putIfNotBlank(JSONObject dto, String key, TextField field, Parser parser) {
-        if (field == null || field.getText() == null || field.getText().isBlank()) {
-            return;
-        }
-        dto.put(key, parser.parse(field.getText().trim()));
-    }
-
-    private Set<String> visibleKeysByModule(String module, boolean editMode) {
-        Set<String> keys = new LinkedHashSet<>();
+        Set<String> fields = new LinkedHashSet<>();
         if (editMode) {
-            keys.add("id");
-            keys.add("status");
+            fields.add("id");
         }
+        fields.addAll(ModuleMeta.formFields(module));
 
-        switch (module) {
-            case "user" -> Collections.addAll(keys, "username", "deptId", "password", "email", "phone");
-            case "goods" -> Collections.addAll(keys, "name", "englishName", "brandId", "seriesId", "categoryId", "makerId");
-            case "stock" -> Collections.addAll(keys, "goodsId", "goodsName", "skuId", "skuCode", "warehouseId", "currentQty", "lockQty", "price", "currency", "stockTypeId");
-            case "warehouse" -> Collections.addAll(keys, "name", "code", "address", "managerId");
-            case "stockType" -> keys.add("name");
-            default -> keys.addAll(fields.keySet());
+        int row = 0;
+        for (String field : fields) {
+            Label label = new Label(ModuleMeta.normalizeTitle(field));
+            Control control = createControl(module, field);
+            control.setPrefWidth(460);
+            controls.put(field, control);
+
+            dynamicFormGrid.add(label, 0, row);
+            dynamicFormGrid.add(control, 1, row);
+            row++;
         }
-        return keys;
     }
 
-    private Node findLabelForNode(Node node) {
-        if (node == null || node.getParent() == null) {
-            return null;
+    private Control createControl(String module, String field) {
+        if (ModuleMeta.fieldType(module, field) == ModuleMeta.FieldType.RELATION) {
+            ComboBox<Option> combo = new ComboBox<>();
+            combo.setEditable(false);
+            combo.getItems().addAll(fetchRelationOptions(ModuleMeta.relationModuleByField(field), Map.of()));
+            return combo;
         }
-        Integer row = GridPane.getRowIndex(node);
-        if (row == null) {
-            row = 0;
+
+        if (ModuleMeta.fieldType(module, field) == ModuleMeta.FieldType.SELECT) {
+            ComboBox<Option> combo = new ComboBox<>();
+            List<ModuleMeta.Option> opts = ModuleMeta.selectOptions(module, field);
+            for (ModuleMeta.Option opt : opts) {
+                combo.getItems().add(new Option(opt.label, opt.value));
+            }
+            return combo;
         }
-        for (Node n : node.getParent().getChildrenUnmodifiable()) {
-            Integer nRow = GridPane.getRowIndex(n);
-            Integer nCol = GridPane.getColumnIndex(n);
-            if (Objects.equals(nRow, row) && Objects.equals(nCol, 0)) {
-                return n;
+
+        String low = field.toLowerCase();
+        if (low.contains("remark") || low.contains("content") || low.contains("description")) {
+            TextArea area = new TextArea();
+            area.setPrefRowCount(3);
+            return area;
+        }
+        return new TextField();
+    }
+
+    private void bindDependencyRules() {
+        dependencyResolver.bind(module, controls, this::fetchRelationOptions);
+    }
+
+    private List<Option> fetchRelationOptions(String relationModule, Map<String, String> extraFilters) {
+        List<Option> options = new ArrayList<>();
+        if (relationModule == null || relationModule.isBlank()) {
+            return options;
+        }
+        try {
+            for (Map<String, String> item : dataService.fetchSimpleRelationOptions(relationModule, extraFilters)) {
+                options.add(new Option(item.get("label"), item.get("value")));
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load relation options failed. module=" + module + ", relationModule=" + relationModule + ", filters=" + extraFilters, ex);
+        }
+        return options;
+    }
+
+    private void fillValues(Map<String, Object> source) {
+        preloadDependencyChildren();
+
+        if (source == null) {
+            return;
+        }
+        for (Map.Entry<String, Object> e : source.entrySet()) {
+            String key = e.getKey();
+            Object val = e.getValue();
+            Control c = controls.get(key);
+            if (c == null || val == null) {
+                continue;
+            }
+            if (c instanceof TextField tf) {
+                tf.setText(String.valueOf(val));
+            } else if (c instanceof TextArea ta) {
+                ta.setText(String.valueOf(val));
+            } else if (c instanceof ComboBox<?> combo) {
+                @SuppressWarnings("unchecked")
+                ComboBox<Option> cb = (ComboBox<Option>) combo;
+                Option selected = null;
+                for (Option op : cb.getItems()) {
+                    if (op.value.equals(String.valueOf(val))) {
+                        selected = op;
+                        break;
+                    }
+                }
+                if (selected != null) {
+                    cb.setValue(selected);
+                } else {
+                    Option fallback = new Option(String.valueOf(val), String.valueOf(val));
+                    cb.getItems().add(fallback);
+                    cb.setValue(fallback);
+                }
             }
         }
+    }
+
+    private void preloadDependencyChildren() {
+        for (ModuleMeta.DependencyRule rule : ModuleMeta.dependencyRules(module)) {
+            Control parentCtrl = controls.get(rule.parentField);
+            Control childCtrl = controls.get(rule.childField);
+            if (!(parentCtrl instanceof ComboBox<?>) || !(childCtrl instanceof ComboBox<?>)) {
+                continue;
+            }
+
+            Object parentVal = sourceValues.get(rule.parentField);
+            if (parentVal == null || String.valueOf(parentVal).isBlank()) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            ComboBox<Option> childCombo = (ComboBox<Option>) childCtrl;
+            Map<String, String> filters = Map.of(rule.queryParam, String.valueOf(parentVal));
+            childCombo.getItems().setAll(fetchRelationOptions(rule.sourceModule, filters));
+        }
+    }
+
+    private JSONObject toJsonFromControls() {
+        JSONObject dto = new JSONObject();
+        for (Map.Entry<String, Control> entry : controls.entrySet()) {
+            String key = entry.getKey();
+            Control c = entry.getValue();
+            Object val = extractValue(c);
+            if (val == null) {
+                continue;
+            }
+
+            String text = String.valueOf(val).trim();
+            if (text.isEmpty()) {
+                continue;
+            }
+
+            if (ModuleMeta.fieldType(module, key) == ModuleMeta.FieldType.NUMBER) {
+                try {
+                    if (text.contains(".")) {
+                        dto.put(key, Double.parseDouble(text));
+                    } else {
+                        dto.put(key, Long.parseLong(text));
+                    }
+                    continue;
+                } catch (Exception ex) {
+                    LOGGER.log(Level.WARNING, "Numeric parse fallback. module=" + module + ", field=" + key + ", value=" + text, ex);
+                }
+            }
+            dto.put(key, text);
+        }
+        return dto;
+    }
+
+    private Object extractValue(Control c) {
+        if (c instanceof TextField tf) {
+            return tf.getText();
+        }
+        if (c instanceof TextArea ta) {
+            return ta.getText();
+        }
+        if (c instanceof ComboBox<?> combo) {
+            Object selected = combo.getValue();
+            if (selected instanceof Option op) {
+                return op.value;
+            }
+            return selected == null ? "" : String.valueOf(selected);
+        }
         return null;
+    }
+
+    private static final class Option implements DependencyResolver.OptionValue {
+        private final String label;
+        private final String value;
+
+        private Option(String label, String value) {
+            this.label = label;
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+
+        @Override
+        public String value() {
+            return value;
+        }
     }
 }

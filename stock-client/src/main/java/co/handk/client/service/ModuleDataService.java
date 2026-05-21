@@ -1,0 +1,77 @@
+package co.handk.client.service;
+
+import co.handk.client.constant.ModuleEndpointStrategy;
+import co.handk.client.util.ApiClient;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ModuleDataService {
+
+    public JSONObject fetchPage(String module, int pageNum, int pageSize, Map<String, String> filters) throws Exception {
+        String res;
+        if (ModuleEndpointStrategy.pageUsesPost(module)) {
+            JSONObject body = new JSONObject();
+            body.put("pageNum", pageNum);
+            body.put("pageSize", pageSize);
+            if (filters != null) {
+                filters.forEach(body::put);
+            }
+            res = ApiClient.post(ModuleEndpointStrategy.pagePath(module), body.toString());
+        } else {
+            Map<String, String> params = new LinkedHashMap<>();
+            params.put("pageNum", String.valueOf(pageNum));
+            params.put("pageSize", String.valueOf(pageSize));
+            if (filters != null) {
+                params.putAll(filters);
+            }
+            res = ApiClient.get(ModuleEndpointStrategy.pagePath(module), params);
+        }
+        return new JSONObject(res);
+    }
+
+    public JSONObject save(String module, boolean editMode, JSONObject dto) throws Exception {
+        String res;
+        if (editMode) {
+            String id = String.valueOf(dto.get("id"));
+            res = ApiClient.put(ModuleEndpointStrategy.updatePath(module, id), dto.toString());
+        } else {
+            res = ApiClient.post("/" + module, dto.toString());
+        }
+        return new JSONObject(res);
+    }
+
+    public JSONObject delete(String module, String id) throws Exception {
+        String res = ApiClient.delete("/" + module + "/" + id);
+        return new JSONObject(res);
+    }
+
+    public List<Map<String, String>> fetchSimpleRelationOptions(String relationModule, Map<String, String> extraFilters) throws Exception {
+        JSONObject page = fetchPage(relationModule, 1, 200, extraFilters == null ? Map.of() : extraFilters);
+        JSONObject data = page.optJSONObject("data");
+        if (data == null) {
+            return List.of();
+        }
+        JSONArray records = data.optJSONArray("records");
+        if (records == null) {
+            return List.of();
+        }
+        List<Map<String, String>> options = new ArrayList<>();
+        for (int i = 0; i < records.length(); i++) {
+            JSONObject row = records.getJSONObject(i);
+            String id = String.valueOf(row.opt("id"));
+            String label = row.optString("name",
+                    row.optString("goodsName",
+                            row.optString("skuName",
+                                    row.optString("username",
+                                            row.optString("code", "ID:" + id)))));
+            options.add(Map.of("label", label, "value", id));
+        }
+        return options;
+    }
+}
+

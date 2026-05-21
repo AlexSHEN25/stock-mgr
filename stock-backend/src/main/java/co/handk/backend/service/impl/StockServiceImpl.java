@@ -3,6 +3,7 @@ package co.handk.backend.service.impl;
 import co.handk.backend.context.UserContext;
 import co.handk.backend.entity.Goods;
 import co.handk.backend.entity.GoodsSku;
+import co.handk.backend.entity.Message;
 import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
@@ -12,6 +13,7 @@ import co.handk.backend.entity.User;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
+import co.handk.backend.service.MessageService;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.backend.service.StockOrderService;
 import co.handk.backend.service.StockRecordService;
@@ -36,6 +38,12 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockVO> implements StockService {
 
+    private static final int MESSAGE_TYPE_INBOUND = 1;
+    private static final int MESSAGE_TYPE_WARNING = 2;
+    private static final int MESSAGE_IS_UNREAD = 0;
+    private static final int MESSAGE_STATE_SENT = 1;
+    private static final int LOW_STOCK_THRESHOLD = 10;
+
     @Autowired
     private GoodsService goodsService;
     @Autowired
@@ -50,6 +58,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private StockRecordService stockRecordService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private MessageService messageService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -69,14 +79,15 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         int sourceType = needApprove ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType, state);
-        StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
+        saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
 
         if (!needApprove) {
             stock.setCurrentQty(afterQty);
             if (!this.updateById(stock)) {
-                throw new RuntimeException("在庫更新に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫の更新に失敗しました");
             }
-            saveStockRecord(order, item, stock, dto.getRemark(), beforeQty, afterQty);
+            saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
+            notifyInbound(sku.getSkuCode(), dto.getQuantity(), afterQty, order.getId());
         }
         return order.getId();
     }
@@ -91,19 +102,21 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
         int beforeQty = safeInt(stock.getCurrentQty());
         if (beforeQty < dto.getQuantity()) {
-            throw new RuntimeException("在庫数が不足しています");
+            notifyInsufficientStock(sku.getSkuCode(), dto.getQuantity(), beforeQty, stock.getId());
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫数が不足しています");
         }
         int afterQty = beforeQty - dto.getQuantity();
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_OUTBOUND,
                 StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_FINISHED);
-        StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
+        saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
 
         stock.setCurrentQty(afterQty);
         if (!this.updateById(stock)) {
-            throw new RuntimeException("在庫更新に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫の更新に失敗しました");
         }
-        saveStockRecord(order, item, stock, dto.getRemark(), beforeQty, afterQty);
+        saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
+        notifyLowStock(sku.getSkuCode(), afterQty, order.getId());
         return order.getId();
     }
 
@@ -112,13 +125,13 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     public Boolean approveInbound(Long orderId, Boolean approved, String approveRemark) {
         StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         if (order == null) {
-            throw new RuntimeException("入庫伝票が存在しません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票が存在しません");
         }
         if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())) {
-            throw new RuntimeException("入庫伝票ではありません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票ではありません");
         }
         if (!Integer.valueOf(StockBizConstant.ORDER_STATE_APPROVING).equals(order.getState())) {
-            throw new RuntimeException("承認待ち状態の伝票ではありません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "承認待ち状態の伝票ではありません");
         }
 
         order.setApproverId(UserContext.getUserIdOrDefault());
@@ -130,7 +143,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (Boolean.FALSE.equals(approved)) {
             order.setState(StockBizConstant.ORDER_STATE_CANCELED);
             if (!stockOrderService.updateById(order)) {
-                throw new RuntimeException("入庫伝票の状態更新に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票の状態更新に失敗しました");
             }
             return true;
         }
@@ -139,20 +152,20 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .eq("order_id", orderId)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         if (items == null || items.isEmpty()) {
-            throw new RuntimeException("入庫伝票明細が存在しません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票明細が存在しません");
         }
 
         for (StockOrderItem item : items) {
             Stock stock = findStock(item.getGoodsId(), item.getSkuId(), order.getWarehouseId(), item.getStockTypeId());
             if (stock == null) {
-                throw new RuntimeException("承認対象の在庫商品が存在しません");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "承認対象の在庫商品が存在しません");
             }
 
             int beforeQty = safeInt(stock.getCurrentQty());
             int afterQty = beforeQty + safeInt(item.getChangeQty());
             stock.setCurrentQty(afterQty);
             if (!this.updateById(stock)) {
-                throw new RuntimeException("在庫更新に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫の更新に失敗しました");
             }
 
             StockRecord record = new StockRecord();
@@ -190,14 +203,16 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             record.setOperatorName(order.getOperatorName());
             record.setRemark(approveRemark);
             if (!stockRecordService.save(record)) {
-                throw new RuntimeException("在庫履歴の保存に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫履歴の保存に失敗しました");
             }
+
+            notifyInbound(item.getSkuCode(), safeInt(item.getChangeQty()), afterQty, order.getId());
         }
 
         order.setState(StockBizConstant.ORDER_STATE_FINISHED);
         order.setFinishTime(LocalDateTime.now());
         if (!stockOrderService.updateById(order)) {
-            throw new RuntimeException("入庫注文の状態更新に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票の状態更新に失敗しました");
         }
         return true;
     }
@@ -205,7 +220,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private Stock requireStock(Long stockId) {
         Stock stock = this.getByIdNotDeleted(stockId);
         if (stock == null) {
-            throw new RuntimeException("在庫商品が存在しません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫商品が存在しません");
         }
         return stock;
     }
@@ -213,7 +228,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private Goods requireGoods(Integer goodsId) {
         Goods goods = goodsService.getByIdNotDeleted(Long.valueOf(goodsId));
         if (goods == null) {
-            throw new RuntimeException("商品が存在しません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品が存在しません");
         }
         return goods;
     }
@@ -221,10 +236,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private GoodsSku requireSku(Long skuId, Long goodsId) {
         GoodsSku sku = goodsSkuService.getByIdNotDeleted(skuId);
         if (sku == null) {
-            throw new RuntimeException("SKUが存在しません");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUが存在しません");
         }
         if (!goodsId.equals(sku.getGoodsId())) {
-            throw new RuntimeException("SKUと商品の関連が不正です");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUと商品の関連が不正です");
         }
         return sku;
     }
@@ -272,7 +287,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             order.setFinishTime(LocalDateTime.now());
         }
         if (!stockOrderService.save(order)) {
-            throw new RuntimeException("入出庫注文の保存に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫伝票の保存に失敗しました");
         }
         return order;
     }
@@ -305,17 +320,19 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         item.setCurrency(stock.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : stock.getCurrency());
         item.setRemark(dto.getRemark());
         if (!stockOrderItemService.save(item)) {
-            throw new RuntimeException("入出庫明細の保存に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫明細の保存に失敗しました");
         }
         return item;
     }
 
-    private void saveStockRecord(StockOrder order,
-                                 StockOrderItem item,
-                                 Stock stock,
-                                 String remark,
-                                 int beforeQty,
-                                 int afterQty) {
+    private void saveStockRecord(StockOrder order, Stock stock, String remark, int beforeQty, int afterQty) {
+        StockOrderItem item = stockOrderItemService.getOne(new QueryWrapper<StockOrderItem>()
+                .eq("order_id", order.getId())
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (item == null) {
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫明細が存在しません");
+        }
         StockRecord record = new StockRecord();
         record.setBizNo(order.getOrderNo());
         record.setOrderId(order.getId());
@@ -351,7 +368,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         record.setOperatorName(order.getOperatorName());
         record.setRemark(remark);
         if (!stockRecordService.save(record)) {
-            throw new RuntimeException("在庫履歴の保存に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫履歴の保存に失敗しました");
         }
     }
 
@@ -362,6 +379,35 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private int safeInt(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private void notifyInbound(String skuCode, int qty, int afterQty, Long sourceId) {
+        String text = String.format("入庫完了: SKU[%s] 数量=%d, 在庫残=%d", skuCode, qty, afterQty);
+        saveMessage(MESSAGE_TYPE_INBOUND, text, sourceId);
+    }
+
+    private void notifyInsufficientStock(String skuCode, int requestQty, int currentQty, Long sourceId) {
+        String text = String.format("在庫不足: SKU[%s] 要求=%d, 現在在庫=%d", skuCode, requestQty, currentQty);
+        saveMessage(MESSAGE_TYPE_WARNING, text, sourceId);
+    }
+
+    private void notifyLowStock(String skuCode, int afterQty, Long sourceId) {
+        if (afterQty > LOW_STOCK_THRESHOLD) {
+            return;
+        }
+        String text = String.format("低在庫警告: SKU[%s] 在庫残=%d (しきい値=%d)", skuCode, afterQty, LOW_STOCK_THRESHOLD);
+        saveMessage(MESSAGE_TYPE_WARNING, text, sourceId);
+    }
+
+    private void saveMessage(int type, String messageText, Long sourceId) {
+        Message message = new Message();
+        message.setType(type);
+        message.setUserId(UserContext.getUserIdOrDefault());
+        message.setMessage(messageText);
+        message.setSourceId(sourceId == null ? 0 : sourceId.intValue());
+        message.setIsRead(MESSAGE_IS_UNREAD);
+        message.setState(MESSAGE_STATE_SENT);
+        messageService.save(message);
     }
 
     @Override

@@ -8,4 +8,9 @@ import org.springframework.validation.annotation.Validated;
 @Service
 @Validated
 public interface MessageService extends BaseService<Message, MessageVO> {
+    boolean read(Long id);
+
+    int readAllCurrentUser();
+
+    long countByReadStatus(Integer isRead);
 }

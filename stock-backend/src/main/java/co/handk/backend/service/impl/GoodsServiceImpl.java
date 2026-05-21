@@ -68,7 +68,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         sku.setStatus(dto.getSkuStatus() == null ? StatusEnum.NOMAL.getCode() : dto.getSkuStatus().getCode());
         boolean skuSaved = goodsSkuService.save(sku);
         if (!skuSaved) {
-            throw new RuntimeException("SKU作成に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKU作成に失敗しました");
         }
 
         if (StringUtils.hasText(dto.getImageUrl())) {
@@ -80,7 +80,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             image.setSort(dto.getImageSort() == null ? NumberConstant.ZERO : dto.getImageSort());
             boolean imageSaved = goodsImageService.save(image);
             if (!imageSaved) {
-                throw new RuntimeException("商品画像作成に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像作成に失敗しました");
             }
         }
         return true;
@@ -213,3 +213,4 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return entity;
     }
 }
+

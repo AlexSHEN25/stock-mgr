@@ -15,6 +15,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Component
@@ -22,6 +23,11 @@ import java.util.Set;
 public class PermissionInterceptor implements HandlerInterceptor {
     private static final String NO_PERMISSION_MESSAGE = "no permission";
     private static final String EMPTY = "";
+    private static final String API_STOCK_ORDER_PREFIX = "/api/stockOrder";
+    private static final String API_STOCK_ORDER_ITEM_PREFIX = "/api/stockOrderItem";
+    private static final String API_REQUEST_FORM_PREFIX = "/api/requestForm";
+    private static final String API_REQUEST_ITEM_PREFIX = "/api/requestItem";
+    private static final String API_CUSTOMER_PREFIX = "/api/customer";
 
     private final PermissionQueryService permissionQueryService;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -40,6 +46,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
 
         String uri = normalizePath(request.getRequestURI());
+        if (isNonAdminWriteAllowedByWhitelist(uri, request.getMethod())) {
+            return true;
+        }
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
             throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, NO_PERMISSION_MESSAGE);
@@ -77,6 +86,28 @@ public class PermissionInterceptor implements HandlerInterceptor {
             }
         }
         return null;
+    }
+
+    private boolean isNonAdminWriteAllowedByWhitelist(String uri, String method) {
+        if (uri == null) {
+            return false;
+        }
+        String normalizedMethod = method == null ? EMPTY : method.toUpperCase(Locale.ROOT);
+        boolean isWrite = !HttpMethod.GET.matches(normalizedMethod)
+                && !HttpMethod.HEAD.matches(normalizedMethod)
+                && !HttpMethod.OPTIONS.matches(normalizedMethod);
+        if (!isWrite) {
+            return false;
+        }
+        return startsWithPath(uri, API_STOCK_ORDER_PREFIX)
+                || startsWithPath(uri, API_STOCK_ORDER_ITEM_PREFIX)
+                || startsWithPath(uri, API_REQUEST_FORM_PREFIX)
+                || startsWithPath(uri, API_REQUEST_ITEM_PREFIX)
+                || startsWithPath(uri, API_CUSTOMER_PREFIX);
+    }
+
+    private boolean startsWithPath(String uri, String prefix) {
+        return uri.equals(prefix) || uri.startsWith(prefix + "/");
     }
 
     private String normalizePath(String path) {

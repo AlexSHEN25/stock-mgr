@@ -1,11 +1,14 @@
 package co.handk.common.model.dto.create;
 
 import jakarta.validation.constraints.NotBlank;
+import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 
 @Data
 public class CreateStockTypeDTO {
 
-    @NotBlank(message = "名称は必須項目です")
+    @NotBlank(message = "必須項目です")
     private String name;
+    private StatusEnum status;
+
 }
