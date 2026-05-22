@@ -47,4 +47,3 @@ public class StockTypeController {
         return stockTypeService.page(query);
     }
 }
-

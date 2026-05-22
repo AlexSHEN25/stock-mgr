@@ -1,5 +1,7 @@
 package co.handk.backend.controller;
 
+import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.exception.BusinessException;
 import co.handk.backend.service.StockService;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
@@ -10,7 +12,7 @@ import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,15 +20,15 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/stock")
 public class StockController {
 
-    @Autowired
-    private StockService stockService;
+    private final StockService stockService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockDTO dto) {
-        throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫登録は入庫処理から実行してください");
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫の手動追加はできません。在庫入庫を実行してください。");
     }
 
     @GetMapping("/{id}")
@@ -36,7 +38,7 @@ public class StockController {
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateStockDTO dto) {
-        throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫更新は入出庫処理から実行してください");
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫の直接更新はできません。入出庫処理を実行してください。");
     }
 
     @PostMapping("/inbound")
@@ -71,4 +73,3 @@ public class StockController {
         return stockService.page(query);
     }
 }
-

@@ -1,10 +1,8 @@
 package co.handk.client.controller;
 
-import co.handk.client.constant.ModuleEndpointStrategy;
 import co.handk.client.constant.UiText;
 import co.handk.client.service.DependencyResolver;
 import co.handk.client.service.ModuleDataService;
-import co.handk.client.util.ApiClient;
 import co.handk.client.util.ModuleMeta;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -14,7 +12,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;

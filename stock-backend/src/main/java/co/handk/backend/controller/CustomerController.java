@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateCustomerDTO;
 import co.handk.common.model.dto.query.CustomerQueryDTO;
 import co.handk.common.model.dto.update.UpdateCustomerDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/customer")
+@RequiredArgsConstructor
 public class CustomerController {
-    @Autowired
-    private CustomerService customerService;
+    private final CustomerService customerService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateCustomerDTO dto) {
@@ -55,5 +55,4 @@ public class CustomerController {
         return customerService.page(query);
     }
 }
-
 

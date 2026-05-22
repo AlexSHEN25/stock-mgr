@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateCustomerLevelDTO;
 import co.handk.common.model.dto.query.CustomerLevelQueryDTO;
 import co.handk.common.model.dto.update.UpdateCustomerLevelDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/customerLevel")
+@RequiredArgsConstructor
 public class CustomerLevelController {
-    @Autowired
-    private CustomerLevelService customerLevelService;
+    private final CustomerLevelService customerLevelService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateCustomerLevelDTO dto) {
@@ -55,5 +55,4 @@ public class CustomerLevelController {
         return customerLevelService.page(query);
     }
 }
-
 

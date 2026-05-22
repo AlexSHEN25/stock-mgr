@@ -11,8 +11,7 @@ import co.handk.common.model.dto.create.CreateMessageDTO;
 import co.handk.common.model.dto.query.MessageQueryDTO;
 import co.handk.common.model.dto.update.UpdateMessageDTO;
 import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +19,10 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/message")
 public class MessageController {
-    @Autowired
-    private MessageService messageService;
+    private final MessageService messageService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateMessageDTO dto) {
@@ -70,5 +69,4 @@ public class MessageController {
         return messageService.page(query);
     }
 }
-
 

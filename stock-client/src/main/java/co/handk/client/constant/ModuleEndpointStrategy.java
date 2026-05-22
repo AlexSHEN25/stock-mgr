@@ -1,12 +1,11 @@
 package co.handk.client.constant;
 
-import static co.handk.client.constant.AppConstants.ApiPath;
-import static co.handk.client.constant.AppConstants.Module;
-
 import java.util.HashMap;
 import java.util.Map;
 
 public final class ModuleEndpointStrategy {
+
+    private static final String PATH_PREFIX = "/";
 
     private ModuleEndpointStrategy() {
     }
@@ -15,17 +14,43 @@ public final class ModuleEndpointStrategy {
         GET, POST
     }
 
-    private record EndpointConfig(HttpMethod pageMethod, String pagePath, boolean updateContainsIdInPath) {}
+    private record EndpointConfig(
+            HttpMethod pageMethod,
+            String pagePath,
+            String createPath,
+            String updatePathTemplate,
+            String deletePathTemplate) {
+    }
 
     private static final Map<String, EndpointConfig> CONFIGS = new HashMap<>();
 
     static {
-        CONFIGS.put(Module.USER, new EndpointConfig(HttpMethod.POST, ApiPath.USER_PAGE, true));
+        CONFIGS.put(AppConstants.Module.USER, new EndpointConfig(
+                HttpMethod.POST,
+                AppConstants.ApiPath.USER_PAGE,
+                PATH_PREFIX + AppConstants.Module.USER,
+                PATH_PREFIX + AppConstants.Module.USER + "/{id}",
+                PATH_PREFIX + AppConstants.Module.USER + "/{id}"
+        ));
+    }
+
+    private static EndpointConfig defaultConfig(String moduleKey) {
+        String basePath = PATH_PREFIX + moduleKey;
+        return new EndpointConfig(
+                HttpMethod.GET,
+                basePath + AppConstants.ApiPath.PAGE_SUFFIX,
+                basePath,
+                basePath,
+                basePath + "/{id}"
+        );
     }
 
     private static EndpointConfig configOf(String moduleKey) {
-        return CONFIGS.getOrDefault(moduleKey,
-                new EndpointConfig(HttpMethod.GET, "/" + moduleKey + ApiPath.PAGE_SUFFIX, false));
+        return CONFIGS.getOrDefault(moduleKey, defaultConfig(moduleKey));
+    }
+
+    private static String resolveTemplate(String template, String id) {
+        return template.replace("{id}", id);
     }
 
     public static String pagePath(String moduleKey) {
@@ -36,14 +61,15 @@ public final class ModuleEndpointStrategy {
         return configOf(moduleKey).pageMethod == HttpMethod.POST;
     }
 
-    public static String updatePath(String moduleKey, String id) {
-        if (configOf(moduleKey).updateContainsIdInPath) {
-            return "/user/" + id;
-        }
-        return "/" + moduleKey;
+    public static String createPath(String moduleKey) {
+        return configOf(moduleKey).createPath;
     }
 
-    public static boolean updateContainsIdInPath(String moduleKey) {
-        return configOf(moduleKey).updateContainsIdInPath;
+    public static String updatePath(String moduleKey, String id) {
+        return resolveTemplate(configOf(moduleKey).updatePathTemplate, id);
+    }
+
+    public static String deletePath(String moduleKey, String id) {
+        return resolveTemplate(configOf(moduleKey).deletePathTemplate, id);
     }
 }

@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateCategoryDTO;
 import co.handk.common.model.dto.query.CategoryQueryDTO;
 import co.handk.common.model.dto.update.UpdateCategoryDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/category")
+@RequiredArgsConstructor
 public class CategoryController {
-    @Autowired
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateCategoryDTO dto) {
@@ -55,5 +55,4 @@ public class CategoryController {
         return categoryService.page(query);
     }
 }
-
 

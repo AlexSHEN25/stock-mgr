@@ -15,7 +15,6 @@ public @interface QueryField {
 
     QueryType type() default QueryType.EQ;
 
-    // 是否忽略 null
+    // true の場合、null 値はクエリ条件に含めない
     boolean ignoreNull() default true;
-
 }

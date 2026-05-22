@@ -7,16 +7,16 @@ import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockOrderService;
 import co.handk.common.model.vo.StockOrderVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, StockOrder, StockOrderVO>
         implements StockOrderService {
 
-    @Autowired
-    private PermissionQueryService permissionQueryService;
+    private final PermissionQueryService permissionQueryService;
 
     @Override
     protected StockOrderVO toVO(StockOrder entity) {

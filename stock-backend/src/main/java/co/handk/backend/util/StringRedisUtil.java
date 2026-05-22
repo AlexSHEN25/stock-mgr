@@ -1,7 +1,5 @@
 package co.handk.backend.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -13,8 +11,6 @@ public class StringRedisUtil {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-
-    private static final ObjectMapper mapper = new ObjectMapper();
 
     public void set(String key, String value) {
         stringRedisTemplate.opsForValue().set(key, value);
@@ -40,32 +36,4 @@ public class StringRedisUtil {
         return stringRedisTemplate.getExpire(key, unit);
     }
 
-    public <T> void setJson(String key, T value, long timeout, TimeUnit unit) {
-        try {
-            String json = mapper.writeValueAsString(value);
-            stringRedisTemplate.opsForValue().set(key, json, timeout, unit);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSONシリアライズに失敗しました", e);
-        }
-    }
-
-    public <T> T getJson(String key, Class<T> clazz) {
-        String json = stringRedisTemplate.opsForValue().get(key);
-        if (json == null) {
-            return null;
-        }
-        try {
-            return mapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSONデシリアライズに失敗しました", e);
-        }
-    }
-
-    public Long increment(String key, long delta) {
-        return stringRedisTemplate.opsForValue().increment(key, delta);
-    }
-
-    public Long decrement(String key, long delta) {
-        return stringRedisTemplate.opsForValue().increment(key, -delta);
-    }
 }

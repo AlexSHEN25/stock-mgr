@@ -2,7 +2,6 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.context.UserContext;
 import co.handk.backend.entity.User;
-import co.handk.backend.mapper.DeptMapper;
 import co.handk.backend.mapper.UserMapper;
 import co.handk.backend.service.LoginService;
 import co.handk.backend.util.StringRedisUtil;
@@ -17,7 +16,6 @@ import co.handk.common.util.PasswordUtil;
 import co.handk.common.util.TokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
@@ -26,14 +24,8 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class LoginServiceImpl implements LoginService {
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private StringRedisUtil stringRedisUtil;
-
-    @Autowired
-    private DeptMapper deptMapper;
+    private final UserMapper userMapper;
+    private final StringRedisUtil stringRedisUtil;
 
     @Override
     public LoginVO login(LoginDTO dto) {
@@ -44,12 +36,18 @@ public class LoginServiceImpl implements LoginService {
                 DeleteEnum.UNDELETED.getCode()
         );
         if (Objects.isNull(user)) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "ユーザーが存在しません");
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "ユーザーが見つかりません"
+            );
         }
         String rawPassword = dto.getPassword();
         String encryptPwd = PasswordUtil.encrypt(rawPassword, user.getSalt());
         if (!user.getPassword().equals(encryptPwd)) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "ユーザー名またはパスワードが正しくありません");
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "ユーザー名またはパスワードが正しくありません"
+            );
         }
         Long userId = user.getId();
         String userKey = RedisKey.LOGIN_USER + userId;
@@ -85,4 +83,3 @@ public class LoginServiceImpl implements LoginService {
         return LogoutVO.success(userId);
     }
 }
-

@@ -40,13 +40,13 @@ public class ModuleDataService {
             String id = String.valueOf(dto.get("id"));
             res = ApiClient.put(ModuleEndpointStrategy.updatePath(module, id), dto.toString());
         } else {
-            res = ApiClient.post("/" + module, dto.toString());
+            res = ApiClient.post(ModuleEndpointStrategy.createPath(module), dto.toString());
         }
         return new JSONObject(res);
     }
 
     public JSONObject delete(String module, String id) throws Exception {
-        String res = ApiClient.delete("/" + module + "/" + id);
+        String res = ApiClient.delete(ModuleEndpointStrategy.deletePath(module, id));
         return new JSONObject(res);
     }
 
@@ -74,4 +74,3 @@ public class ModuleDataService {
         return options;
     }
 }
-

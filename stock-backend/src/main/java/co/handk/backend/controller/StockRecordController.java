@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateStockRecordDTO;
 import co.handk.common.model.dto.query.StockRecordQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockRecordDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/stockRecord")
+@RequiredArgsConstructor
 public class StockRecordController {
-    @Autowired
-    private StockRecordService stockRecordService;
+    private final StockRecordService stockRecordService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockRecordDTO dto) {
@@ -55,5 +55,4 @@ public class StockRecordController {
         return stockRecordService.page(query);
     }
 }
-
 

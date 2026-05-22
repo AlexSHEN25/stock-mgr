@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateRequestItemDTO;
 import co.handk.common.model.dto.query.RequestItemQueryDTO;
 import co.handk.common.model.dto.update.UpdateRequestItemDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/requestItem")
+@RequiredArgsConstructor
 public class RequestItemController {
-    @Autowired
-    private RequestItemService requestItemService;
+    private final RequestItemService requestItemService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRequestItemDTO dto) {
@@ -55,5 +55,4 @@ public class RequestItemController {
         return requestItemService.page(query);
     }
 }
-
 

@@ -11,8 +11,7 @@ import co.handk.common.model.dto.create.CreateUserTokenDTO;
 import co.handk.common.model.dto.query.UserTokenQueryDTO;
 import co.handk.common.model.dto.update.UpdateUserTokenDTO;
 import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +19,10 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/userToken")
 public class UserTokenController {
-    @Autowired
-    private UserTokenService userTokenService;
+    private final UserTokenService userTokenService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateUserTokenDTO dto) {
@@ -55,5 +54,4 @@ public class UserTokenController {
         return userTokenService.page(query);
     }
 }
-
 

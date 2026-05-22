@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateRoleDTO;
 import co.handk.common.model.dto.query.RoleQueryDTO;
 import co.handk.common.model.dto.update.UpdateRoleDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/role")
+@RequiredArgsConstructor
 public class RoleController {
-    @Autowired
-    private RoleService roleService;
+    private final RoleService roleService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRoleDTO dto) {
@@ -55,5 +55,4 @@ public class RoleController {
         return roleService.page(query);
     }
 }
-
 

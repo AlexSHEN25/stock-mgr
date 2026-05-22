@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreatePermissionDTO;
 import co.handk.common.model.dto.query.PermissionQueryDTO;
 import co.handk.common.model.dto.update.UpdatePermissionDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/permission")
+@RequiredArgsConstructor
 public class PermissionController {
-    @Autowired
-    private PermissionService permissionService;
+    private final PermissionService permissionService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreatePermissionDTO dto) {
@@ -55,5 +55,4 @@ public class PermissionController {
         return permissionService.page(query);
     }
 }
-
 

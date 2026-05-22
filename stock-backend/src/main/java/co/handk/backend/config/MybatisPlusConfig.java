@@ -13,9 +13,9 @@ public class MybatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 分页插件
+        // 蛻・｡ｵ謠剃ｻｶ
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-        // 乐观锁插件（version 字段，库存和商品用到）
+        // 荵占ｧる煤謠剃ｻｶ・・ersion 蟄玲ｮｵ・悟ｺ灘ｭ伜柱蝠・刀逕ｨ蛻ｰ・・
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         return interceptor;
     }

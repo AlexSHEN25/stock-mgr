@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreatePriceRecordDTO;
 import co.handk.common.model.dto.query.PriceRecordQueryDTO;
 import co.handk.common.model.dto.update.UpdatePriceRecordDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/priceRecord")
+@RequiredArgsConstructor
 public class PriceRecordController {
-    @Autowired
-    private PriceRecordService priceRecordService;
+    private final PriceRecordService priceRecordService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreatePriceRecordDTO dto) {
@@ -55,5 +55,4 @@ public class PriceRecordController {
         return priceRecordService.page(query);
     }
 }
-
 

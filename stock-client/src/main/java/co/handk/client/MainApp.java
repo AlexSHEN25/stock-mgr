@@ -11,9 +11,13 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 
+import java.util.Locale;
+import java.util.ResourceBundle;
+
 public class MainApp extends Application {
 
     private Stage primaryStage;
+    private final ResourceBundle uiBundle = ResourceBundle.getBundle("i18n.ui", Locale.JAPAN);
 
     @Override
     public void start(Stage stage) {
@@ -32,14 +36,14 @@ public class MainApp extends Application {
 
     public void showLogin() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/login.fxml"), uiBundle);
             Scene scene = new Scene(loader.load(), 860, 620);
             scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
             LoginController controller = loader.getController();
             controller.setApp(this);
 
             primaryStage.setScene(scene);
-            primaryStage.setTitle("在庫管理ログイン");
+            primaryStage.setTitle(uiBundle.getString("login.window.title"));
             primaryStage.setMinWidth(760);
             primaryStage.setMinHeight(560);
             primaryStage.show();
@@ -50,7 +54,7 @@ public class MainApp extends Application {
 
     public void showMain() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main.fxml"), uiBundle);
             Scene scene = new Scene(loader.load(), 1360, 820);
             scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
             MainController controller = loader.getController();

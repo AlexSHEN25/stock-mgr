@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateOperateLogDTO;
 import co.handk.common.model.dto.query.OperateLogQueryDTO;
 import co.handk.common.model.dto.update.UpdateOperateLogDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/operateLog")
+@RequiredArgsConstructor
 public class OperateLogController {
-    @Autowired
-    private OperateLogService operateLogService;
+    private final OperateLogService operateLogService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateOperateLogDTO dto) {
@@ -55,5 +55,4 @@ public class OperateLogController {
         return operateLogService.page(query);
     }
 }
-
 

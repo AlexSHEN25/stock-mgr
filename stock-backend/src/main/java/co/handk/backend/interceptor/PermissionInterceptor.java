@@ -21,7 +21,6 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 public class PermissionInterceptor implements HandlerInterceptor {
-    private static final String NO_PERMISSION_MESSAGE = "no permission";
     private static final String EMPTY = "";
     private static final String API_STOCK_ORDER_PREFIX = "/api/stockOrder";
     private static final String API_STOCK_ORDER_ITEM_PREFIX = "/api/stockOrderItem";
@@ -51,12 +50,12 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
-            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, NO_PERMISSION_MESSAGE);
+            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, SecurityConstant.NO_PERMISSION_MESSAGE);
         }
 
         Set<String> codes = permissionQueryService.getPermissionCodes(userId);
         if (!codes.contains(requiredCode)) {
-            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, NO_PERMISSION_MESSAGE);
+            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, SecurityConstant.NO_PERMISSION_MESSAGE);
         }
         return true;
     }

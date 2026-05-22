@@ -21,65 +21,65 @@
             <padding>
                 <Insets top="14" right="12" bottom="14" left="12"/>
             </padding>
-            <Label text="在庫管理" styleClass="brand"/>
+            <Label text="%main.brand" styleClass="brand"/>
             <Accordion VBox.vgrow="ALWAYS" styleClass="side-accordion">
                 <panes>
-                    <TitledPane text="組織・権限" expanded="true">
+                    <TitledPane text="%main.group.base" expanded="true">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="ユーザー管理" userData="user" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="部署管理" userData="dept" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="倉庫管理" userData="warehouse" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="ロール管理" userData="role" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="権限管理" userData="permission" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.user" userData="user" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.dept" userData="dept" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.warehouse" userData="warehouse" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.role" userData="role" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.permission" userData="permission" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
                     </TitledPane>
-                    <TitledPane text="商品管理">
+                    <TitledPane text="%main.group.goods">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="商品管理" userData="goods" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="会員価格管理" userData="goodsLevelPrice" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="メーカー管理" userData="maker" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="ブランド管理" userData="brand" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="カテゴリ管理" userData="category" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="シリーズ管理" userData="series" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.goods" userData="goods" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.goodsLevelPrice" userData="goodsLevelPrice" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.maker" userData="maker" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.brand" userData="brand" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.category" userData="category" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.series" userData="series" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
                     </TitledPane>
-                    <TitledPane text="在庫管理">
+                    <TitledPane text="%main.group.stock">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="在庫一覧" userData="stock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="在庫区分" userData="stockType" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="在庫履歴" userData="stockRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="入出庫伝票" userData="stockOrder" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="価格履歴" userData="priceRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.stock" userData="stock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.stockType" userData="stockType" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.stockRecord" userData="stockRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.stockOrder" userData="stockOrder" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.priceRecord" userData="priceRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
                     </TitledPane>
-                    <TitledPane text="申請管理">
+                    <TitledPane text="%main.group.request">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="申請管理" userData="requestForm" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="申請明細" userData="requestItem" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.requestForm" userData="requestForm" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.requestItem" userData="requestItem" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
                     </TitledPane>
-                    <TitledPane text="顧客管理">
+                    <TitledPane text="%main.group.customer">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="顧客管理" userData="customer" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="顧客ランク管理" userData="customerLevel" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.customer" userData="customer" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.customerLevel" userData="customerLevel" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
                     </TitledPane>
-                    <TitledPane text="システム管理">
+                    <TitledPane text="%main.group.system">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="システム設定" userData="config" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="メッセージ管理" userData="message" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="操作ログ" userData="operateLog" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.config" userData="config" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.message" userData="message" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.operateLog" userData="operateLog" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
                     </TitledPane>
@@ -93,10 +93,10 @@
             <padding>
                 <Insets top="10" right="14" bottom="10" left="14"/>
             </padding>
-            <Label fx:id="pageTitleLabel" text="ダッシュボード" styleClass="page-title"/>
+            <Label fx:id="pageTitleLabel" text="%main.page.dashboard" styleClass="page-title"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="currentUserLabel" text="-" styleClass="user-chip"/>
-            <Button text="ログアウト" onAction="#onLogout" styleClass="link-btn"/>
+            <Button text="%main.logout" onAction="#onLogout" styleClass="link-btn"/>
         </HBox>
     </top>
 
@@ -107,23 +107,23 @@
             </padding>
 
             <VBox spacing="10" styleClass="search-panel">
-                <Label text="検索条件" styleClass="section-title"/>
+                <Label text="%main.section.search" styleClass="section-title"/>
                 <FlowPane fx:id="queryFieldsPane" hgap="10" vgap="10" prefWrapLength="980"/>
                 <Separator/>
-                <Label text="操作" styleClass="section-title"/>
+                <Label text="%main.section.action" styleClass="section-title"/>
                 <FlowPane hgap="8" vgap="8">
-                    <Button text="検索" onAction="#onSearch" styleClass="primary-btn"/>
-                    <Button text="リセット" onAction="#onRefresh"/>
-                    <Button text="前ページ" onAction="#onPrevPage"/>
-                    <Button text="次ページ" onAction="#onNextPage"/>
-                    <Button text="新規" onAction="#onAdd" styleClass="success-btn"/>
-                    <Button text="行編集" onAction="#onInlineEdit"/>
-                    <Button text="保存" onAction="#onInlineSave" styleClass="success-btn"/>
-                    <Button text="取消" onAction="#onInlineCancel"/>
-                    <Button text="編集" onAction="#onEdit"/>
-                    <Button text="一括削除" onAction="#onBatchDelete" styleClass="danger-btn"/>
-                    <TextField fx:id="deleteIdField" promptText="ID" prefWidth="90"/>
-                    <Button text="削除" onAction="#onDelete" styleClass="danger-btn"/>
+                    <Button text="%main.btn.search" onAction="#onSearch" styleClass="primary-btn"/>
+                    <Button text="%main.btn.reset" onAction="#onRefresh"/>
+                    <Button text="%main.btn.prev" onAction="#onPrevPage"/>
+                    <Button text="%main.btn.next" onAction="#onNextPage"/>
+                    <Button text="%main.btn.create" onAction="#onAdd" styleClass="success-btn"/>
+                    <Button text="%main.btn.inlineEdit" onAction="#onInlineEdit"/>
+                    <Button text="%main.btn.save" onAction="#onInlineSave" styleClass="success-btn"/>
+                    <Button text="%main.btn.cancel" onAction="#onInlineCancel"/>
+                    <Button text="%main.btn.edit" onAction="#onEdit"/>
+                    <Button text="%main.btn.batchDelete" onAction="#onBatchDelete" styleClass="danger-btn"/>
+                    <TextField fx:id="deleteIdField" promptText="%main.delete.id" prefWidth="90"/>
+                    <Button text="%main.btn.delete" onAction="#onDelete" styleClass="danger-btn"/>
                 </FlowPane>
             </VBox>
 

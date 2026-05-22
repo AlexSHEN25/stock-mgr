@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateBrandDTO;
 import co.handk.common.model.dto.query.BrandQueryDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/brand")
+@RequiredArgsConstructor
 public class BrandController {
-    @Autowired
-    private BrandService brandService;
+    private final BrandService brandService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateBrandDTO dto) {
@@ -55,5 +55,4 @@ public class BrandController {
         return brandService.page(query);
     }
 }
-
 

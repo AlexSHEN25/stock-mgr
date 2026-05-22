@@ -13,8 +13,7 @@ import co.handk.common.model.dto.query.RequestFormQueryDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,10 +21,10 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/requestForm")
 public class RequestFormController {
-    @Autowired
-    private RequestFormService requestFormService;
+    private final RequestFormService requestFormService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRequestFormDTO dto) {
@@ -72,5 +71,4 @@ public class RequestFormController {
         requestFormService.downloadBDeptRequestForm(id, response);
     }
 }
-
 

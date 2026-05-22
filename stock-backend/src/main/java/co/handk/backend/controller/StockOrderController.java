@@ -11,8 +11,7 @@ import co.handk.common.model.dto.create.CreateStockOrderDTO;
 import co.handk.common.model.dto.query.StockOrderQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockOrderDTO;
 import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +19,10 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/stockOrder")
 public class StockOrderController {
-    @Autowired
-    private StockOrderService stockOrderService;
+    private final StockOrderService stockOrderService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockOrderDTO dto) {
@@ -55,5 +54,4 @@ public class StockOrderController {
         return stockOrderService.page(query);
     }
 }
-
 

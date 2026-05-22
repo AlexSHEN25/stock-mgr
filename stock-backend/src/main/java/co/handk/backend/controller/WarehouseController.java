@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateWarehouseDTO;
 import co.handk.common.model.dto.query.WarehouseQueryDTO;
 import co.handk.common.model.dto.update.UpdateWarehouseDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/warehouse")
+@RequiredArgsConstructor
 public class WarehouseController {
-    @Autowired
-    private WarehouseService warehouseService;
+    private final WarehouseService warehouseService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateWarehouseDTO dto) {
@@ -55,5 +55,4 @@ public class WarehouseController {
         return warehouseService.page(query);
     }
 }
-
 

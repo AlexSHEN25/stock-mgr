@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateMakerDTO;
 import co.handk.common.model.dto.query.MakerQueryDTO;
 import co.handk.common.model.dto.update.UpdateMakerDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/maker")
+@RequiredArgsConstructor
 public class MakerController {
-    @Autowired
-    private MakerService makerService;
+    private final MakerService makerService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateMakerDTO dto) {
@@ -55,5 +55,4 @@ public class MakerController {
         return makerService.page(query);
     }
 }
-
 

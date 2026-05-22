@@ -1,4 +1,4 @@
-﻿<component name="ProjectRunConfigurationManager">
+<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Backend Debug" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="stock-backend" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="co.handk.backend.StockBackendApplication" />

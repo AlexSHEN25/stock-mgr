@@ -10,8 +10,7 @@ import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsDTO;
 import co.handk.common.model.vo.GoodsVO;
 import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,10 +18,10 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/goods")
 public class GoodsController {
-    @Autowired
-    private GoodsService goodsService;
+    private final GoodsService goodsService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsDTO dto) {

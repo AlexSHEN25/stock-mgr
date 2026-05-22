@@ -18,8 +18,8 @@ import co.handk.common.model.dto.update.UpdateGoodsDTO;
 import co.handk.common.model.vo.GoodsVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,13 +28,12 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsVO>
         implements GoodsService {
 
-    @Autowired
-    private GoodsSkuService goodsSkuService;
-    @Autowired
-    private GoodsImageService goodsImageService;
+    private final GoodsSkuService goodsSkuService;
+    private final GoodsImageService goodsImageService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -68,7 +67,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         sku.setStatus(dto.getSkuStatus() == null ? StatusEnum.NOMAL.getCode() : dto.getSkuStatus().getCode());
         boolean skuSaved = goodsSkuService.save(sku);
         if (!skuSaved) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKU作成に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKU縺ｮ菫晏ｭ倥↓螟ｱ謨励＠縺ｾ縺励◆");
         }
 
         if (StringUtils.hasText(dto.getImageUrl())) {
@@ -80,7 +79,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             image.setSort(dto.getImageSort() == null ? NumberConstant.ZERO : dto.getImageSort());
             boolean imageSaved = goodsImageService.save(image);
             if (!imageSaved) {
-                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像作成に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蝠・刀逕ｻ蜒上・菫晏ｭ倥↓螟ｱ謨励＠縺ｾ縺励◆");
             }
         }
         return true;
@@ -213,4 +212,3 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return entity;
     }
 }
-

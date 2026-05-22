@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateGoodsSkuDTO;
 import co.handk.common.model.dto.query.GoodsSkuQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsSkuDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/goodsSku")
+@RequiredArgsConstructor
 public class GoodsSkuController {
-    @Autowired
-    private GoodsSkuService goodsSkuService;
+    private final GoodsSkuService goodsSkuService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsSkuDTO dto) {
@@ -55,5 +55,4 @@ public class GoodsSkuController {
         return goodsSkuService.page(query);
     }
 }
-
 

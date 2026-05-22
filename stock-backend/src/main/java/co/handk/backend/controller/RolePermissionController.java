@@ -11,8 +11,7 @@ import co.handk.common.model.dto.create.CreateRolePermissionDTO;
 import co.handk.common.model.dto.query.RolePermissionQueryDTO;
 import co.handk.common.model.dto.update.UpdateRolePermissionDTO;
 import jakarta.validation.Valid;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +19,10 @@ import java.util.List;
 
 @RestController
 @Validated
+@RequiredArgsConstructor
 @RequestMapping("/rolePermission")
 public class RolePermissionController {
-    @Autowired
-    private RolePermissionService rolePermissionService;
+    private final RolePermissionService rolePermissionService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRolePermissionDTO dto) {
@@ -55,5 +54,4 @@ public class RolePermissionController {
         return rolePermissionService.page(query);
     }
 }
-
 

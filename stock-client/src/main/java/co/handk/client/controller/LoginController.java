@@ -58,13 +58,13 @@ public class LoginController {
                 ApiClient.resetLoginTimeoutHandled();
                 app.showMain();
             } else {
-                String msg = json.optString("message", json.optString("msg", "ログイン失敗"));
+                String msg = json.optString("message", json.optString("msg", UiText.MSG_LOGIN_FAILED_DEFAULT));
                 messageLabel.setText(msg);
             }
         } catch (Exception ex) {
             messageLabel.setText(UiText.MSG_REQUEST_FAILED_PREFIX + ex.getMessage());
             Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("ログイン失敗");
+            alert.setTitle(UiText.TITLE_LOGIN_FAILED);
             alert.setHeaderText(null);
             alert.setContentText(ex.getMessage());
             alert.showAndWait();

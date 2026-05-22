@@ -8,8 +8,8 @@ import co.handk.backend.service.PermissionQueryService;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.vo.CustomerVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +17,11 @@ import java.io.Serializable;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Customer, CustomerVO>
         implements CustomerService {
 
-    @Autowired
-    private PermissionQueryService permissionQueryService;
+    private final PermissionQueryService permissionQueryService;
 
     @Override
     protected CustomerVO toVO(Customer entity) {
@@ -100,8 +100,10 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             return;
         }
         if (!userId.equals(customer.getOwnerUserId())) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "この顧客データにアクセスする権限がありません");
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "他ユーザーの顧客は操作できません"
+            );
         }
     }
 }
-

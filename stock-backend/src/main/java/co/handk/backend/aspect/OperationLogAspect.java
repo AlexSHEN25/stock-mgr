@@ -83,7 +83,7 @@ public class OperationLogAspect {
             log.setCostTime((int) costTime);
             operateLogService.save(log);
         } catch (Exception e) {
-            log.warn("操作日志写入失败: {}", e.getMessage(), e);
+            log.warn("操作ログ書き込み失敗: {}", e.getMessage(), e);
         }
     }
 

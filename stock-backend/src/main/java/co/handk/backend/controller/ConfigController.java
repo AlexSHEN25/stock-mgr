@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateConfigDTO;
 import co.handk.common.model.dto.query.ConfigQueryDTO;
 import co.handk.common.model.dto.update.UpdateConfigDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/config")
+@RequiredArgsConstructor
 public class ConfigController {
-    @Autowired
-    private ConfigService configService;
+    private final ConfigService configService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateConfigDTO dto) {
@@ -55,5 +55,4 @@ public class ConfigController {
         return configService.page(query);
     }
 }
-
 

@@ -1,36 +1,75 @@
 package co.handk.client.constant;
 
+import java.util.Locale;
+import java.util.ResourceBundle;
+
 public final class UiText {
+
+    private static final ResourceBundle BUNDLE = ResourceBundle.getBundle("i18n.ui", Locale.JAPAN);
 
     private UiText() {
     }
 
-    public static final String MSG_SELECT_ROW_FIRST = "先に行を選択してください。";
-    public static final String MSG_INLINE_EDIT_STARTED = "選択行のインライン編集を開始しました。";
-    public static final String MSG_INLINE_EDIT_NONE = "インライン編集対象がありません。";
-    public static final String MSG_INLINE_UPDATE_SUCCESS = "インライン更新が完了しました。";
-    public static final String MSG_INLINE_UPDATE_FAILED = "インライン更新に失敗しました。";
-    public static final String MSG_INLINE_CANCELLED = "インライン編集を取り消しました。";
-    public static final String MSG_BATCH_DELETE_CHECK = "削除する行にチェックを入れてください。";
-    public static final String MSG_BATCH_DELETE_DONE = "一括削除完了: 成功 %d 件";
-    public static final String MSG_DELETE_ID_REQUIRED = "IDを入力してください。";
-    public static final String MSG_DELETE_SUCCESS = "削除に成功しました。";
-    public static final String MSG_DELETE_FAILED = "削除に失敗しました。";
-    public static final String MSG_LOGOUT_FAILED = "ログアウトに失敗しました。";
-    public static final String MSG_FORM_OPEN_FAILED = "フォーム表示に失敗しました: ";
-    public static final String MSG_SAVE_FAILED = "保存に失敗しました: ";
-    public static final String MSG_UPDATE_FAILED = "更新に失敗しました: ";
-    public static final String MSG_SAVE_SUCCESS_CREATE = "作成に成功しました。";
-    public static final String MSG_SAVE_SUCCESS_UPDATE = "更新に成功しました。";
-    public static final String MSG_LOAD_FAILED = "読み込みに失敗しました。";
-    public static final String MSG_LOAD_SUCCESS = "読み込み成功";
-    public static final String MSG_RESPONSE_DATA_EMPTY = "レスポンスのデータが空です。";
-    public static final String MSG_RELATION_ID_NOT_FOUND = "ID が見つかりません。";
-    public static final String MSG_DOWNLOAD_DONE = "ダウンロード完了";
-    public static final String MSG_DOWNLOAD_FAIL = "ダウンロード失敗: ";
-    public static final String MSG_EDIT_ID_REQUIRED = "編集時は id が必須です";
-    public static final String MSG_JSON_PARSE_FAIL = "JSON 解析エラー: ";
-    public static final String MSG_REQUIRED_SUFFIX = " は必須です";
-    public static final String MSG_LOGIN_TOKEN_EMPTY = "ログイン失敗: トークンが空です";
-    public static final String MSG_REQUEST_FAILED_PREFIX = "リクエスト失敗: ";
+    private static String t(String key) {
+        return BUNDLE.getString(key);
+    }
+
+    public static final String LABEL_LOGIN_USER_PREFIX = t("msg.loginUserPrefix");
+    public static final String MSG_FIRST_GUIDE = t("msg.firstGuide");
+    public static final String MSG_EMPTY_RESULT = t("msg.emptyResult");
+
+    public static final String ACTION_CREATE = t("action.create");
+    public static final String ACTION_EDIT = t("action.edit");
+    public static final String ACTION_ORDER_DETAIL = t("action.orderDetail");
+    public static final String ACTION_REQUEST_DETAIL = t("action.requestDetail");
+    public static final String ACTION_DOWNLOAD = t("action.download");
+
+    public static final String TITLE_CONFIRM_BATCH_DELETE = t("title.confirmBatchDelete");
+    public static final String TITLE_CONFIRM_DELETE = t("title.confirmDelete");
+    public static final String TITLE_CONFIRM_LOGOUT = t("title.confirmLogout");
+    public static final String TITLE_SAVE_FILE = t("title.saveFile");
+    public static final String TITLE_LOGIN_FAILED = t("title.loginFailed");
+
+    public static final String MSG_CONFIRM_BATCH_DELETE = t("msg.confirmBatchDelete");
+    public static final String MSG_CONFIRM_DELETE = t("msg.confirmDelete");
+    public static final String MSG_CONFIRM_LOGOUT = t("msg.confirmLogout");
+    public static final String MSG_BATCH_DELETE_CANCELLED = t("msg.batchDeleteCancelled");
+    public static final String MSG_DELETE_CANCELLED = t("msg.deleteCancelled");
+    public static final String MSG_SELECT_ROW_FIRST = t("msg.selectRowFirst");
+    public static final String MSG_INLINE_EDIT_STARTED = t("msg.inlineEditStarted");
+    public static final String MSG_INLINE_EDIT_NONE = t("msg.inlineEditNone");
+    public static final String MSG_INLINE_UPDATE_SUCCESS = t("msg.inlineUpdateSuccess");
+    public static final String MSG_INLINE_UPDATE_FAILED = t("msg.inlineUpdateFailed");
+    public static final String MSG_INLINE_CANCELLED = t("msg.inlineCancelled");
+    public static final String MSG_BATCH_DELETE_CHECK = t("msg.batchDeleteCheck");
+    public static final String MSG_BATCH_DELETE_DONE = t("msg.batchDeleteDone");
+    public static final String MSG_DELETE_ID_REQUIRED = t("msg.deleteIdRequired");
+    public static final String MSG_DELETE_SUCCESS = t("msg.deleteSuccess");
+    public static final String MSG_DELETE_FAILED = t("msg.deleteFailed");
+    public static final String MSG_LOGOUT_FAILED = t("msg.logoutFailed");
+    public static final String MSG_FORM_OPEN_FAILED = t("msg.formOpenFailed");
+    public static final String MSG_SAVE_FAILED = t("msg.saveFailed");
+    public static final String MSG_UPDATE_FAILED = t("msg.updateFailed");
+    public static final String MSG_SAVE_SUCCESS_CREATE = t("msg.saveSuccessCreate");
+    public static final String MSG_SAVE_SUCCESS_UPDATE = t("msg.saveSuccessUpdate");
+    public static final String MSG_LOAD_FAILED = t("msg.loadFailed");
+    public static final String MSG_LOAD_SUCCESS = t("msg.loadSuccess");
+    public static final String MSG_RESPONSE_DATA_EMPTY = t("msg.responseDataEmpty");
+    public static final String MSG_RELATION_ID_NOT_FOUND = t("msg.relationIdNotFound");
+    public static final String MSG_DOWNLOAD_DONE = t("msg.downloadDone");
+    public static final String MSG_DOWNLOAD_FAIL = t("msg.downloadFail");
+    public static final String MSG_EDIT_ID_REQUIRED = t("msg.editIdRequired");
+    public static final String MSG_JSON_PARSE_FAIL = t("msg.jsonParseFail");
+    public static final String MSG_REQUIRED_SUFFIX = t("msg.requiredSuffix");
+    public static final String MSG_LOGIN_TOKEN_EMPTY = t("msg.loginTokenEmpty");
+    public static final String MSG_REQUEST_FAILED_PREFIX = t("msg.requestFailedPrefix");
+    public static final String MSG_LOGIN_FAILED_DEFAULT = t("msg.loginFailedDefault");
+
+    public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
+    public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");
+    public static final String DELETE_ID_PATTERN = t("format.deleteId");
+
+    public static String byKey(String key) {
+        return t(key);
+    }
 }

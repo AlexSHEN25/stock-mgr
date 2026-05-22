@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateSeriesDTO;
 import co.handk.common.model.dto.query.SeriesQueryDTO;
 import co.handk.common.model.dto.update.UpdateSeriesDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/series")
+@RequiredArgsConstructor
 public class SeriesController {
-    @Autowired
-    private SeriesService seriesService;
+    private final SeriesService seriesService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateSeriesDTO dto) {
@@ -55,5 +55,4 @@ public class SeriesController {
         return seriesService.page(query);
     }
 }
-
 

@@ -71,7 +71,7 @@ public class MainController {
     private MainApp app;
     private String currentModule = Module.USER;
     private int pageNum = 1;
-    private final int pageSize = 10;
+    private static final int PAGE_SIZE = 10;
     private final Map<String, Control> queryControls = new LinkedHashMap<>();
     private final ModuleDataService dataService = new ModuleDataService();
     private final TableActionService tableActionService = new TableActionService();
@@ -81,24 +81,23 @@ public class MainController {
 
     public void setApp(MainApp app) {
         this.app = app;
-        currentUserLabel.setText("ログインユーザー: " + Session.getUsername());
+        currentUserLabel.setText(UiText.LABEL_LOGIN_USER_PREFIX + Session.getUsername());
         dataTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         dataTable.getSelectionModel().setCellSelectionEnabled(true);
         dataTable.setEditable(true);
         dataTable.setTableMenuButtonVisible(true);
         dataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         rebuildQueryFields();
-        messageLabel.setText("左メニューからモジュールを選択し、検索後に操作してください。");
+        messageLabel.setText(UiText.MSG_FIRST_GUIDE);
         Platform.runLater(this::focusFirstQueryField);
         loadData();
     }
 
     @FXML
     private void onNavSelect(ActionEvent event) {
-        if (!(event.getSource() instanceof Button btn)) {
-            return;
+        if (event.getSource() instanceof Button btn) {
+            switchModule(String.valueOf(btn.getUserData()), btn.getText());
         }
-        switchModule(String.valueOf(btn.getUserData()), btn.getText());
     }
 
     @FXML
@@ -130,7 +129,7 @@ public class MainController {
 
     @FXML
     private void onAdd() {
-        openFormDialog("新規作成", false);
+        openFormDialog(UiText.ACTION_CREATE, false);
     }
 
     @FXML
@@ -190,7 +189,7 @@ public class MainController {
             messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
             return;
         }
-        openFormDialog("編集", true);
+        openFormDialog(UiText.ACTION_EDIT, true);
     }
 
     @FXML
@@ -200,13 +199,12 @@ public class MainController {
             messageLabel.setText(UiText.MSG_BATCH_DELETE_CHECK);
             return;
         }
-
         List<String> ids = new ArrayList<>();
         for (Map<String, Object> row : checkedRows) {
             ids.add(resolveRecordId(row));
         }
-        if (!confirm("一括削除確認", ids.size() + "件を削除します。よろしいですか？")) {
-            messageLabel.setText("一括削除をキャンセルしました。");
+        if (!confirm(UiText.TITLE_CONFIRM_BATCH_DELETE, String.format(UiText.MSG_CONFIRM_BATCH_DELETE, ids.size()))) {
+            messageLabel.setText(UiText.MSG_BATCH_DELETE_CANCELLED);
             return;
         }
         int ok = tableActionService.batchDelete(currentModule, ids);
@@ -221,13 +219,13 @@ public class MainController {
             messageLabel.setText(UiText.MSG_DELETE_ID_REQUIRED);
             return;
         }
-
+        String normalizedId = id.trim();
+        if (!confirm(UiText.TITLE_CONFIRM_DELETE, String.format(UiText.MSG_CONFIRM_DELETE, normalizedId))) {
+            messageLabel.setText(UiText.MSG_DELETE_CANCELLED);
+            return;
+        }
         try {
-            if (!confirm("削除確認", "ID " + id.trim() + " を削除します。よろしいですか？")) {
-                messageLabel.setText("削除をキャンセルしました。");
-                return;
-            }
-            JSONObject json = tableActionService.deleteOne(currentModule, id.trim());
+            JSONObject json = tableActionService.deleteOne(currentModule, normalizedId);
             if (uiFeedback.isSuccess(json)) {
                 messageLabel.setText(UiText.MSG_DELETE_SUCCESS);
                 loadData();
@@ -241,7 +239,7 @@ public class MainController {
 
     @FXML
     private void onLogout() {
-        if (!confirm("ログアウト確認", "ログアウトします。よろしいですか？")) {
+        if (!confirm(UiText.TITLE_CONFIRM_LOGOUT, UiText.MSG_CONFIRM_LOGOUT)) {
             return;
         }
         try {
@@ -258,14 +256,6 @@ public class MainController {
         }
     }
 
-    private String resolveRecordId(Map<String, Object> row) {
-        Object id = row.get(Field.ID);
-        if (id == null) {
-            id = row.get(Field.SKU_ID);
-        }
-        return id == null ? "" : String.valueOf(id);
-    }
-
     private void switchModule(String module, String title) {
         currentModule = module;
         pageNum = 1;
@@ -279,14 +269,12 @@ public class MainController {
     private void rebuildQueryFields() {
         queryFieldsPane.getChildren().clear();
         queryControls.clear();
-
         for (String field : ModuleMeta.queryFields(currentModule)) {
             Label label = new Label(ModuleMeta.normalizeTitle(field));
             label.setStyle("-fx-text-fill:#4b5563;");
             Control control = createControl(field);
             control.setUserData(field);
             control.setPrefWidth(170);
-
             queryFieldsPane.getChildren().add(label);
             queryFieldsPane.getChildren().add(control);
             queryControls.put(field, control);
@@ -298,19 +286,16 @@ public class MainController {
         ModuleMeta.FieldType type = ModuleMeta.fieldType(currentModule, field);
         if (type == ModuleMeta.FieldType.SELECT) {
             ComboBox<Option> combo = new ComboBox<>();
-            List<ModuleMeta.Option> options = ModuleMeta.selectOptions(currentModule, field);
-            for (ModuleMeta.Option option : options) {
+            for (ModuleMeta.Option option : ModuleMeta.selectOptions(currentModule, field)) {
                 combo.getItems().add(new Option(option.label, option.value));
             }
             return combo;
         }
-
         String relationField = ModuleMeta.mapNameFieldToIdField(field);
         if (!relationField.isBlank()) {
             field = relationField;
             type = ModuleMeta.FieldType.RELATION;
         }
-
         if (type == ModuleMeta.FieldType.RELATION) {
             ComboBox<Option> combo = new ComboBox<>();
             String relationModule = ModuleMeta.relationModuleByField(field);
@@ -319,7 +304,6 @@ public class MainController {
             }
             return combo;
         }
-
         return new TextField();
     }
 
@@ -361,8 +345,7 @@ public class MainController {
         Map<String, String> params = new LinkedHashMap<>();
         for (Map.Entry<String, Control> entry : queryControls.entrySet()) {
             String field = entry.getKey();
-            Control control = entry.getValue();
-            String value = readControlValue(control);
+            String value = readControlValue(entry.getValue());
             if (value == null || value.isBlank()) {
                 continue;
             }
@@ -398,17 +381,14 @@ public class MainController {
                 modal.initOwner(owner);
             }
             modal.setScene(new Scene(root));
-
             ModuleFormController formController = loader.getController();
             Map<String, Object> selected = editMode ? currentWorkingRow() : null;
             formController.configure(currentModule, action + " " + pageTitleLabel.getText(), editMode, selected);
             modal.setOnCloseRequest(e -> formController.markCanceled());
             modal.showAndWait();
-
-            if (!formController.isSubmitted()) {
-                return;
+            if (formController.isSubmitted()) {
+                submitForm(editMode, formController.toJson());
             }
-            submitForm(editMode, formController.toJson());
         } catch (Exception ex) {
             messageLabel.setText(uiFeedback.formOpenFailed(ex));
         }
@@ -448,32 +428,29 @@ public class MainController {
                 ModuleMeta.FieldType type = ModuleMeta.fieldType(currentModule, key);
                 try {
                     if (type == ModuleMeta.FieldType.NUMBER) {
-                        if (text.contains(".")) {
-                            dto.put(key, Double.parseDouble(text));
-                        } else {
-                            dto.put(key, Long.parseLong(text));
-                        }
+                        dto.put(key, text.contains(".") ? Double.parseDouble(text) : Long.parseLong(text));
                     } else {
                         dto.put(key, text);
                     }
+                    continue;
                 } catch (Exception ex) {
+                    LOGGER.log(Level.WARNING, "Numeric parse fallback. module=" + currentModule + ", field=" + key + ", value=" + text, ex);
                     dto.put(key, text);
+                    continue;
                 }
-            } else {
-                dto.put(key, val);
             }
+            dto.put(key, val);
         }
         return dto;
     }
 
     private void loadData() {
         try {
-            JSONObject wrapper = dataService.fetchPage(currentModule, pageNum, pageSize, buildQueryParams());
+            JSONObject wrapper = dataService.fetchPage(currentModule, pageNum, PAGE_SIZE, buildQueryParams());
             if (!uiFeedback.isSuccess(wrapper)) {
                 messageLabel.setText(uiFeedback.resolveMessage(wrapper, UiText.MSG_LOAD_FAILED));
                 return;
             }
-
             JSONObject data = wrapper.optJSONObject("data");
             if (data == null) {
                 messageLabel.setText(UiText.MSG_RESPONSE_DATA_EMPTY);
@@ -482,15 +459,11 @@ public class MainController {
 
             long total = data.optLong("total", 0);
             long totalPages = data.optLong("totalPages", 0);
-            pageInfoLabel.setText(String.format("%d / %d ページ, 全 %d 件", pageNum, totalPages, total));
+            pageInfoLabel.setText(String.format(UiText.PAGE_INFO_FORMAT, pageNum, totalPages, total));
 
             JSONArray records = data.optJSONArray("records");
             buildTable(records == null ? new JSONArray() : records);
-            if (records == null || records.isEmpty()) {
-                messageLabel.setText("該当データがありません。条件を変更して再検索してください。");
-            } else {
-                messageLabel.setText(UiText.MSG_LOAD_SUCCESS);
-            }
+            messageLabel.setText(records == null || records.isEmpty() ? UiText.MSG_EMPTY_RESULT : UiText.MSG_LOAD_SUCCESS);
 
             if (totalPages > 0 && pageNum > totalPages) {
                 pageNum = (int) totalPages;
@@ -503,7 +476,6 @@ public class MainController {
 
     private void buildTable(JSONArray records) {
         dataTable.getColumns().clear();
-
         ObservableList<Map<String, Object>> rows = FXCollections.observableArrayList();
         LinkedHashSet<String> keys = new LinkedHashSet<>();
 
@@ -512,8 +484,7 @@ public class MainController {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put(SELECTED_KEY, new SimpleBooleanProperty(false));
             for (String key : item.keySet()) {
-                Object value = item.opt(key);
-                row.put(key, value);
+                row.put(key, item.opt(key));
                 keys.add(key);
             }
             rows.add(row);
@@ -521,28 +492,30 @@ public class MainController {
 
         dataTable.getColumns().add(createSelectColumn(rows));
         for (String key : ModuleMeta.orderedColumns(currentModule, keys)) {
-            if (!keys.contains(key)) {
-                continue;
+            if (keys.contains(key)) {
+                dataTable.getColumns().add(createTextColumn(key));
             }
-            dataTable.getColumns().add(createTextColumn(key));
         }
-        if (Module.STOCK_ORDER.equals(currentModule)) {
-            dataTable.getColumns().add(createDetailActionColumn("入出庫明細", Module.STOCK_ORDER_ITEM, Field.ORDER_ID));
-        }
-        if (Module.REQUEST_FORM.equals(currentModule)) {
-            dataTable.getColumns().add(createDetailActionColumn("申請明細", Module.REQUEST_ITEM, Field.REQUEST_ID));
-            dataTable.getColumns().add(createDownloadActionColumn());
+        for (ModuleMeta.RowAction action : ModuleMeta.rowActions(currentModule)) {
+            dataTable.getColumns().add(createActionColumn(action));
         }
         dataTable.setItems(rows);
     }
 
+    private TableColumn<Map<String, Object>, Void> createActionColumn(ModuleMeta.RowAction action) {
+        if (action.type == ModuleMeta.RowActionType.DOWNLOAD_REQUEST_FORM) {
+            return createDownloadActionColumn();
+        }
+        return createDetailActionColumn(UiText.byKey(action.titleKey), action.targetModule, action.filterField);
+    }
+
     private TableColumn<Map<String, Object>, Void> createDownloadActionColumn() {
-        TableColumn<Map<String, Object>, Void> col = new TableColumn<>("ダウンロード");
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>(UiText.ACTION_DOWNLOAD);
         col.setPrefWidth(120);
         col.setSortable(false);
         col.setReorderable(false);
         col.setCellFactory(param -> new TableCell<>() {
-            private final Button btn = new Button("ダウンロード");
+            private final Button btn = new Button(UiText.ACTION_DOWNLOAD);
             {
                 btn.setOnAction(event -> {
                     Map<String, Object> row = getTableView().getItems().get(getIndex());
@@ -566,10 +539,9 @@ public class MainController {
     private void downloadRequestForm(String id) {
         try {
             byte[] bytes = tableActionService.downloadRequestForm(id);
-
             FileChooser chooser = new FileChooser();
-            chooser.setTitle("保存先を選択");
-            chooser.setInitialFileName("request_" + id + ".xlsx");
+            chooser.setTitle(UiText.TITLE_SAVE_FILE);
+            chooser.setInitialFileName(String.format(UiText.DOWNLOAD_FILENAME_PATTERN, id));
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx"));
             Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
             File target = chooser.showSaveDialog(owner);
@@ -637,7 +609,7 @@ public class MainController {
 
     private TableColumn<Map<String, Object>, String> createTextColumn(String key) {
         TableColumn<Map<String, Object>, String> col = new TableColumn<>(columnTitle(key));
-        col.setPrefWidth("id".equals(key) || "skuId".equals(key) ? 90 : 150);
+        col.setPrefWidth("id".equals(key) ? 90 : 150);
         col.setEditable(true);
         col.setCellFactory(TextFieldTableCell.forTableColumn());
         col.setCellValueFactory(cell -> {
@@ -672,6 +644,10 @@ public class MainController {
         return col;
     }
 
+    private String columnTitle(String key) {
+        return Field.ID.equals(key) ? "ID" : ModuleMeta.normalizeTitle(key);
+    }
+
     private String normalizeEnumValue(String value) {
         if (value == null) {
             return "";
@@ -685,11 +661,12 @@ public class MainController {
         return value;
     }
 
-    private String columnTitle(String key) {
-        if (Field.ID.equals(key) || Field.SKU_ID.equals(key)) {
-            return "ID";
+    private String resolveRecordId(Map<String, Object> row) {
+        Object id = row.get(Field.ID);
+        if (id == null) {
+            id = row.get(Field.SKU_ID);
         }
-        return ModuleMeta.normalizeTitle(key);
+        return id == null ? "" : String.valueOf(id);
     }
 
     private SimpleBooleanProperty selectedProperty(Map<String, Object> row) {

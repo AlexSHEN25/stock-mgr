@@ -11,8 +11,8 @@ import co.handk.common.model.dto.create.CreateGoodsLevelPriceDTO;
 import co.handk.common.model.dto.query.GoodsLevelPriceQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsLevelPriceDTO;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +21,9 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/goodsLevelPrice")
+@RequiredArgsConstructor
 public class GoodsLevelPriceController {
-    @Autowired
-    private GoodsLevelPriceService goodsLevelPriceService;
+    private final GoodsLevelPriceService goodsLevelPriceService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsLevelPriceDTO dto) {
@@ -55,5 +55,4 @@ public class GoodsLevelPriceController {
         return goodsLevelPriceService.page(query);
     }
 }
-
 

@@ -17,18 +17,18 @@
             <Insets top="26" right="26" bottom="26" left="26"/>
         </padding>
 
-        <Label text="Stock Admin" styleClass="login-title"/>
-        <Label text="在庫管理クライアント" styleClass="login-subtitle"/>
+        <Label text="%login.title" styleClass="login-title"/>
+        <Label text="%login.subtitle" styleClass="login-subtitle"/>
 
-        <TextField fx:id="usernameField" promptText="ユーザー名" styleClass="input-field"/>
-        <PasswordField fx:id="passwordField" promptText="パスワード" styleClass="input-field"/>
+        <TextField fx:id="usernameField" promptText="%login.username" styleClass="input-field"/>
+        <PasswordField fx:id="passwordField" promptText="%login.password" styleClass="input-field"/>
 
         <HBox alignment="CENTER_LEFT" spacing="8">
-            <CheckBox fx:id="rememberCheckBox" text="ユーザー名とパスワードを記憶"/>
+            <CheckBox fx:id="rememberCheckBox" text="%login.remember"/>
             <Region HBox.hgrow="ALWAYS"/>
         </HBox>
 
-        <Button text="ログイン" onAction="#onLogin" styleClass="primary-btn" maxWidth="1.7976931348623157E308"/>
+        <Button text="%login.submit" onAction="#onLogin" styleClass="primary-btn" maxWidth="1.7976931348623157E308"/>
         <Label fx:id="messageLabel" styleClass="error-label" wrapText="true"/>
     </VBox>
 </StackPane>

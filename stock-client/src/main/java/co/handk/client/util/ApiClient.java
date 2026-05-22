@@ -8,7 +8,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -40,52 +39,43 @@ public class ApiClient {
     private static final String DEBUG_FLAG = "stock.client.http.debug";
     private static final AtomicBoolean LOGIN_TIMEOUT_HANDLED = new AtomicBoolean(false);
     private static Runnable loginTimeoutHandler;
-    private static final Map<String, String> PATH_ALIASES = new LinkedHashMap<>();
-
-    static {
-        PATH_ALIASES.put("/goodsManagement/", "/goods/");
-        PATH_ALIASES.put("/goods/management/page", "/goods/page");
-    }
 
     public static void setLoginTimeoutHandler(Runnable handler) {
         loginTimeoutHandler = handler;
     }
 
     public static String post(String path, String json) throws Exception {
-        String normalizedPath = normalizePath(path);
-        HttpURLConnection conn = open(normalizedPath, METHOD_POST);
+        HttpURLConnection conn = open(path, METHOD_POST);
         conn.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
         conn.setDoOutput(true);
 
         long start = System.currentTimeMillis();
-        debugRequest(METHOD_POST, normalizedPath, json, conn);
+        debugRequest(METHOD_POST, path, json, conn);
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        return read(conn, start, METHOD_POST, normalizedPath);
+        return read(conn, start, METHOD_POST, path);
     }
 
     public static String put(String path, String json) throws Exception {
-        String normalizedPath = normalizePath(path);
-        HttpURLConnection conn = open(normalizedPath, METHOD_PUT);
+        HttpURLConnection conn = open(path, METHOD_PUT);
         conn.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
         conn.setDoOutput(true);
 
         long start = System.currentTimeMillis();
-        debugRequest(METHOD_PUT, normalizedPath, json, conn);
+        debugRequest(METHOD_PUT, path, json, conn);
 
         try (OutputStream os = conn.getOutputStream()) {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        return read(conn, start, METHOD_PUT, normalizedPath);
+        return read(conn, start, METHOD_PUT, path);
     }
 
     public static String get(String path, Map<String, String> queryParams) throws Exception {
-        String normalizedPath = normalizePath(path);
-        String fullPath = normalizedPath + toQueryString(queryParams);
+        String fullPath = path + toQueryString(queryParams);
         HttpURLConnection conn = open(fullPath, METHOD_GET);
 
         long start = System.currentTimeMillis();
@@ -94,19 +84,17 @@ public class ApiClient {
     }
 
     public static String delete(String path) throws Exception {
-        String normalizedPath = normalizePath(path);
-        HttpURLConnection conn = open(normalizedPath, METHOD_DELETE);
+        HttpURLConnection conn = open(path, METHOD_DELETE);
 
         long start = System.currentTimeMillis();
-        debugRequest(METHOD_DELETE, normalizedPath, EMPTY, conn);
-        return read(conn, start, METHOD_DELETE, normalizedPath);
+        debugRequest(METHOD_DELETE, path, EMPTY, conn);
+        return read(conn, start, METHOD_DELETE, path);
     }
 
     public static byte[] getBytes(String path) throws Exception {
-        String normalizedPath = normalizePath(path);
-        HttpURLConnection conn = open(normalizedPath, METHOD_GET);
+        HttpURLConnection conn = open(path, METHOD_GET);
         long start = System.currentTimeMillis();
-        debugRequest(METHOD_GET, normalizedPath, EMPTY, conn);
+        debugRequest(METHOD_GET, path, EMPTY, conn);
         int status = conn.getResponseCode();
         InputStream is = status >= HTTP_BAD_REQUEST ? conn.getErrorStream() : conn.getInputStream();
         if (is == null) {
@@ -119,7 +107,7 @@ public class ApiClient {
             bos.write(buffer, 0, len);
         }
         byte[] bytes = bos.toByteArray();
-        debugResponse(METHOD_GET, normalizedPath, status, System.currentTimeMillis() - start, "binary(" + bytes.length + ")");
+        debugResponse(METHOD_GET, path, status, System.currentTimeMillis() - start, "binary(" + bytes.length + ")");
         if (status >= HTTP_BAD_REQUEST) {
             String body = new String(bytes, StandardCharsets.UTF_8);
             throw new IOException(body.isBlank() ? ("HTTP " + status) : body);
@@ -139,17 +127,6 @@ public class ApiClient {
             conn.setRequestProperty(HEADER_AUTHORIZATION, AUTH_BEARER_PREFIX + token);
         }
         return conn;
-    }
-
-    private static String normalizePath(String path) {
-        if (path == null || path.isBlank()) {
-            return path;
-        }
-        String normalized = path;
-        for (Map.Entry<String, String> entry : PATH_ALIASES.entrySet()) {
-            normalized = normalized.replace(entry.getKey(), entry.getValue());
-        }
-        return normalized;
     }
 
     private static String toQueryString(Map<String, String> queryParams) {

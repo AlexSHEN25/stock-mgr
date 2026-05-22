@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 库存 Mapper
+ * 蠎灘ｭ・Mapper
  */
 @Mapper
 public interface StockMapper extends BaseMapper<Stock> {
