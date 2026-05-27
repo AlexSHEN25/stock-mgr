@@ -1,0 +1,12 @@
+package co.handk.common.model.vo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class OptionVO {
+    private Long id;
+    private String name;
+}
+

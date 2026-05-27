@@ -48,7 +48,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     private DataSource dataSource;
 
     /**
-     * ================= 鬯ｮ・ｫ繝ｻ・ｴ髮狗ｿｫ・代・・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・･鬯ｯ・ｮ繝ｻ・ｫ郢晢ｽｻ繝ｻ・ｸ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・｢ =================
+     * internal helper
      */
     @Override
     public T getByIdNotDeleted(Serializable id) {
@@ -146,16 +146,18 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     }
 
     /**
-     * ================= 鬯ｮ・ｫ繝ｻ・ｴ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｰ鬯ｮ・ｯ雋・･繝ｻ驛｢譎｢・ｽ・ｻ=================
+     * internal helper
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
-        return save(toEntity(dto));
+        T entity = toEntity(dto);
+        applyDefaultStatusIfPresent(entity);
+        return save(entity);
     }
 
     /**
-     * ================= 鬯ｮ・ｫ繝ｻ・ｴ髯ｷ・ｴ郢晢ｽｻ繝ｻ・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｴ鬯ｮ・ｫ繝ｻ・ｴ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｰ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬮｣雋ｻ・｣・ｰ髯具ｽｹ郢晢ｽｻ繝ｻ・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｻ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬮ｯ譎｢・ｽ・ｲ郢晢ｽｻ繝ｻ・ｩ鬯ｮ・ｫ繝ｻ・ｴ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｰ鬯ｯ・ｯ繝ｻ・ｮ郢晢ｽｻ繝ｻ・ｱ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻnull 鬯ｮ・ｯ隴擾ｽｴ郢晢ｽｻ鬮ｴ繝ｻ・ｽ・ｸ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｮ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｵ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ=================
+     * internal helper
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -185,14 +187,14 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         if (versioned && updated <= DeleteEnum.UNDELETED.getCode()) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "他のユーザーが先に更新しました。画面を更新して再試行してください"
+                    "更新に失敗しました。データが変更または削除されている可能性があります。再読み込みしてから再実行してください。"
             );
         }
         return updated > DeleteEnum.UNDELETED.getCode();
     }
 
     /**
-     * ================= 鬯ｯ・ｯ繝ｻ・ｨ郢晢ｽｻ繝ｻ・ｾ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｻ鬯ｯ・ｮ繝ｻ・ｴ髣包ｽｳ繝ｻ・ｻ郢晢ｽｻ繝ｻ・､郢晢ｽｻ繝ｻ・ｧ鬮ｯ・ｷ陞｢・ｼ繝ｻ・､隲幢ｽｶ繝ｻ・ｽ繝ｻ・ｫ郢晢ｽｻ繝ｻ・ｯ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・､ =================
+     * internal helper
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -207,7 +209,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             if (oldVersion == null) {
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "versionが存在しないため削除できません"
+                        "versionは必須です"
                 );
             }
             wrapper.eq(FieldNameConstant.COLUMN_VERSION, oldVersion);
@@ -217,7 +219,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         if (hasVersionField(resolveEntityClass()) && deleted <= DeleteEnum.UNDELETED.getCode()) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "他のユーザーが先に更新しました。画面を更新して再試行してください"
+                    "削除に失敗しました。データが変更または削除されている可能性があります。再読み込みしてから再実行してください。"
             );
         }
         return deleted;
@@ -248,11 +250,11 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     }
 
     /**
-     * ================= 鬯ｮ・ｮ闕ｳ・ｻ隴ｯ竏壹・繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｨ鬯ｯ・ｮ繝ｻ・ｫ髫ｴ莨夲ｽｽ・ｦ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・｣鬯ｯ・ｯ繝ｻ・ｯ郢晢ｽｻ繝ｻ・ｩ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｱ鬯ｮ・ｯ繝ｻ・ｷ髣費ｽｨ陞滂ｽｲ繝ｻ・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｨ鬯ｮ・ｫ繝ｻ・ｴ髮狗ｿｫ・代・・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・･鬯ｯ・ｮ繝ｻ・ｫ郢晢ｽｻ繝ｻ・ｸ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・｢ =================
+     * internal helper
      */
     protected <Q> QueryWrapper<T> buildWrapper(Q dto) {
         QueryWrapper<T> wrapper = new QueryWrapper<>();
-        // 鬯ｮ・ｯ繝ｻ・ｷ鬮｣魃会ｽｽ・ｨ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｨ鬯ｮ・ｯ隶厄ｽｸ繝ｻ・ｽ繝ｻ・ｻ郢晢ｽｻ邵ｺ・､・つ鬯ｯ・ｮ繝ｻ・ｴ髣比ｼ夲ｽｽ・｣驛｢譎｢・ｽ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・､鬯ｮ・ｫ繝ｻ・ｴ髯晢ｽｷ繝ｻ・｢郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｪ鬯ｮ・ｯ陷茨ｽｷ繝ｻ・ｽ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｰ鬯ｯ・ｯ繝ｻ・ｮ郢晢ｽｻ繝ｻ・ｯ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・､
+        // internal helper
         wrapper.eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
         if (dto == null) return wrapper;
         for (Field field : dto.getClass().getDeclaredFields()) {
@@ -283,7 +285,11 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                 }
 
             } catch (Exception e) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "検索条件の構築に失敗しました", e);
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "検索条件の構築に失敗しました",
+                        e
+                );
             }
         }
         buildJoinConditions(dto, wrapper);
@@ -291,7 +297,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     }
 
     protected <Q> void buildJoinConditions(Q dto, QueryWrapper<T> wrapper) {
-        // 鬯ｮ・ｯ隴擾ｽｴ郢晢ｽｻ鬯ｲ蛛・ｽｽ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｱ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｻ鬯ｮ・ｫ繝ｻ・ｰ髣包ｽｵ雋・ｽｷ隲｢蟶ｷ・ｹ譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｨ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・｡鬯ｮ・ｯ隲幢ｽｶ繝ｻ・ｽ繝ｻ・ｮ鬯ｮ・｣陜難ｽｼ陞ｻ・ｮ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｦ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬮ｯ譏ｴ繝ｻ繝ｻ・｣繝ｻ・ｰ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬮ｯ讖ｸ・ｽ・｢郢晢ｽｻ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｾ鬮ｯ・ｷ繝ｻ・ｿ郢晢ｽｻ繝ｻ・･驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｦ鬩幢ｽ｢繝ｻ・ｧ髣比ｼ夲ｽｽ・ｰ繝ｻ縺､ﾂ鬮ｯ讓奇ｽｺ・ｷ繝ｻ・･郢晢ｽｻ繝ｻ・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｿ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬯ｯ・ｪ繝ｻ・ｭ髯橸ｽｳ繝ｻ・｣繝ｻ繧托ｽｽ・ｧ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｰ鬯ｮ・ｯ隴擾ｽｴ郢晢ｽｻ鬮ｴ繝ｻ・ｽ・ｸ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｮ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｵ鬯ｮ・ｯ繝ｻ・ｷ鬮｣魃会ｽｽ・ｨ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｳ鬯ｯ・ｮ繝ｻ・｢郢晢ｽｻ繝ｻ・ｨ鬮ｮ荳ｻ萓帙・・ｾ陟募ｾ後・鬯ｮ・｣騾ｧ・ｮ騾包ｽ･驛｢譎｢・ｽ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・｡驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｨ鬯ｯ・ｮ繝ｻ・ｴ髯樊ｻゑｽｽ・ｧ郢晢ｽｻ繝ｻ・ｹ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・｡鬮ｫ・ｶ陷ｻ・ｵ繝ｻ・ｶ繝ｻ・｣郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｭ鬮ｯ譎｢・ｽ・ｷ繝ｻ雜｣・ｽ・ｴ繝ｻ縺､ﾂ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ
+        // internal helper
     }
 
     private void applyDefaultCondition(QueryWrapper<T> wrapper, String fieldName, Object value) {
@@ -327,7 +333,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     }
 
     /**
-     * ================= 鬯ｮ・ｫ繝ｻ・ｴ髯ｷ・ｴ郢晢ｽｻ繝ｻ・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｴ鬯ｮ・ｫ繝ｻ・ｴ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｰ鬯ｮ・ｯ隴擾ｽｴ郢晢ｽｻ鬮ｴ繝ｻ・ｽ・ｸ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｮ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｵ鬯ｮ・ｫ繝ｻ・ｴ郢晢ｽｻ繝ｻ・ｫ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｺ =================
+     * internal helper
      */
     protected void buildUpdateSet(T entity, UpdateWrapper<T> wrapper) {
         if (entity == null) return;
@@ -335,17 +341,17 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         while (clazz != null && clazz != Object.class) {
             Field[] fields = clazz.getDeclaredFields();
             for (Field field : fields) {
-                //  鬯ｮ・ｯ繝ｻ・ｷ髣費｣ｰ陋ｹ繝ｻ・ｽ・ｽ繝ｻ・ｺ郢晢ｽｻ繝ｻ・･鬮ｫ・ｲ繝ｻ・｢髯晢ｽｷ郢晢ｽｻ繝ｻ・ｽ繝ｻ・ｭ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｭ鬯ｮ・ｮ闕ｳ・ｻ隴ｯ竏壹・繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｨ鬯ｯ・ｮ繝ｻ・ｫ髫ｴ莨夲ｽｽ・ｦ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・｣鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬮｣雋ｻ・｣・ｰ郢晢ｽｻ繝ｻ・･驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｿ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・｡驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｻ鬯ｮ・ｫ繝ｻ・ｰ郢晢ｽｻ繝ｻ・ｾ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｾ鬯ｮ・ｫ繝ｻ・ｴ髯晢｣ｰ繝ｻ・｢繝ｻ縺､ﾂ鬯ｮ・ｯ繝ｻ・ｷ髯樊ｻゑｽｽ・ｧ髮趣ｽｸ繝ｻ・ｵ鬮ｫ・ｰ繝ｻ・ｫ驛｢譎｢・ｽ・ｻ驛｢譎｢・ｽ・ｻ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ
+                // internal helper
                 if (field.isAnnotationPresent(UpdateIgnore.class)) {
                     continue;
                 }
                 field.setAccessible(true);
                 try {
                     Object value = field.get(entity);
-                    // 鬯ｮ・ｯ雋翫ｑ・ｽ・ｽ繝ｻ・｢驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ鬯ｯ・ｨ繝ｻ・ｾ郢晢ｽｻ繝ｻ・｡驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・･ null
+                    // internal helper
                     if (value == null) continue;
                     String fieldName = field.getName();
-                    // 鬯ｯ・ｮ繝ｻ・ｴ髯樊ｻゑｽｽ・ｧ髯晉事萓ｭ郢晢ｽｻ郢晢ｽｻ繝ｻ・ｺ鬮ｯ譎｢・ｽ・ｶ髯晢ｽｷ繝ｻ・｢郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｭ鬯ｩ髦ｪ繝ｻ繝ｻ・ｽ繝ｻ・ｲ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｮ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｵ鬯ｮ・｣陋ｹ繝ｻ・ｽ・ｽ繝ｻ・ｳ鬮ｫ・ｶ陞ｳ闌ｨ・ｽ・ｿ繝ｻ・ｫ驛｢譎｢・ｽ・ｻ鬯ｯ・ｮ繝ｻ・ｫ郢晢ｽｻ繝ｻ・ｶ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｸ鬯ｮ・ｫ繝ｻ・ｴ髯ｷ・ｴ郢晢ｽｻ繝ｻ・ｽ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｴ鬯ｮ・ｫ繝ｻ・ｴ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｰ
+                    // internal helper
                     if (FieldNameConstant.ID.equals(fieldName)
                             || FieldNameConstant.CREATE_TIME.equals(fieldName)
                             || FieldNameConstant.CREATED_BY.equals(fieldName)
@@ -356,22 +362,26 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
                     String column = camelToUnderline(fieldName);
                     wrapper.set(column, value);
                 } catch (Exception e) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "更新項目の構築に失敗しました", e);
+                    throw new co.handk.backend.exception.BusinessException(
+                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                            "更新項目の構築に失敗しました",
+                            e
+                    );
                 }
             }
-            clazz = clazz.getSuperclass(); // 鬯ｮ・ｯ繝ｻ・ｷ鬮｣魃会ｽｽ・ｨ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｳ鬯ｯ・ｯ繝ｻ・ｮ髫ｶ蜴・ｽｽ・ｸ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｮ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬮ｯ讖ｸ・ｽ・｢郢晢ｽｻ繝ｻ・ｽ鬯ｯ・ｯ繝ｻ・ｮ郢晢ｽｻ繝ｻ・ｪ鬯ｮ・ｫ繝ｻ・ｰ髫ｰ雋ｻ・ｽ・ｶ驛｢譎｢・ｽ・ｻBaseEntity
+            clazz = clazz.getSuperclass(); // internal helper
         }
     }
 
     /**
-     * 鬯ｯ・ｯ繝ｻ・ｯ郢晢ｽｻ繝ｻ・ｩ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｼ鬯ｮ・ｯ隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｲ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｰ鬯ｯ・ｮ繝ｻ・ｴ鬯ｮ・ｮ繝ｻ・｣郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｬ鬯ｮ・｣陋ｹ繝ｻ・ｽ・ｽ繝ｻ・ｳ鬮ｯ・ｷ繝ｻ・ｿ郢晢ｽｻ繝ｻ・･鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬯ｯ・ｩ陝ｷ・｢繝ｻ・ｽ繝ｻ・､驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｿ
+     * internal helper
      */
     protected String camelToUnderline(String str) {
         return str.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
     }
 
     /**
-     * 鬯ｮ・ｯ隴擾ｽｴ郢晢ｽｻ鬯ｲ蛛・ｽｽ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｱ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｻ鬯ｮ・ｯ隶厄ｽｸ繝ｻ・ｽ繝ｻ・ｳ鬮ｫ・ｶ霓｣蛛・ｽｽ・ｸ隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｴ郢晢ｽｻ繝ｻ・ｫ
+     * internal helper
      */
     protected abstract <D> T toEntity(D dto);
 
@@ -407,6 +417,27 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             return null;
         } catch (IllegalAccessException e) {
             return null;
+        }
+    }
+
+    private void applyDefaultStatusIfPresent(T entity) {
+        if (entity == null) {
+            return;
+        }
+        Field statusField = findField(entity.getClass(), FieldNameConstant.STATUS);
+        if (statusField == null) {
+            return;
+        }
+        try {
+            statusField.setAccessible(true);
+            Object currentValue = statusField.get(entity);
+            if (currentValue != null) {
+                return;
+            }
+            if (statusField.getType() == Integer.class || statusField.getType() == int.class) {
+                statusField.set(entity, StatusEnum.NOMAL.getCode());
+            }
+        } catch (IllegalAccessException ignored) {
         }
     }
 

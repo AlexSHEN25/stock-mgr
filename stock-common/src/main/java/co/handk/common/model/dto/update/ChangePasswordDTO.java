@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class ChangePasswordDTO {
 
-    @NotBlank(message = "必須項目です")
+    @NotBlank(message = "パスワードは必須項目です")
     private String password;
 }

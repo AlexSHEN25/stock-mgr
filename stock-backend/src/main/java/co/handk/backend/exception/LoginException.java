@@ -1,5 +1,8 @@
 package co.handk.backend.exception;
 
+import lombok.Getter;
+
+@Getter
 public class LoginException extends RuntimeException {
 
     private final String messageKey;
@@ -9,7 +12,4 @@ public class LoginException extends RuntimeException {
         this.messageKey = messageKey;
     }
 
-    public String getMessageKey() {
-        return messageKey;
-    }
 }

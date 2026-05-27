@@ -67,7 +67,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         sku.setStatus(dto.getSkuStatus() == null ? StatusEnum.NOMAL.getCode() : dto.getSkuStatus().getCode());
         boolean skuSaved = goodsSkuService.save(sku);
         if (!skuSaved) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKU縺ｮ菫晏ｭ倥↓螟ｱ謨励＠縺ｾ縺励◆");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUの登録に失敗しました");
         }
 
         if (StringUtils.hasText(dto.getImageUrl())) {
@@ -79,7 +79,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             image.setSort(dto.getImageSort() == null ? NumberConstant.ZERO : dto.getImageSort());
             boolean imageSaved = goodsImageService.save(image);
             if (!imageSaved) {
-                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蝠・刀逕ｻ蜒上・菫晏ｭ倥↓螟ｱ謨励＠縺ｾ縺励◆");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像の登録に失敗しました");
             }
         }
         return true;

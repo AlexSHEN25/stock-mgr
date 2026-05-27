@@ -8,6 +8,7 @@ import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -17,6 +18,8 @@ public class WebConfig implements WebMvcConfigurer {
     private LoginInterceptor loginInterceptor;
     @Resource
     private PermissionInterceptor permissionInterceptor;
+    @Resource
+    private AvatarStorageProperties avatarStorageProperties;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -100,6 +103,16 @@ public class WebConfig implements WebMvcConfigurer {
                         "/assets/**",
                         "/icons/**"
                 );
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String root = avatarStorageProperties.getRootDir().toUri().toString();
+        if (!root.endsWith("/")) {
+            root = root + "/";
+        }
+        registry.addResourceHandler("/avatar/**")
+                .addResourceLocations(root, "classpath:/static/avatar/");
     }
 
     @Override

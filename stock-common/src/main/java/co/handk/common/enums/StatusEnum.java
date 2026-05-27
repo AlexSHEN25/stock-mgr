@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 @Getter
-public enum StatusEnum {
+public enum StatusEnum implements OptionEnum {
 
     NOMAL(1, "有効"),
     FOBBIDEN(0, "無効");
@@ -16,6 +16,11 @@ public enum StatusEnum {
     StatusEnum(Integer code, String message) {
         this.code = code;
         this.message = message;
+    }
+
+    @Override
+    public String getLabel() {
+        return message;
     }
 
     @JsonValue

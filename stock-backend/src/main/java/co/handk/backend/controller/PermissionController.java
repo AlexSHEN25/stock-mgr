@@ -54,5 +54,25 @@ public class PermissionController {
     public PageResult<PermissionVO> page(@Valid PermissionQueryDTO query) {
         return permissionService.page(query);
     }
+
+    @GetMapping("/options")
+    public List<OptionVO> options() {
+        return permissionService.options();
+    }
+
+    @GetMapping("/module-options")
+    public List<TextOptionVO> moduleOptions() {
+        return permissionService.moduleOptions();
+    }
+
+    @GetMapping("/type-options")
+    public List<EnumOptionVO> typeOptions() {
+        return permissionService.typeOptions();
+    }
+
+    @GetMapping("/status-options")
+    public List<EnumOptionVO> statusOptions() {
+        return permissionService.statusOptions();
+    }
 }
 

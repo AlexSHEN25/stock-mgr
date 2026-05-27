@@ -1,5 +1,8 @@
 package co.handk.backend.exception;
 
+import lombok.Getter;
+
+@Getter
 public class AccessDeniedException extends RuntimeException {
 
     private final String messageKey;
@@ -9,8 +12,5 @@ public class AccessDeniedException extends RuntimeException {
         this.messageKey = messageKey;
     }
 
-    public String getMessageKey() {
-        return messageKey;
-    }
 }
 

@@ -14,7 +14,9 @@ public class UpdateUserDTO {
     @NotBlank(message = "ユーザー名は必須です")
     private String username;
 
+    private String password;
     private Long deptId;
+    private Long roleId;
     private String email;
     private String phone;
     private String avatar;

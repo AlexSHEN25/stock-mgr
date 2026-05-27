@@ -16,6 +16,7 @@ import co.handk.common.model.vo.UserVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -79,6 +80,14 @@ public class UserController {
     public boolean update(@PathVariable("id") Long id, @RequestBody @NotNull @Valid UpdateUserDTO dto) {
         dto.setId(id);
         return userService.updateByDto(dto);
+    }
+
+    /**
+     * Upload or replace user avatar.
+     */
+    @PostMapping("/{id:\\d+}/avatar")
+    public String uploadAvatar(@PathVariable("id") Long id, @RequestPart("file") MultipartFile file) {
+        return userService.uploadAvatar(id, file);
     }
 
     /**

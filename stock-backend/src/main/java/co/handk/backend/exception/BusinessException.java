@@ -1,7 +1,9 @@
 package co.handk.backend.exception;
 
 import co.handk.backend.constant.MessageKeyConstant;
+import lombok.Getter;
 
+@Getter
 public class BusinessException extends RuntimeException {
 
     private final String messageKey;
@@ -26,7 +28,4 @@ public class BusinessException extends RuntimeException {
         this.messageKey = messageKey;
     }
 
-    public String getMessageKey() {
-        return messageKey;
-    }
 }

@@ -9,6 +9,7 @@ public class PermissionVO extends BaseVO {
     private String module;
     private Integer type;
     private Long parentId;
+    private String parentName;
     private String path;
     private Integer sort;
     private String icon;

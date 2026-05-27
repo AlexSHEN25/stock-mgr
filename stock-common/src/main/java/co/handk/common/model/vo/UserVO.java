@@ -8,6 +8,8 @@ public class UserVO extends BaseVO {
     private String username;
     private Long deptId;
     private String deptName;
+    private Long roleId;
+    private String roleName;
     private String email;
     private String phone;
     private String avatar;
