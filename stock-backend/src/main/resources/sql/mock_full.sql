@@ -103,9 +103,16 @@ VALUES (1, 'システム管理', 'MENU_SYSTEM', 'system', 1, 0, '/system', 1, 's
        (27, '顧客-ランク編集', 'DATA_CUSTOMER_LEVEL_WRITE', 'customer', 2, 5, '/api/customerLevel/**', 4, 'api', '', 1,
         0, 1, 1),
        (28, '顧客-ランク価格閲覧', 'DATA_GOODS_LEVEL_PRICE_READ', 'customer', 2, 5, '/api/goodsLevelPrice/**', 5, 'api',
-        '', 1, 0, 1, 1),
+         '', 1, 0, 1, 1),
        (29, '顧客-ランク価格編集', 'DATA_GOODS_LEVEL_PRICE_WRITE', 'customer', 2, 5, '/api/goodsLevelPrice/**', 6,
-        'api', '', 1, 0, 1, 1);
+        'api', '', 1, 0, 1, 1),
+       (30, 'ユーザー-閲覧', 'DATA_USER_READ', 'user', 2, 2, '/api/user/**', 1, 'api', '', 1, 0, 1, 1),
+       (31, '商品-閲覧', 'DATA_GOODS_READ', 'goods', 2, 3, '/api/goods/**', 1, 'api', '', 1, 0, 1, 1),
+       (32, '商品SKU-閲覧', 'DATA_GOODS_SKU_READ', 'goods', 2, 3, '/api/goodsSku/**', 2, 'api', '', 1, 0, 1, 1),
+       (33, '商品画像-閲覧', 'DATA_GOODS_IMAGE_READ', 'goods', 2, 3, '/api/goodsImage/**', 3, 'api', '', 1, 0, 1, 1),
+       (34, '商品仕様-閲覧', 'DATA_GOODS_SKU_SPEC_READ', 'goods', 2, 3, '/api/goodsSkuSpec/**', 4, 'api', '', 1, 0, 1, 1),
+       (35, 'メッセージ-閲覧', 'DATA_MESSAGE_READ', 'system', 2, 1, '/api/message/**', 1, 'api', '', 1, 0, 1, 1),
+       (36, 'メッセージ-編集', 'DATA_MESSAGE_WRITE', 'system', 2, 1, '/api/message/**', 2, 'api', '', 1, 0, 1, 1);
 
 -- user role
 INSERT INTO t_user_role(id, user_id, role_id, deleted, created_by, updated_by)
@@ -158,7 +165,27 @@ VALUES (1, 1, 1, 0, 1, 1),
        (40, 2, 22, 0, 1, 1),
        (41, 2, 24, 0, 1, 1),
        (42, 2, 26, 0, 1, 1),
-       (43, 2, 28, 0, 1, 1);
+       (43, 2, 28, 0, 1, 1),
+       (44, 2, 2, 0, 1, 1),
+       (45, 2, 3, 0, 1, 1),
+       (46, 2, 7, 0, 1, 1),
+       (47, 2, 9, 0, 1, 1),
+       (48, 2, 11, 0, 1, 1),
+       (49, 2, 13, 0, 1, 1),
+       (50, 2, 15, 0, 1, 1),
+       (51, 2, 17, 0, 1, 1),
+       (52, 2, 19, 0, 1, 1),
+       (53, 2, 21, 0, 1, 1),
+       (54, 2, 23, 0, 1, 1),
+       (55, 2, 25, 0, 1, 1),
+       (56, 2, 30, 0, 1, 1),
+       (57, 2, 31, 0, 1, 1),
+       (58, 2, 32, 0, 1, 1),
+       (59, 2, 33, 0, 1, 1),
+       (60, 2, 34, 0, 1, 1),
+       (61, 2, 35, 0, 1, 1),
+       (62, 2, 36, 0, 1, 1),
+       (63, 2, 1, 0, 1, 1);
 
 -- master data
 INSERT INTO t_brand(id, name, english_name, image, content, status, deleted, created_by, updated_by)
@@ -322,8 +349,6 @@ VALUES (1, 1, 'admin', 'schema', 'GET', 'GET', '/api/schema/menu', '127.0.0.1', 
         '{"ok":true}', 1, NULL, 35, 0, 2, 2);
 
 SET FOREIGN_KEY_CHECKS = 1;
-
-
 
 
 

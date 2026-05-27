@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -39,9 +40,26 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
 
     @Override
     public Set<String> getPermissionCodes(Long userId) {
+        boolean superAdmin = isSuperAdmin(userId);
         List<Long> roleIds = getRoleIds(userId);
         if (roleIds.isEmpty()) {
-            return Collections.emptySet();
+            if (superAdmin) {
+                Set<String> adminCodes = new HashSet<>();
+                adminCodes.add(SecurityConstant.ROLE_SUPER_ADMIN);
+                adminCodes.add(SecurityConstant.DATA_ALL_WRITE);
+                permissionMapper.selectList(
+                                new QueryWrapper<Permission>()
+                                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                                        .eq("status", StatusEnum.NOMAL.getCode())
+                        ).stream()
+                        .map(Permission::getCode)
+                        .filter(code -> code != null && !code.isBlank())
+                        .forEach(adminCodes::add);
+                return adminCodes;
+            }
+            Set<String> normalCodes = new HashSet<>();
+            normalCodes.add(SecurityConstant.ROLE_NORMAL_USER);
+            return normalCodes;
         }
         List<Object> permissionIdObjs = rolePermissionMapper.selectObjs(
                 new QueryWrapper<RolePermission>()
@@ -53,19 +71,26 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .map(obj -> ((Number) obj).longValue())
                 .distinct()
                 .toList();
-        if (permissionIds.isEmpty()) {
-            return Collections.emptySet();
+        QueryWrapper<Permission> permissionQuery = new QueryWrapper<Permission>()
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .eq("status", StatusEnum.NOMAL.getCode());
+        if (!superAdmin) {
+            if (permissionIds.isEmpty()) {
+                return Collections.emptySet();
+            }
+            permissionQuery.in("id", permissionIds);
         }
-        List<Permission> permissions = permissionMapper.selectList(
-                new QueryWrapper<Permission>()
-                        .in("id", permissionIds)
-                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                        .eq("status", StatusEnum.NOMAL.getCode())
-        );
-        return permissions.stream()
+        Set<String> codes = permissionMapper.selectList(permissionQuery).stream()
                 .map(Permission::getCode)
                 .filter(code -> code != null && !code.isBlank())
                 .collect(Collectors.toSet());
+        if (superAdmin) {
+            codes.add(SecurityConstant.ROLE_SUPER_ADMIN);
+            codes.add(SecurityConstant.DATA_ALL_WRITE);
+        } else {
+            codes.add(SecurityConstant.ROLE_NORMAL_USER);
+        }
+        return codes;
     }
 
     @Override

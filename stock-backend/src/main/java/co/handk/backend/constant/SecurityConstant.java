@@ -6,6 +6,8 @@ public final class SecurityConstant {
     }
 
     public static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
+    public static final String ROLE_NORMAL_USER = "ROLE_NORMAL_USER";
+    public static final String DATA_ALL_WRITE = "DATA_ALL_WRITE";
     public static final String PERMISSION_SUFFIX_READ = "_READ";
     public static final String PERMISSION_SUFFIX_WRITE = "_WRITE";
     public static final String BEARER_PREFIX = "Bearer ";

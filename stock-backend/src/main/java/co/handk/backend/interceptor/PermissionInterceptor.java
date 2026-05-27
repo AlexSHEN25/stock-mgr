@@ -9,6 +9,7 @@ import co.handk.backend.service.PermissionQueryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
@@ -20,6 +21,7 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PermissionInterceptor implements HandlerInterceptor {
     private static final String EMPTY = "";
     private static final String API_STOCK_ORDER_PREFIX = "/api/stockOrder";
@@ -50,11 +52,15 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
-            throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, SecurityConstant.NO_PERMISSION_MESSAGE);
+            // No configured DATA permission path matched:
+            // treat as non-protected by this interceptor and allow through.
+            return true;
         }
 
         Set<String> codes = permissionQueryService.getPermissionCodes(userId);
         if (!codes.contains(requiredCode)) {
+            log.warn("Permission denied: userId={}, method={}, uri={}, requiredCode={}, userCodes={}",
+                    userId, request.getMethod(), uri, requiredCode, codes);
             throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, SecurityConstant.NO_PERMISSION_MESSAGE);
         }
         return true;
