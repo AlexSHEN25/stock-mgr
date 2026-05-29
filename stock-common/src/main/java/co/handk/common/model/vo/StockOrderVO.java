@@ -22,5 +22,6 @@ public class StockOrderVO extends BaseVO {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
+    private LocalDateTime bizDate;
     private LocalDateTime finishTime;
 }

@@ -79,5 +79,7 @@ public class StockRecord extends BaseEntity {
     private String operatorName;
 
     private String remark;
+
+    private LocalDateTime bizDate;
 }
 

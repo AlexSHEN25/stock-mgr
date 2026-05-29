@@ -41,6 +41,8 @@ public class StockOrder extends BaseEntity {
 
     private LocalDateTime approveTime;
 
+    private LocalDateTime bizDate;
+
     private Long version;
 
     private LocalDateTime finishTime;

@@ -351,4 +351,3 @@ VALUES (1, 1, 'admin', 'schema', 'GET', 'GET', '/api/schema/menu', '127.0.0.1', 
 SET FOREIGN_KEY_CHECKS = 1;
 
 
-

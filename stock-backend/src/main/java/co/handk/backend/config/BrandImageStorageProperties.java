@@ -1,6 +1,5 @@
 package co.handk.backend.config;
 
-import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -10,16 +9,13 @@ import java.nio.file.Paths;
 
 @Setter
 @Component
-@ConfigurationProperties(prefix = "app.avatar")
-public class AvatarStorageProperties {
+@ConfigurationProperties(prefix = "app.brand-image")
+public class BrandImageStorageProperties {
 
-    private String dir = "./data/upload/avatar";
+    private String dir = "./data/upload/brand";
 
     public Path getRootDir() {
         return Paths.get(dir).toAbsolutePath().normalize();
     }
-
-    public Path getUploadDir() {
-        return getRootDir().resolve("upload").normalize();
-    }
 }
+

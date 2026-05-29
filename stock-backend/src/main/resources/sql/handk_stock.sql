@@ -206,6 +206,7 @@ CREATE TABLE t_stock_order
     `approver_id`    BIGINT UNSIGNED           DEFAULT NULL COMMENT '审核人ID',
     `approver_name`  VARCHAR(64)               DEFAULT NULL COMMENT '审核人',
     `approve_time`   DATETIME                  DEFAULT NULL COMMENT '审核时间',
+    `biz_date`       DATETIME                  DEFAULT NULL COMMENT '业务日期',
     `version`        BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '版本控制',
     `finish_time`    DATETIME                  DEFAULT NULL COMMENT '完成时间',
     `deleted`        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -253,6 +254,7 @@ CREATE TABLE t_stock_order_item
     `after_qty`       INT(10)          NOT NULL COMMENT '变更后库存',
     `price`           DECIMAL(18, 2)            DEFAULT 0 COMMENT '单价',
     `currency`        VARCHAR(8)       NOT NULL DEFAULT 'JPY' COMMENT '币种',
+    `biz_date`        DATETIME                  DEFAULT NULL COMMENT '业务日期',
     `remark`          VARCHAR(255)              DEFAULT NULL,
     `deleted`         TINYINT UNSIGNED NOT NULL DEFAULT 0,
     `created_by`      BIGINT UNSIGNED           DEFAULT NULL COMMENT '创建人ID',
@@ -316,6 +318,7 @@ create TABLE `t_stock_record`
     `requester_name`    VARCHAR(64)               DEFAULT NULL COMMENT '申请人名',
     `operator_id`       BIGINT UNSIGNED           DEFAULT NULL COMMENT '操作人id',
     `operator_name`     VARCHAR(64)               DEFAULT NULL COMMENT '操作人名',
+    `biz_date`          DATETIME                  DEFAULT NULL COMMENT '业务日期',
     `remark`            VARCHAR(255)              DEFAULT NULL COMMENT '备注',
     `deleted`           TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `created_by`        BIGINT UNSIGNED           DEFAULT NULL COMMENT '创建人ID',
@@ -856,6 +859,5 @@ create TABLE `t_operate_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='操作日志表';
-
 
 

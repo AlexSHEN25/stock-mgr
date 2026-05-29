@@ -58,7 +58,7 @@
         <include refid="fromAndWhere"/>
     </select>
 
-    <select id="selectGoodsPage" resultType="co.handk.common.model.vo.GoodsVO">
+    <select id="selectGoodsPage" resultType="co.handk.common.model.vo.GoodsListVO">
         SELECT
         g.id,
         g.name,
@@ -89,15 +89,7 @@
         gs.sku_code,
         gs.sku_name,
         gs.price,
-        gs.currency,
-        gs.cost_price,
-        gs.update_price,
-        gs.price_update_time,
-        gs.barcode,
-        gs.weight,
-        gs.volume,
-        gi.id AS image_id,
-        gi.image_url AS image_url
+        gs.currency
         <include refid="fromAndWhere"/>
         ORDER BY g.update_time DESC, gs.update_time DESC
         LIMIT #{offset}, #{size}

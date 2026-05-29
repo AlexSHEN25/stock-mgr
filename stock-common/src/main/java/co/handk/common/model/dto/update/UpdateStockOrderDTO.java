@@ -8,16 +8,17 @@ import java.time.LocalDateTime;
 
 @Data
 public class UpdateStockOrderDTO {
+
     @NotNull(message = "IDは必須です")
     private Long id;
 
-    @NotBlank(message = "伝票番号は必須です")
+    @NotBlank(message = "注文番号は必須です")
     private String orderNo;
 
-    @NotNull(message = "伝票種別は必須です")
+    @NotNull(message = "入出庫種別は必須です")
     private Integer orderType;
 
-    @NotNull(message = "倉庫は必須です")
+    @NotNull(message = "倉庫IDは必須です")
     private Long warehouseId;
 
     @NotNull(message = "ソース種別は必須です")
@@ -35,6 +36,7 @@ public class UpdateStockOrderDTO {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
+    private LocalDateTime bizDate;
     private LocalDateTime finishTime;
 
     @NotNull(message = "versionは必須です")

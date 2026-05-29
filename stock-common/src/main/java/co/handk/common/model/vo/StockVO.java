@@ -1,6 +1,7 @@
 package co.handk.common.model.vo;
 
 import co.handk.common.annotation.JoinValue;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ public class StockVO extends BaseVO {
     private Integer lockQty;
     private BigDecimal price;
     private String currency;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime priceUpdateTime;
     private Long stockTypeId;
     @JoinValue(sourceField = "stockTypeId", serviceBean = "stockTypeServiceImpl", targetField = "name")

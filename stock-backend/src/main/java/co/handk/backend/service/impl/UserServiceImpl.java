@@ -2,6 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.config.AvatarStorageProperties;
 import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.constant.UploadBizType;
 import co.handk.backend.context.UserContext;
 import co.handk.backend.entity.Dept;
 import co.handk.backend.entity.Role;
@@ -13,6 +14,7 @@ import co.handk.backend.mapper.RoleMapper;
 import co.handk.backend.mapper.UserMapper;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.DeptService;
+import co.handk.backend.service.FileStorageService;
 import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.UserService;
 import co.handk.common.constant.FieldNameConstant;
@@ -52,6 +54,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
     private final DeptService deptService;
     private final PermissionQueryService permissionQueryService;
     private final AvatarStorageProperties avatarStorageProperties;
+    private final FileStorageService fileStorageService;
     private final UserRoleMapper userRoleMapper;
     private final RoleMapper roleMapper;
 
@@ -62,7 +65,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
         }
         UserVO vo = new UserVO();
         BeanUtils.copyProperties(entity, vo);
-        if (!StringUtils.hasText(vo.getAvatar())) {
+        if (!StringUtils.hasText(vo.getAvatar()) || !isAvatarPathReachable(vo.getAvatar())) {
             vo.setAvatar(DEFAULT_AVATAR_PATH);
         }
         if (entity.getDeptId() != null) {
@@ -355,7 +358,30 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
     }
 
     private Path resolveAvatarStoreDir() {
-        return avatarStorageProperties.getRootDir().resolve("upload");
+        return avatarStorageProperties.getUploadDir();
+    }
+
+    private boolean isAvatarPathReachable(String avatarPath) {
+        if (!StringUtils.hasText(avatarPath)) {
+            return false;
+        }
+        String normalized = avatarPath.trim();
+        if (normalized.startsWith("http://") || normalized.startsWith("https://") || normalized.startsWith("data:")) {
+            return true;
+        }
+        if (!normalized.startsWith("/avatar/")) {
+            return true;
+        }
+        String relative = normalized.substring("/avatar/".length());
+        if (!StringUtils.hasText(relative)) {
+            return false;
+        }
+        Path byRoot = avatarStorageProperties.getRootDir().resolve(relative).normalize();
+        if (Files.exists(byRoot)) {
+            return true;
+        }
+        Path byUpload = avatarStorageProperties.getUploadDir().resolve(relative).normalize();
+        return Files.exists(byUpload);
     }
 
     @Override

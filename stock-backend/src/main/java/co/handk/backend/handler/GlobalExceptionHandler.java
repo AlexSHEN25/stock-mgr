@@ -9,6 +9,7 @@ import co.handk.common.model.Result;
 import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.validation.BindException;
@@ -26,6 +27,8 @@ public class GlobalExceptionHandler {
     private static final Locale JAPANESE_LOCALE = Locale.JAPAN;
 
     private final MessageSource messageSource;
+    @Value("${app.error.include-detail:false}")
+    private boolean includeDetail;
 
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class, ConstraintViolationException.class})
     public Result<?> handleValidationException(Exception e) {
@@ -46,7 +49,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e) {
-        log.error("Unhandled exception captured by GlobalExceptionHandler", e);
+        log.error(
+                "Unhandled exception captured by GlobalExceptionHandler: type={}, message={}, rootCause={}",
+                e.getClass().getName(),
+                safeMessage(e),
+                rootCauseMessage(e),
+                e
+        );
 
         if (e instanceof LoginException ex) {
             return Result.fail(ResultCode.LOGIN_TIME_OUT, ex.getMessageKey(), i18n(ex.getMessageKey()));
@@ -63,6 +72,9 @@ public class GlobalExceptionHandler {
         if (e instanceof RuntimeException) {
             return Result.fail(ResultCode.ERROR, MessageKeyConstant.ERROR_RUNTIME, safeMessage(e));
         }
+        if (includeDetail) {
+            return Result.fail(ResultCode.ERROR, MessageKeyConstant.ERROR_INTERNAL, safeMessage(e));
+        }
         return Result.fail(ResultCode.ERROR, MessageKeyConstant.ERROR_INTERNAL, i18n(MessageKeyConstant.ERROR_INTERNAL));
     }
 
@@ -72,8 +84,27 @@ public class GlobalExceptionHandler {
 
     private String safeMessage(Exception e) {
         String message = e.getMessage();
-        if (message == null || message.isBlank()) {
+        if (message != null && !message.isBlank()) {
+            return message;
+        }
+        String rootCause = rootCauseMessage(e);
+        if (rootCause != null && !rootCause.isBlank()) {
+            return rootCause;
+        }
+        return i18n(MessageKeyConstant.ERROR_INTERNAL);
+    }
+
+    private String rootCauseMessage(Throwable throwable) {
+        Throwable root = throwable;
+        while (root != null && root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        if (root == null) {
             return i18n(MessageKeyConstant.ERROR_INTERNAL);
+        }
+        String message = root.getMessage();
+        if (message == null || message.isBlank()) {
+            return root.getClass().getName();
         }
         return message;
     }

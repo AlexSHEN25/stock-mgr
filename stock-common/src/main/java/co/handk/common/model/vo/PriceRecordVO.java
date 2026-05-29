@@ -1,6 +1,7 @@
 package co.handk.common.model.vo;
 
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ public class PriceRecordVO extends BaseVO {
     private BigDecimal newPrice;
     private String currency;
     private BigDecimal discount;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime priceUpdateTime;
     private Long operatorId;
     private String operatorName;

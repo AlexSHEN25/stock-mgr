@@ -5,6 +5,7 @@ import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsDTO;
 import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsDTO;
+import co.handk.common.model.vo.GoodsListVO;
 import co.handk.common.model.vo.GoodsVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -23,5 +24,5 @@ public interface GoodsService extends BaseService<Goods, GoodsVO> {
 
     int deleteGoodsById(@NotNull Long id);
 
-    PageResult<GoodsVO> pageGoods(@Valid GoodsQueryDTO query);
+    PageResult<GoodsListVO> pageGoods(@Valid GoodsQueryDTO query);
 }

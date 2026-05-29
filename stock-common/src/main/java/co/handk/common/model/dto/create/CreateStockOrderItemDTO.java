@@ -1,23 +1,23 @@
 package co.handk.common.model.dto.create;
 
 import jakarta.validation.constraints.NotBlank;
-
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class CreateStockOrderItemDTO {
 
-    @NotNull(message = "伝票IDは必須項目です")
+    @NotNull(message = "注文IDは必須です")
     private Long orderId;
-    @NotNull(message = "商品は必須項目です")
+    @NotNull(message = "商品IDは必須です")
     private Long goodsId;
-    @NotNull(message = "SKUは必須項目です")
+    @NotNull(message = "SKU IDは必須です")
     private Long skuId;
     private String skuCode;
-    @NotBlank(message = "商品名は必須項目です")
+    @NotBlank(message = "商品名は必須です")
     private String goodsName;
     private String englishName;
     private Long brandId;
@@ -30,14 +30,14 @@ public class CreateStockOrderItemDTO {
     private String stockTypeName;
     private Long makerId;
     private String makerName;
-    @NotNull(message = "変更前数量は必須項目です")
+    @NotNull(message = "変更前数量は必須です")
     private Integer beforeQty;
-    @NotNull(message = "変更数量は必須項目です")
+    @NotNull(message = "変更数量は必須です")
     private Integer changeQty;
-    @NotNull(message = "変更後数量は必須項目です")
+    @NotNull(message = "変更後数量は必須です")
     private Integer afterQty;
     private BigDecimal price;
     private String currency;
     private String remark;
+    private LocalDateTime bizDate;
 }
-

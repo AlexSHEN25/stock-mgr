@@ -20,6 +20,10 @@ public class WebConfig implements WebMvcConfigurer {
     private PermissionInterceptor permissionInterceptor;
     @Resource
     private AvatarStorageProperties avatarStorageProperties;
+    @Resource
+    private GoodsImageStorageProperties goodsImageStorageProperties;
+    @Resource
+    private BrandImageStorageProperties brandImageStorageProperties;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -55,6 +59,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/userRole/**",
                         "/rolePermission/**",
                         "/userToken/**",
+                        "/file/**",
                         "/config/**",
                         "/operateLog/**"
                 )
@@ -111,8 +116,28 @@ public class WebConfig implements WebMvcConfigurer {
         if (!root.endsWith("/")) {
             root = root + "/";
         }
+        String uploadRoot = avatarStorageProperties.getUploadDir().toUri().toString();
+        if (!uploadRoot.endsWith("/")) {
+            uploadRoot = uploadRoot + "/";
+        }
+        registry.addResourceHandler("/avatar/upload/**")
+                .addResourceLocations(uploadRoot, root);
         registry.addResourceHandler("/avatar/**")
                 .addResourceLocations(root, "classpath:/static/avatar/");
+
+        String goodsRoot = goodsImageStorageProperties.getRootDir().toUri().toString();
+        if (!goodsRoot.endsWith("/")) {
+            goodsRoot = goodsRoot + "/";
+        }
+        registry.addResourceHandler("/upload/goods/**")
+                .addResourceLocations(goodsRoot);
+
+        String brandRoot = brandImageStorageProperties.getRootDir().toUri().toString();
+        if (!brandRoot.endsWith("/")) {
+            brandRoot = brandRoot + "/";
+        }
+        registry.addResourceHandler("/upload/brand/**")
+                .addResourceLocations(brandRoot);
     }
 
     @Override

@@ -46,5 +46,6 @@ public class StockRecordQueryDTO extends PageQuery {
     private Long operatorId;
     private String operatorName;
     private String remark;
+    private LocalDateTime bizDate;
 }
 

@@ -3,6 +3,7 @@ package co.handk.common.model.vo;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class StockOrderItemVO extends BaseVO {
@@ -28,4 +29,5 @@ public class StockOrderItemVO extends BaseVO {
     private BigDecimal price;
     private String currency;
     private String remark;
+    private LocalDateTime bizDate;
 }

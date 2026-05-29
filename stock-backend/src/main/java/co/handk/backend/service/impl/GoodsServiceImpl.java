@@ -3,7 +3,10 @@ package co.handk.backend.service.impl;
 import co.handk.backend.entity.Goods;
 import co.handk.backend.entity.GoodsImage;
 import co.handk.backend.entity.GoodsSku;
+import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.GoodsMapper;
+import co.handk.backend.constant.UploadBizType;
+import co.handk.backend.service.FileStorageService;
 import co.handk.backend.service.GoodsImageService;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
@@ -15,6 +18,7 @@ import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsDTO;
 import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsDTO;
+import co.handk.common.model.vo.GoodsListVO;
 import co.handk.common.model.vo.GoodsVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
@@ -24,8 +28,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,10 +40,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     private final GoodsSkuService goodsSkuService;
     private final GoodsImageService goodsImageService;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean saveGoods(CreateGoodsDTO dto) {
+        validatePriceUpdateFields(dto.getUpdatePrice(), dto.getPriceUpdateTime());
         Goods goods = new Goods();
         BeanUtils.copyProperties(dto, goods);
         if (!StringUtils.hasText(goods.getName())) {
@@ -61,25 +69,26 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         sku.setCostPrice(dto.getCostPrice());
         sku.setUpdatePrice(dto.getUpdatePrice());
         sku.setPriceUpdateTime(dto.getPriceUpdateTime());
-        sku.setBarcode(dto.getBarcode());
+        sku.setBarcode(StringUtils.hasText(dto.getBarcode()) ? dto.getBarcode() : generateBarcode());
         sku.setWeight(dto.getWeight());
         sku.setVolume(dto.getVolume());
         sku.setStatus(dto.getSkuStatus() == null ? StatusEnum.NOMAL.getCode() : dto.getSkuStatus().getCode());
         boolean skuSaved = goodsSkuService.save(sku);
         if (!skuSaved) {
-            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUの登録に失敗しました");
+            throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUの保存に失敗しました");
         }
 
         if (StringUtils.hasText(dto.getImageUrl())) {
+            String normalizedImageUrl = fileStorageService.normalize(UploadBizType.GOODS, dto.getImageUrl());
             GoodsImage image = new GoodsImage();
             image.setGoodsId(goods.getId());
             image.setSkuId(sku.getId());
             image.setSkuCode(sku.getSkuCode());
-            image.setImageUrl(dto.getImageUrl());
+            image.setImageUrl(normalizedImageUrl);
             image.setSort(dto.getImageSort() == null ? NumberConstant.ZERO : dto.getImageSort());
             boolean imageSaved = goodsImageService.save(image);
             if (!imageSaved) {
-                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像の登録に失敗しました");
+                throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像の保存に失敗しました");
             }
         }
         return true;
@@ -117,6 +126,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 .last("LIMIT 1"));
         if (image != null) {
             vo.setImageId(image.getId());
+            vo.setImageUrl(fileStorageService.toApiPath(UploadBizType.GOODS, image.getImageUrl()));
         }
         return vo;
     }
@@ -124,6 +134,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateGoods(UpdateGoodsDTO dto) {
+        validatePriceUpdateFields(dto.getUpdatePrice(), dto.getPriceUpdateTime());
         Goods goods = new Goods();
         BeanUtils.copyProperties(dto, goods);
         goods.setStatus(dto.getStatus() == null ? null : dto.getStatus().getCode());
@@ -132,11 +143,13 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             return false;
         }
 
+        String skuNameToSave = StringUtils.hasText(dto.getSkuName()) ? dto.getSkuName() : dto.getName();
+        Integer skuStatusCode = dto.getSkuStatus() == null ? null : dto.getSkuStatus().getCode();
         UpdateWrapper<GoodsSku> skuWrapper = new UpdateWrapper<GoodsSku>()
                 .eq("goods_id", dto.getId())
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .set(StringUtils.hasText(dto.getSkuCode()), "sku_code", dto.getSkuCode())
-                .set(StringUtils.hasText(dto.getSkuName()), "sku_name", dto.getSkuName())
+                .set(StringUtils.hasText(skuNameToSave), "sku_name", skuNameToSave)
                 .set(dto.getPrice() != null, "price", dto.getPrice())
                 .set(StringUtils.hasText(dto.getCurrency()), "currency", dto.getCurrency())
                 .set(dto.getCostPrice() != null, "cost_price", dto.getCostPrice())
@@ -145,23 +158,30 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 .set(StringUtils.hasText(dto.getBarcode()), "barcode", dto.getBarcode())
                 .set(dto.getWeight() != null, "weight", dto.getWeight())
                 .set(dto.getVolume() != null, "volume", dto.getVolume())
-                .set(dto.getSkuStatus() != null, "status", dto.getSkuStatus().getCode());
+                .set(skuStatusCode != null, "status", skuStatusCode);
         if (dto.getSkuId() != null) {
             skuWrapper.eq("id", dto.getSkuId());
         }
-        goodsSkuService.update(null, skuWrapper);
+        boolean skuUpdated = goodsSkuService.update(null, skuWrapper);
+        if (!skuUpdated) {
+            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUの更新に失敗しました");
+        }
 
         if (StringUtils.hasText(dto.getImageUrl()) || dto.getImageSort() != null || dto.getImageId() != null) {
+            String normalizedImageUrl = fileStorageService.normalize(UploadBizType.GOODS, dto.getImageUrl());
             UpdateWrapper<GoodsImage> imageWrapper = new UpdateWrapper<GoodsImage>()
                     .eq("goods_id", dto.getId())
                     .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                    .set(StringUtils.hasText(dto.getImageUrl()), "image_url", dto.getImageUrl())
+                    .set(StringUtils.hasText(normalizedImageUrl), "image_url", normalizedImageUrl)
                     .set(dto.getImageSort() != null, "sort", dto.getImageSort())
                     .set(StringUtils.hasText(dto.getSkuCode()), "sku_code", dto.getSkuCode());
             if (dto.getImageId() != null) {
                 imageWrapper.eq("id", dto.getImageId());
             }
-            goodsImageService.update(null, imageWrapper);
+            boolean imageUpdated = goodsImageService.update(null, imageWrapper);
+            if (!imageUpdated) {
+                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像の更新に失敗しました");
+            }
         }
         return true;
     }
@@ -181,14 +201,30 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return goodsRows;
     }
 
+    private void validatePriceUpdateFields(java.math.BigDecimal updatePrice, LocalDateTime priceUpdateTime) {
+        if (updatePrice != null && priceUpdateTime == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "updatePrice入力時はpriceUpdateTimeが必須です"
+            );
+        }
+    }
+
+    private String generateBarcode() {
+        String ts = Long.toString(System.currentTimeMillis(), 36).toUpperCase();
+        String random = UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+        return "BC" + ts + random;
+    }
+
+
     @Override
-    public PageResult<GoodsVO> pageGoods(GoodsQueryDTO queryDTO) {
+    public PageResult<GoodsListVO> pageGoods(GoodsQueryDTO queryDTO) {
         Long total = baseMapper.countGoodsPage(queryDTO);
         if (total == null || total <= 0) {
             return PageResult.build(0L, queryDTO.getPageNum(), queryDTO.getPageSize(), Collections.emptyList());
         }
         long offset = (queryDTO.getPageNum() - 1) * queryDTO.getPageSize();
-        List<GoodsVO> records = baseMapper.selectGoodsPage(queryDTO, offset, queryDTO.getPageSize());
+        List<GoodsListVO> records = baseMapper.selectGoodsPage(queryDTO, offset, queryDTO.getPageSize());
         return PageResult.build(total, queryDTO.getPageNum(), queryDTO.getPageSize(), records);
     }
 

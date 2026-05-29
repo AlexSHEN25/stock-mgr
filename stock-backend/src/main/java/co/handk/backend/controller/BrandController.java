@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -28,6 +29,16 @@ public class BrandController {
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateBrandDTO dto) {
         return brandService.saveByDto(dto);
+    }
+
+    @PostMapping("/upload")
+    public String upload(@RequestPart("file") MultipartFile file) {
+        return brandService.uploadImage(file);
+    }
+
+    @PutMapping("/{id:\\d+}/upload")
+    public String replaceUpload(@PathVariable("id") Long id, @RequestPart("file") MultipartFile file) {
+        return brandService.replaceImage(id, file);
     }
 
     @GetMapping("/{id}")
