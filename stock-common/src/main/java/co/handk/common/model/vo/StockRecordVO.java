@@ -4,6 +4,7 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -44,5 +45,5 @@ public class StockRecordVO extends BaseVO {
     private Long operatorId;
     private String operatorName;
     private String remark;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
 }

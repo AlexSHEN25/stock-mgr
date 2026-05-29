@@ -4,6 +4,7 @@ import co.handk.common.model.PageQuery;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -32,6 +33,5 @@ public class StockOrderItemQueryDTO extends PageQuery {
     private BigDecimal price;
     private String currency;
     private String remark;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
 }
-

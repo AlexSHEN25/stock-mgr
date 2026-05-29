@@ -27,4 +27,7 @@ public final class StockBizConstant {
 
     public static final int REQUEST_STATE_CREATED = 1;
     public static final int REQUEST_STATE_REINBOUND_APPLIED = 2;
+
+    public static final int REQUEST_ITEM_STATE_REMOVED = 0;
+    public static final int REQUEST_ITEM_STATE_ADDED = 1;
 }

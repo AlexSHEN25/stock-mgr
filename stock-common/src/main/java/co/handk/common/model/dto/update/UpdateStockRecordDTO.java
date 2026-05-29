@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -64,5 +65,5 @@ public class UpdateStockRecordDTO {
     private Long operatorId;
     private String operatorName;
     private String remark;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
 }

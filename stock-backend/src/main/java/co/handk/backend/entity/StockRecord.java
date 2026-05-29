@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -80,6 +81,7 @@ public class StockRecord extends BaseEntity {
 
     private String remark;
 
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
 }
+
 

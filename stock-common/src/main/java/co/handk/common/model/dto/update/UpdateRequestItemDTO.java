@@ -1,21 +1,21 @@
 package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateRequestItemDTO {
-    @NotNull(message = "IDは必須項目です")
+    @NotNull(message = "IDは必須です")
     private Long id;
 
-    @NotNull(message = "申請IDは必須項目です")
+    @NotNull(message = "申請IDは必須です")
     private Long requestId;
-    @NotNull(message = "商品は必須項目です")
+    @NotNull(message = "商品IDは必須です")
     private Long goodsId;
-    @NotNull(message = "SKUは必須項目です")
+    @NotNull(message = "SKU IDは必須です")
     private Long skuId;
     private String skuCode;
     private String goodsName;
@@ -45,6 +45,6 @@ public class UpdateRequestItemDTO {
     @PositiveOrZero(message = "0以上で入力してください")
     private Integer outQty;
     private Long stockRecordId;
+    private Integer state;
     private String remark;
 }
-

@@ -58,6 +58,9 @@ import static co.handk.client.constant.AppConstants.Module;
 public class MainController {
 
     private static final String SELECTED_KEY = "__selected";
+    private static final String MODULE_OPERATE_LOG = "operateLog";
+    private static final String MODULE_STOCK_RECORD = "stockRecord";
+    private static final String MODULE_PRICE_RECORD = "priceRecord";
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     @FXML private Label currentUserLabel;
@@ -129,11 +132,19 @@ public class MainController {
 
     @FXML
     private void onAdd() {
+        if (isReadOnlyModule()) {
+            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            return;
+        }
         openFormDialog(UiText.ACTION_CREATE, false);
     }
 
     @FXML
     private void onInlineEdit() {
+        if (isReadOnlyModule()) {
+            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            return;
+        }
         Map<String, Object> selected = currentWorkingRow();
         if (selected == null) {
             messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
@@ -147,6 +158,10 @@ public class MainController {
 
     @FXML
     private void onInlineSave() {
+        if (isReadOnlyModule()) {
+            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            return;
+        }
         if (inlineEditingRow == null) {
             messageLabel.setText(UiText.MSG_INLINE_EDIT_NONE);
             return;
@@ -185,6 +200,10 @@ public class MainController {
 
     @FXML
     private void onEdit() {
+        if (isReadOnlyModule()) {
+            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            return;
+        }
         if (currentWorkingRow() == null) {
             messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
             return;
@@ -194,6 +213,10 @@ public class MainController {
 
     @FXML
     private void onBatchDelete() {
+        if (isReadOnlyModule()) {
+            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            return;
+        }
         List<Map<String, Object>> checkedRows = checkedRows();
         if (checkedRows.isEmpty()) {
             messageLabel.setText(UiText.MSG_BATCH_DELETE_CHECK);
@@ -214,6 +237,10 @@ public class MainController {
 
     @FXML
     private void onDelete() {
+        if (isReadOnlyModule()) {
+            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            return;
+        }
         String id = deleteIdField.getText();
         if (id == null || id.isBlank()) {
             messageLabel.setText(UiText.MSG_DELETE_ID_REQUIRED);
@@ -699,6 +726,12 @@ public class MainController {
         }
         List<Map<String, Object>> checkedRows = checkedRows();
         return checkedRows.isEmpty() ? null : checkedRows.get(0);
+    }
+
+    private boolean isReadOnlyModule() {
+        return MODULE_OPERATE_LOG.equals(currentModule)
+                || MODULE_STOCK_RECORD.equals(currentModule)
+                || MODULE_PRICE_RECORD.equals(currentModule);
     }
 
     private void focusFirstQueryField() {

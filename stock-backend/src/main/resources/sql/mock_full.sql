@@ -1,4 +1,4 @@
-﻿SET NAMES utf8mb4;
+SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- clean
@@ -200,11 +200,11 @@ VALUES (1, 1, 1, 'SKU-MC-001', 2, 268.00, 'JPY', 0.9000, NOW(), DATE_ADD(NOW(), 
        (2, 2, 3, 'SKU-DT-001', 2, 378.00, 'JPY', 0.9000, NOW(), DATE_ADD(NOW(), INTERVAL 365 DAY), 1, 0, 1, 1);
 
 -- request form / item
-INSERT INTO t_request_form(id, biz_no, user_id, username, dept_id, dept_name, customer_id, customer_name, warehouse_id,
+INSERT INTO t_request_form(id, biz_no, user_id, username, dept_id, dept_name, customer_id, customer_name, warehouse_id, source_order_id,
                            total_qty, request_qty, total_amt, state, approver_id, approver_name, approve_time,
                            approve_remark, deleted, created_by, updated_by)
-VALUES (1, 'REQ-20260507-001', 2, 'sales01', 2, '営業部', 1, '山田商事', 1, 30, 30, 10740.00, 2, 1, 'admin', NOW(), '承認済み', 0, 2, 1),
-       (2, 'REQ-20260507-002', 2, 'sales01', 2, '営業部', 2, '大阪物産', 2, 20, 20, 7560.00, 1, NULL, NULL, NULL, NULL, 0, 2, 2);
+VALUES (1, 'REQ-20260507-001', 2, 'sales01', 2, '営業部', 1, '山田商事', 1, 1, 30, 30, 10740.00, 2, 1, 'admin', NOW(), '承認済み', 0, 2, 1),
+       (2, 'REQ-20260507-002', 2, 'sales01', 2, '営業部', 2, '大阪物産', 2, NULL, 20, 20, 7560.00, 1, NULL, NULL, NULL, NULL, 0, 2, 2);
 
 INSERT INTO t_request_item(id, request_id, goods_id, sku_id, sku_code, goods_name, english_name, brand_id, brand_name,
                            series_id, series_name, category_id, category_name, stock_type_id, stock_type_name, maker_id,

@@ -10,7 +10,9 @@ import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
+import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
+import co.handk.common.model.vo.RequestCandidateItemVO;
 import co.handk.common.model.vo.RequestFormVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.servlet.http.HttpServletResponse;
@@ -35,7 +37,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -44,6 +49,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     @Autowired private StockOrderService stockOrderService;
     @Autowired private StockOrderItemService stockOrderItemService;
+    @Autowired private StockRecordService stockRecordService;
     @Autowired private RequestItemService requestItemService;
     @Autowired private UserService userService;
     @Autowired private DeptService deptService;
@@ -171,6 +177,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         form.setDeptId(user == null ? null : user.getDeptId());
         form.setDeptName(dept == null ? null : dept.getName());
         form.setWarehouseId(outboundOrder.getWarehouseId());
+        form.setSourceOrderId(outboundOrder.getId());
         form.setState(StockBizConstant.REQUEST_STATE_CREATED);
         form.setApproveRemark(dto.getRemark());
 
@@ -182,48 +189,35 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
 
         for (StockOrderItem orderItem : selectedItems) {
-            RequestItem requestItem = new RequestItem();
-            requestItem.setRequestId(form.getId());
-            requestItem.setGoodsId(orderItem.getGoodsId());
-            requestItem.setSkuId(orderItem.getSkuId());
-            requestItem.setSkuCode(orderItem.getSkuCode());
-            requestItem.setGoodsName(orderItem.getGoodsName());
-            requestItem.setEnglishName(orderItem.getEnglishName());
-            requestItem.setBrandId(orderItem.getBrandId());
-            requestItem.setBrandName(orderItem.getBrandName());
-            requestItem.setSeriesId(orderItem.getSeriesId());
-            requestItem.setSeriesName(orderItem.getSeriesName());
-            requestItem.setCategoryId(orderItem.getCategoryId());
-            requestItem.setCategoryName(orderItem.getCategoryName());
-            requestItem.setStockTypeId(orderItem.getStockTypeId());
-            requestItem.setStockTypeName(orderItem.getStockTypeName());
-            requestItem.setMakerId(orderItem.getMakerId());
-            requestItem.setMakerName(orderItem.getMakerName());
-            requestItem.setWarehouseId(outboundOrder.getWarehouseId());
-            requestItem.setPrice(orderItem.getPrice());
-            requestItem.setExchangeRate(BigDecimal.ONE);
-            requestItem.setCurrency(orderItem.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : orderItem.getCurrency());
-            requestItem.setDiscount(BigDecimal.ONE);
-            requestItem.setRequestQty(orderItem.getChangeQty());
-            requestItem.setApproveQty(0);
-            requestItem.setOutQty(orderItem.getChangeQty());
-            requestItem.setTotalAmt(safeAmount(orderItem.getPrice()).multiply(BigDecimal.valueOf(orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty())));
-            requestItem.setStockRecordId(null);
-            requestItem.setRemark(dto.getRemark());
+            StockRecord stockRecord = stockRecordService.getOne(new QueryWrapper<StockRecord>()
+                    .eq("order_id", outboundOrder.getId())
+                    .eq("order_item_id", orderItem.getId())
+                    .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (stockRecord == null) {
+                throw new RuntimeException("source outbound stock record not found");
+            }
+            int requestQty = stockRecord.getChangeQty() == null ? 0 : stockRecord.getChangeQty();
+            RequestItem requestItem = buildRequestItemFromStockRecord(form, stockRecord, dto.getRemark());
+            requestItem.setRequestQty(requestQty);
+            requestItem.setOutQty(requestQty);
+            requestItem.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestQty)));
+            applyOutboundRemainderDelta(stockRecord, requestQty);
             if (!requestItemService.save(requestItem)) {
-                throw new RuntimeException("申請明細の保存に失敗しました");
+                throw new RuntimeException("failed to save request item");
             }
 
-            totalQty += orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
+            totalQty += requestQty;
             totalAmt = totalAmt.add(safeAmount(requestItem.getTotalAmt()));
         }
-
         form.setTotalQty(totalQty);
         form.setRequestQty(totalQty);
         form.setTotalAmt(totalAmt);
         if (!this.updateById(form)) {
             throw new RuntimeException("申請書の集計更新に失敗しました");
         }
+        validateSourceBalance(form);
         return form.getId();
     }
 
@@ -237,6 +231,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         if (items.isEmpty()) {
             throw new RuntimeException("申請明細が存在しません");
@@ -256,7 +251,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         inboundOrder.setOperatorId(loginUserId);
         inboundOrder.setOperatorName(form.getUsername());
         inboundOrder.setRemark("申請書再入庫: " + form.getBizNo());
-        inboundOrder.setBizDate(LocalDateTime.now());
+        inboundOrder.setBizDate(LocalDate.now());
 
         int totalQty = 0;
         for (RequestItem item : items) {
@@ -301,7 +296,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             orderItem.setPrice(reqItem.getPrice());
             orderItem.setCurrency(reqItem.getCurrency());
             orderItem.setRemark("申請書再入庫明細");
-            orderItem.setBizDate(LocalDateTime.now());
+            orderItem.setBizDate(LocalDate.now());
             if (!stockOrderItemService.save(orderItem)) {
                 throw new RuntimeException("入庫伝票明細の保存に失敗しました");
             }
@@ -314,7 +309,161 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return inboundOrder.getId();
     }
 
+        @Override
+    public List<RequestCandidateItemVO> listCandidateItems(Long requestId) {
+        RequestForm form = this.getByIdNotDeleted(requestId);
+        if (form == null) {
+            throw new RuntimeException("逕ｳ隲区嶌縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ");
+        }
+        requireOwned(form);
+
+        List<StockRecord> records = listSourceOutboundRecords(form);
+        if (records.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<RequestItem> existing = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", requestId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        Map<Long, RequestItem> selectedMap = new HashMap<>();
+        for (RequestItem requestItem : existing) {
+            if (requestItem.getStockRecordId() != null) {
+                selectedMap.put(requestItem.getStockRecordId(), requestItem);
+            }
+        }
+
+        List<RequestCandidateItemVO> result = new ArrayList<>();
+        for (StockRecord record : records) {
+            RequestItem selected = selectedMap.get(record.getId());
+            RequestCandidateItemVO vo = new RequestCandidateItemVO();
+            vo.setStockOrderId(record.getOrderId());
+            vo.setStockOrderItemId(record.getId());
+            vo.setOrderNo(record.getBizNo());
+            vo.setOrderType(record.getOrderType());
+            vo.setBizDate(record.getBizDate());
+            vo.setGoodsId(record.getGoodsId());
+            vo.setSkuId(record.getSkuId());
+            vo.setSkuCode(record.getSkuCode());
+            vo.setGoodsName(record.getGoodsName());
+            vo.setBrandName(record.getBrandName());
+            vo.setSeriesName(record.getSeriesName());
+            vo.setCategoryName(record.getCategoryName());
+            vo.setStockTypeName(record.getStockTypeName());
+            vo.setMakerName(record.getMakerName());
+            StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
+            int remainingQty = orderItem == null || orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
+            int selectedQty = selected == null || selected.getRequestQty() == null
+                    || !Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(selected.getState())
+                    ? 0 : selected.getRequestQty();
+            vo.setChangeQty(remainingQty + selectedQty);
+            vo.setPrice(record.getPrice());
+            vo.setCurrency(record.getCurrency());
+            vo.setSelected(selected != null && selected.getState() != null
+                    && selected.getState().equals(StockBizConstant.REQUEST_ITEM_STATE_ADDED));
+            vo.setRequestItemState(selected == null ? null : selected.getState());
+            vo.setRequestItemId(selected == null ? null : selected.getId());
+            result.add(vo);
+        }
+        return result;
+    }
+
+        @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean addItemsFromStockOrder(RequestFormItemBatchDTO dto) {
+        RequestForm form = this.getByIdNotDeleted(dto.getRequestId());
+        if (form == null) {
+            throw new RuntimeException("request form not found");
+        }
+        requireOwned(form);
+        Map<Long, Integer> requestedQuantities = resolveRequestedQuantities(dto);
+        if (requestedQuantities.isEmpty()) {
+            return true;
+        }
+        requireOwnedSourceOutbound(form);
+        for (Map.Entry<Long, Integer> entry : requestedQuantities.entrySet()) {
+            Long stockRecordId = entry.getKey();
+            int requestedQty = entry.getValue();
+            StockRecord stockRecord = requireSourceStockRecord(form, stockRecordId);
+
+            RequestItem existing = requestItemService.getOne(new QueryWrapper<RequestItem>()
+                    .eq("request_id", form.getId())
+                    .eq("stock_record_id", stockRecordId)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+
+            int currentQty = existing == null || !Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(existing.getState())
+                    || existing.getRequestQty() == null ? 0 : existing.getRequestQty();
+            int deltaQty = requestedQty - currentQty;
+            applyOutboundRemainderDelta(stockRecord, deltaQty);
+
+            if (existing == null) {
+                RequestItem requestItem = buildRequestItemFromStockRecord(form, stockRecord, dto.getRemark());
+                requestItem.setRequestQty(requestedQty);
+                requestItem.setOutQty(requestedQty);
+                requestItem.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestedQty)));
+                if (!saveOrReactivateRequestItem(form.getId(), stockRecordId, requestItem, dto.getRemark())) {
+                    throw new RuntimeException("failed to add request item");
+                }
+            } else {
+                existing.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
+                existing.setRequestQty(requestedQty);
+                existing.setOutQty(requestedQty);
+                existing.setPrice(stockRecord.getPrice());
+                existing.setCurrency(stockRecord.getCurrency());
+                existing.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestedQty)));
+                existing.setStockRecordId(stockRecord.getId());
+                if (dto.getRemark() != null && !dto.getRemark().isBlank()) {
+                    existing.setRemark(dto.getRemark());
+                }
+                if (!requestItemService.updateById(existing)) {
+                    throw new RuntimeException("failed to update request item");
+                }
+            }
+        }
+
+        validateKnifeHandleQuantity(form.getId());
+        validateSourceBalance(form);
+        recalculateRequestFormSummary(form.getId());
+        return true;
+    }
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean removeItemsFromRequest(RequestFormItemBatchDTO dto) {
+        RequestForm form = this.getByIdNotDeleted(dto.getRequestId());
+        if (form == null) {
+            throw new RuntimeException("request form not found");
+        }
+        requireOwned(form);
+        requireOwnedSourceOutbound(form);
+        List<Long> stockRecordIds = !normalizeStockRecordIds(dto.getStockOrderItemIds()).isEmpty()
+                ? normalizeStockRecordIds(dto.getStockOrderItemIds())
+                : new ArrayList<>(resolveRequestedQuantities(dto).keySet());
+        if (stockRecordIds.isEmpty()) {
+            return true;
+        }
+
+        List<RequestItem> existing = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", form.getId())
+                .in("stock_record_id", stockRecordIds)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        if (existing == null || existing.isEmpty()) {
+            return true;
+        }
+
+        for (RequestItem requestItem : existing) {
+            int currentQty = requestItem.getRequestQty() == null ? 0 : requestItem.getRequestQty();
+            StockRecord record = requireSourceStockRecord(form, requestItem.getStockRecordId());
+            applyOutboundRemainderDelta(record, -currentQty);
+            requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_REMOVED);
+            if (!requestItemService.updateById(requestItem)) {
+                throw new RuntimeException("failed to remove request item");
+            }
+        }
+        validateSourceBalance(form);
+        recalculateRequestFormSummary(form.getId());
+        return true;
+    }
+@Override
     public void downloadBDeptRequestForm(Long requestId, HttpServletResponse response) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
@@ -442,8 +591,328 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return selected;
     }
 
+    
+    private List<Long> normalizeStockRecordIds(List<Long> ids) {
+        java.util.LinkedHashSet<Long> uniq = new java.util.LinkedHashSet<>();
+        if (ids != null) {
+            for (Long id : ids) {
+                if (id != null && id > 0) {
+                    uniq.add(id);
+                }
+            }
+        }
+        return new ArrayList<>(uniq);
+    }
+
+    private Map<Long, Integer> resolveRequestedQuantities(RequestFormItemBatchDTO dto) {
+        Map<Long, Integer> quantities = new java.util.LinkedHashMap<>();
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            for (RequestFormItemBatchDTO.Item item : dto.getItems()) {
+                if (item == null || item.getStockRecordId() == null || item.getStockRecordId() <= 0) {
+                    continue;
+                }
+                int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
+                if (qty > 0) {
+                    quantities.merge(item.getStockRecordId(), qty, Integer::sum);
+                }
+            }
+            return quantities;
+        }
+        for (Long stockRecordId : normalizeStockRecordIds(dto.getStockOrderItemIds())) {
+            StockRecord record = stockRecordService.getByIdNotDeleted(stockRecordId);
+            if (record != null && record.getChangeQty() != null && record.getChangeQty() > 0) {
+                quantities.put(stockRecordId, record.getChangeQty());
+            }
+        }
+        return quantities;
+    }
+
+    private StockOrder requireOwnedSourceOutbound(RequestForm form) {
+        if (form.getSourceOrderId() == null) {
+            throw new RuntimeException("request form source outbound order is required");
+        }
+        StockOrder order = stockOrderService.getByIdNotDeleted(form.getSourceOrderId());
+        if (order == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
+            throw new RuntimeException("source outbound order not found");
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return order;
+        }
+        if (!userId.equals(order.getRequesterId()) && !userId.equals(order.getOperatorId())) {
+            throw new RuntimeException("source outbound order is not owned by current user");
+        }
+        return order;
+    }
+
+    private StockRecord requireSourceStockRecord(RequestForm form, Long stockRecordId) {
+        StockRecord record = stockRecordService.getByIdNotDeleted(stockRecordId);
+        if (record == null || !form.getSourceOrderId().equals(record.getOrderId())
+                || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(record.getOrderType())) {
+            throw new RuntimeException("selected stock record is not available");
+        }
+        return record;
+    }
+
+    private void applyOutboundRemainderDelta(StockRecord record, int deltaQty) {
+        if (deltaQty == 0) {
+            return;
+        }
+        StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
+        if (orderItem == null) {
+            throw new RuntimeException("source outbound item not found");
+        }
+        int originalQty = record.getChangeQty() == null ? 0 : record.getChangeQty();
+        int currentQty = orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
+        int nextQty = currentQty - deltaQty;
+        if (nextQty < 0 || nextQty > originalQty) {
+            throw new RuntimeException("request quantity exceeds source outbound remaining quantity");
+        }
+        orderItem.setChangeQty(nextQty);
+        if (!stockOrderItemService.updateById(orderItem)) {
+            throw new RuntimeException("failed to update source outbound item");
+        }
+        StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
+        if (order != null) {
+            int totalQty = order.getTotalQty() == null ? 0 : order.getTotalQty();
+            order.setTotalQty(totalQty - deltaQty);
+            if (!stockOrderService.updateById(order)) {
+                throw new RuntimeException("failed to update source outbound order");
+            }
+        }
+    }
+
+    private void validateSourceBalance(RequestForm form) {
+        List<StockRecord> records = listSourceOutboundRecords(form);
+        for (StockRecord record : records) {
+            int originalQty = record.getChangeQty() == null ? 0 : record.getChangeQty();
+            StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
+            int remainingQty = orderItem == null || orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
+            RequestItem requestItem = requestItemService.getOne(new QueryWrapper<RequestItem>()
+                    .eq("request_id", form.getId())
+                    .eq("stock_record_id", record.getId())
+                    .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            int requestQty = requestItem == null || requestItem.getRequestQty() == null ? 0 : requestItem.getRequestQty();
+            if (requestQty + remainingQty != originalQty) {
+                throw new RuntimeException("request and outbound quantities are inconsistent");
+            }
+        }
+    }
+
+    private boolean saveOrReactivateRequestItem(Long requestId, Long stockRecordId, RequestItem candidate, String remark) {
+        try {
+            return requestItemService.save(candidate);
+        } catch (Exception ex) {
+            RequestItem existed = requestItemService.getOne(new QueryWrapper<RequestItem>()
+                    .eq("request_id", requestId)
+                    .eq("stock_record_id", stockRecordId)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (existed == null) {
+                throw ex;
+            }
+            existed.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
+            existed.setRequestQty(candidate.getRequestQty());
+            existed.setOutQty(candidate.getOutQty());
+            existed.setPrice(candidate.getPrice());
+            existed.setCurrency(candidate.getCurrency());
+            existed.setTotalAmt(candidate.getTotalAmt());
+            if (remark != null && !remark.isBlank()) {
+                existed.setRemark(remark);
+            }
+            return requestItemService.updateById(existed);
+        }
+    }
     private BigDecimal safeAmount(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private RequestItem buildRequestItemFromOrder(RequestForm form, StockOrderItem orderItem, String remark) {
+        RequestItem requestItem = new RequestItem();
+        requestItem.setRequestId(form.getId());
+        requestItem.setGoodsId(orderItem.getGoodsId());
+        requestItem.setSkuId(orderItem.getSkuId());
+        requestItem.setSkuCode(orderItem.getSkuCode());
+        requestItem.setGoodsName(orderItem.getGoodsName());
+        requestItem.setEnglishName(orderItem.getEnglishName());
+        requestItem.setBrandId(orderItem.getBrandId());
+        requestItem.setBrandName(orderItem.getBrandName());
+        requestItem.setSeriesId(orderItem.getSeriesId());
+        requestItem.setSeriesName(orderItem.getSeriesName());
+        requestItem.setCategoryId(orderItem.getCategoryId());
+        requestItem.setCategoryName(orderItem.getCategoryName());
+        requestItem.setStockTypeId(orderItem.getStockTypeId());
+        requestItem.setStockTypeName(orderItem.getStockTypeName());
+        requestItem.setMakerId(orderItem.getMakerId());
+        requestItem.setMakerName(orderItem.getMakerName());
+        requestItem.setWarehouseId(form.getWarehouseId());
+        requestItem.setPrice(orderItem.getPrice());
+        requestItem.setExchangeRate(BigDecimal.ONE);
+        requestItem.setCurrency(orderItem.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : orderItem.getCurrency());
+        requestItem.setDiscount(BigDecimal.ONE);
+        requestItem.setRequestQty(orderItem.getChangeQty());
+        requestItem.setApproveQty(0);
+        requestItem.setOutQty(orderItem.getChangeQty());
+        requestItem.setTotalAmt(safeAmount(orderItem.getPrice())
+                .multiply(BigDecimal.valueOf(orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty())));
+        requestItem.setStockRecordId(null);
+        requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
+        requestItem.setRemark(remark);
+        return requestItem;
+    }
+
+    private RequestItem buildRequestItemFromStockRecord(RequestForm form, StockRecord record, String remark) {
+        RequestItem requestItem = new RequestItem();
+        requestItem.setRequestId(form.getId());
+        requestItem.setGoodsId(record.getGoodsId());
+        requestItem.setSkuId(record.getSkuId());
+        requestItem.setSkuCode(record.getSkuCode());
+        requestItem.setGoodsName(record.getGoodsName());
+        requestItem.setEnglishName(record.getEnglishName());
+        requestItem.setBrandId(record.getBrandId());
+        requestItem.setBrandName(record.getBrandName());
+        requestItem.setSeriesId(record.getSeriesId());
+        requestItem.setSeriesName(record.getSeriesName());
+        requestItem.setCategoryId(record.getCategoryId());
+        requestItem.setCategoryName(record.getCategoryName());
+        requestItem.setStockTypeId(record.getStockTypeId());
+        requestItem.setStockTypeName(record.getStockTypeName());
+        requestItem.setMakerId(record.getMakerId());
+        requestItem.setMakerName(record.getMakerName());
+        requestItem.setWarehouseId(form.getWarehouseId());
+        requestItem.setPrice(record.getPrice());
+        requestItem.setExchangeRate(BigDecimal.ONE);
+        requestItem.setCurrency(record.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : record.getCurrency());
+        requestItem.setDiscount(BigDecimal.ONE);
+        requestItem.setRequestQty(record.getChangeQty());
+        requestItem.setApproveQty(0);
+        requestItem.setOutQty(record.getChangeQty());
+        requestItem.setTotalAmt(safeAmount(record.getPrice())
+                .multiply(BigDecimal.valueOf(record.getChangeQty() == null ? 0 : record.getChangeQty())));
+        requestItem.setStockRecordId(record.getId());
+        requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
+        requestItem.setRemark(remark);
+        return requestItem;
+    }
+    private void recalculateRequestFormSummary(Long requestId) {
+        RequestForm form = this.getByIdNotDeleted(requestId);
+        if (form == null) {
+            throw new RuntimeException("申請書が見つかりません");
+        }
+        List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", requestId)
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        int totalQty = 0;
+        BigDecimal totalAmt = BigDecimal.ZERO;
+        for (RequestItem item : items) {
+            totalQty += item.getRequestQty() == null ? 0 : item.getRequestQty();
+            totalAmt = totalAmt.add(safeAmount(item.getTotalAmt()));
+        }
+        form.setTotalQty(totalQty);
+        form.setRequestQty(totalQty);
+        form.setTotalAmt(totalAmt);
+        if (!this.updateById(form)) {
+            throw new RuntimeException("申請書集計の更新に失敗しました");
+        }
+    }
+
+    private List<StockOrder> listAvailableOrdersForRequest(Long userId, Long warehouseId) {
+        QueryWrapper<StockOrder> wrapper = new QueryWrapper<StockOrder>()
+                .eq("deleted", DeleteEnum.UNDELETED.getCode());
+        if (warehouseId != null) {
+            wrapper.eq("warehouse_id", warehouseId);
+        }
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            wrapper.and(w -> w.eq("requester_id", userId).or().eq("operator_id", userId));
+        }
+        return stockOrderService.list(wrapper);
+    }
+
+    private List<StockRecord> listAvailableStockRecordsForRequest(Long userId, Long warehouseId) {
+        QueryWrapper<StockRecord> wrapper = new QueryWrapper<StockRecord>()
+                .eq("deleted", DeleteEnum.UNDELETED.getCode());
+        if (warehouseId != null) {
+            wrapper.eq("warehouse_id", warehouseId);
+        }
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            wrapper.and(w -> w.eq("requester_id", userId).or().eq("operator_id", userId));
+        }
+        return stockRecordService.list(wrapper);
+    }
+
+    private List<StockRecord> listSourceOutboundRecords(RequestForm form) {
+        requireOwnedSourceOutbound(form);
+        return stockRecordService.list(new QueryWrapper<StockRecord>()
+                .eq("order_id", form.getSourceOrderId())
+                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+    }
+
+    private Set<Long> findAvailableStockRecordIds(Long userId, Long warehouseId) {
+        List<StockRecord> records = listAvailableStockRecordsForRequest(userId, warehouseId);
+        java.util.HashSet<Long> ids = new java.util.HashSet<>();
+        for (StockRecord record : records) {
+            ids.add(record.getId());
+        }
+        return ids;
+    }
+
+    private void validateKnifeHandleQuantity(Long requestId) {
+        List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", requestId)
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        int knifeQty = 0;
+        int handleQty = 0;
+        for (RequestItem item : items) {
+            int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
+            if (isKnifeItem(item)) {
+                knifeQty += qty;
+            }
+            if (isHandleItem(item)) {
+                handleQty += qty;
+            }
+        }
+        if (knifeQty > 0 && handleQty > 0 && knifeQty != handleQty) {
+            throw new RuntimeException("刀と柄の数量が一致していません");
+        }
+    }
+
+    private boolean isKnifeItem(RequestItem item) {
+        return containsTypeKeyword(item.getCategoryName(), "\u5200")
+                || containsTypeKeyword(item.getGoodsName(), "\u5200")
+                || containsTypeKeyword(item.getSeriesName(), "\u5200");
+    }
+
+    private boolean isHandleItem(RequestItem item) {
+        return containsTypeKeyword(item.getCategoryName(), "\u67C4")
+                || containsTypeKeyword(item.getGoodsName(), "\u67C4")
+                || containsTypeKeyword(item.getSeriesName(), "\u67C4");
+    }
+
+    private boolean containsTypeKeyword(String value, String keyword) {
+        return value != null && value.contains(keyword);
+    }
+private Set<Long> findAvailableOrderItemIds(Long userId, Long warehouseId) {
+        List<StockOrder> orders = listAvailableOrdersForRequest(userId, warehouseId);
+        java.util.HashSet<Long> ids = new java.util.HashSet<>();
+        if (orders.isEmpty()) {
+            return ids;
+        }
+        List<Long> orderIds = new ArrayList<>();
+        for (StockOrder order : orders) {
+            orderIds.add(order.getId());
+        }
+        List<StockOrderItem> orderItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
+                .in("order_id", orderIds)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        for (StockOrderItem item : orderItems) {
+            ids.add(item.getId());
+        }
+        return ids;
     }
 
     private Stock findStock(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {

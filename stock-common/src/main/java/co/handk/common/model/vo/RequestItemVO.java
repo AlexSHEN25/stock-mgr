@@ -30,5 +30,6 @@ public class RequestItemVO extends BaseVO {
     private Integer approveQty;
     private Integer outQty;
     private Long stockRecordId;
+    private Integer state;
     private String remark;
 }

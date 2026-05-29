@@ -10,6 +10,7 @@ import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
 import co.handk.common.model.dto.query.RequestFormQueryDTO;
+import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -39,6 +40,21 @@ public class RequestFormController {
     @PostMapping("/reapplyInbound/{id}")
     public Long reapplyInbound(@PathVariable("id") @NotNull Long id) {
         return requestFormService.reapplyInbound(id);
+    }
+
+    @GetMapping("/{id}/candidateItems")
+    public List<RequestCandidateItemVO> candidateItems(@PathVariable("id") @NotNull Long id) {
+        return requestFormService.listCandidateItems(id);
+    }
+
+    @PostMapping("/items/add")
+    public Boolean addItems(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
+        return requestFormService.addItemsFromStockOrder(dto);
+    }
+
+    @PostMapping("/items/remove")
+    public Boolean removeItems(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
+        return requestFormService.removeItemsFromRequest(dto);
     }
 
     @GetMapping("/{id}")

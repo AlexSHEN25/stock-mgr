@@ -17,7 +17,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -80,7 +80,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
         }
     }
 
-    private void validateRequiredDateByOrderType(Integer orderType, LocalDateTime bizDate) {
+    private void validateRequiredDateByOrderType(Integer orderType, LocalDate bizDate) {
         if (orderType == null) {
             return;
         }

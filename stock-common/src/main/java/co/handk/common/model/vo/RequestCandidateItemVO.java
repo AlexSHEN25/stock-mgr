@@ -4,31 +4,28 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
-public class StockOrderItemVO extends BaseVO {
-    private Long orderId;
+public class RequestCandidateItemVO {
+    private Long stockOrderId;
+    private Long stockOrderItemId;
+    private String orderNo;
+    private Integer orderType;
+    private LocalDate bizDate;
     private Long goodsId;
     private Long skuId;
     private String skuCode;
     private String goodsName;
-    private String englishName;
-    private Long brandId;
     private String brandName;
-    private Long seriesId;
     private String seriesName;
-    private Long categoryId;
     private String categoryName;
-    private Long stockTypeId;
     private String stockTypeName;
-    private Long makerId;
     private String makerName;
-    private Integer beforeQty;
     private Integer changeQty;
-    private Integer afterQty;
     private BigDecimal price;
     private String currency;
-    private String remark;
-    private LocalDate bizDate;
+    private Boolean selected;
+    private Integer requestItemState;
+    private Long requestItemId;
 }
+

@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -54,6 +54,7 @@ public class StockOrderItem extends BaseEntity {
 
     private String remark;
 
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
 }
+
 

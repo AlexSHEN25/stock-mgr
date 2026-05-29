@@ -29,6 +29,8 @@ public class CreateRequestFormDTO {
 
     private Long warehouseId;
 
+    private Long sourceOrderId;
+
     @PositiveOrZero(message = "0以上で入力してください")
     private Integer totalQty;
 

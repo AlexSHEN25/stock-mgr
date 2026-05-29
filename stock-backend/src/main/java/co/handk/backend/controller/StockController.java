@@ -15,7 +15,15 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -29,7 +37,7 @@ public class StockController {
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateStockDTO dto) {
-        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫の手動追加はできません。在庫入庫を実行してください。");
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫の直接作成はできません。入庫処理を利用してください。");
     }
 
     @GetMapping("/{id}")
@@ -39,7 +47,7 @@ public class StockController {
 
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateStockDTO dto) {
-        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫の直接更新はできません。入出庫処理を実行してください。");
+        return stockService.updateByDto(dto);
     }
 
     @PostMapping("/inbound")

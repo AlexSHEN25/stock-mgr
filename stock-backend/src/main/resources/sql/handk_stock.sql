@@ -623,6 +623,7 @@ create TABLE `t_request_form`
     `customer_id`    BIGINT UNSIGNED  NOT NULL COMMENT '客户ID',
     `customer_name`  VARCHAR(255)     NOT NULL COMMENT '客户名称',
     `warehouse_id`   BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '出库仓库ID',
+    `source_order_id` BIGINT UNSIGNED           DEFAULT NULL COMMENT '出库单id',
     `total_qty`      INT(10)          NOT NULL DEFAULT 0 COMMENT '出库总数量',
     `request_qty`    INT(10)          NOT NULL DEFAULT 0 COMMENT '请求书写入数量',
     `total_amt`      DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '总金额',
@@ -639,6 +640,7 @@ create TABLE `t_request_form`
     PRIMARY KEY (`id`),
     UNIQUE KEY uk_biz_no (biz_no, deleted),
     KEY idx_user (user_id),
+    KEY idx_source_order (source_order_id),
     KEY idx_customer (customer_id),
     KEY idx_created_by (created_by),
     KEY idx_updated_by (updated_by)
@@ -696,7 +698,8 @@ create TABLE `t_request_item`
     KEY `idx_type_id` (`stock_type_id`),
     KEY `idx_maker_id` (`maker_id`),
     KEY idx_created_by (created_by),
-    KEY idx_updated_by (updated_by)
+    KEY idx_updated_by (updated_by),
+    UNIQUE KEY uk_request_stock_record (request_id, stock_record_id, deleted)
 )
     ENGINE = InnoDB
     DEFAULT CHARSET = utf8mb4

@@ -2,6 +2,7 @@ package co.handk.common.model.vo;
 
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -22,6 +23,6 @@ public class StockOrderVO extends BaseVO {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
     private LocalDateTime finishTime;
 }

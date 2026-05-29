@@ -1,6 +1,5 @@
 package co.handk.backend.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -66,6 +65,8 @@ public class RequestItem extends BaseEntity {
     private LocalDateTime depositTime;
 
     private Long stockRecordId;
+
+    private Integer state;
 
     private String remark;
 }

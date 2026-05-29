@@ -28,6 +28,8 @@ public class RequestForm extends BaseEntity {
 
     private Long warehouseId;
 
+    private Long sourceOrderId;
+
     private Integer totalQty;
 
     private Integer requestQty;

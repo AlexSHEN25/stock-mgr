@@ -15,6 +15,7 @@ public class RequestFormVO extends BaseVO {
     private Long customerId;
     private String customerName;
     private Long warehouseId;
+    private Long sourceOrderId;
     private Integer totalQty;
     private Integer requestQty;
     private BigDecimal totalAmt;

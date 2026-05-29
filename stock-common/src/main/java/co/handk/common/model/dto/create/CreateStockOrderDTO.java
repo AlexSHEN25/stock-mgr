@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -35,6 +36,6 @@ public class CreateStockOrderDTO {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
     private LocalDateTime finishTime;
 }

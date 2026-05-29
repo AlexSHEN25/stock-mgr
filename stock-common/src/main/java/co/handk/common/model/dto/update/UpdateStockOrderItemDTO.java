@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import jakarta.validation.constraints.PositiveOrZero;
 
@@ -46,5 +47,5 @@ public class UpdateStockOrderItemDTO {
     private BigDecimal price;
     private String currency;
     private String remark;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
 }

@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Images (do not commit) ###
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.bmp
+*.ico

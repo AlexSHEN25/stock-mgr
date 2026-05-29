@@ -3,6 +3,7 @@ package co.handk.common.model.dto.query;
 import co.handk.common.model.PageQuery;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -25,6 +26,6 @@ public class StockOrderQueryDTO extends PageQuery {
     private Long approverId;
     private String approverName;
     private LocalDateTime approveTime;
-    private LocalDateTime bizDate;
+    private LocalDate bizDate;
     private LocalDateTime finishTime;
 }
