@@ -23,6 +23,8 @@ import co.handk.backend.service.UserService;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.model.dto.create.StockOrderSubmitDTO;
+import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -32,6 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -230,6 +233,175 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return true;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long submitOrder(StockOrderSubmitDTO dto) {
+        int orderType = dto.getOrderType() == null ? StockBizConstant.ORDER_TYPE_INBOUND : dto.getOrderType();
+        if (orderType != StockBizConstant.ORDER_TYPE_INBOUND && orderType != StockBizConstant.ORDER_TYPE_OUTBOUND) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "伝票種別が不正です");
+        }
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "明細は必須です");
+        }
+
+        List<OrderWorkingItem> workingItems = new ArrayList<>();
+        int totalQty = 0;
+        Long warehouseId = null;
+        Long stockTypeId = null;
+        String orderRemark = dto.getRemark();
+        LocalDateTime bizDate = LocalDateTime.now();
+
+        for (StockOrderSubmitItemDTO itemDTO : dto.getItems()) {
+            Stock stock = requireStock(itemDTO.getStockId());
+            if (warehouseId == null) {
+                warehouseId = Long.valueOf(stock.getWarehouseId());
+            } else if (!warehouseId.equals(Long.valueOf(stock.getWarehouseId()))) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "同一伝票の倉庫は一致する必要があります");
+            }
+            if (stockTypeId == null) {
+                stockTypeId = stock.getStockTypeId();
+            }
+
+            Goods goods = requireGoods(stock.getGoodsId());
+            GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
+            String stockTypeName = getStockTypeName(stock.getStockTypeId());
+
+            int qty = safeInt(itemDTO.getQuantity());
+            int beforeQty = safeInt(stock.getCurrentQty());
+            int afterQty;
+            if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
+                afterQty = beforeQty + qty;
+            } else {
+                if (beforeQty < qty) {
+                    notifyInsufficientStock(sku.getSkuCode(), qty, beforeQty, stock.getId());
+                    throw new co.handk.backend.exception.BusinessException(
+                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                            "在庫数量が不足しています: SKU[" + sku.getSkuCode() + "]");
+                }
+                afterQty = beforeQty - qty;
+            }
+
+            OrderWorkingItem working = new OrderWorkingItem();
+            working.stock = stock;
+            working.goods = goods;
+            working.sku = sku;
+            working.stockTypeName = stockTypeName;
+            working.changeQty = qty;
+            working.beforeQty = beforeQty;
+            working.afterQty = afterQty;
+            working.remark = itemDTO.getRemark();
+            workingItems.add(working);
+            totalQty += qty;
+        }
+
+        int sourceType = dto.getSourceType() == null ? StockBizConstant.SOURCE_TYPE_MANUAL : dto.getSourceType();
+        StockOrder order = new StockOrder();
+        order.setOrderNo(generateOrderNo(orderType));
+        order.setOrderType(orderType);
+        order.setWarehouseId(warehouseId);
+        order.setSourceType(sourceType);
+        order.setTotalQty(totalQty);
+        order.setStockTypeId(stockTypeId);
+        order.setState(StockBizConstant.ORDER_STATE_FINISHED);
+        Long userId = UserContext.getUserIdOrDefault();
+        User user = userService.getByIdNotDeleted(userId);
+        String username = user == null ? null : user.getUsername();
+        order.setRequesterId(userId);
+        order.setRequesterName(username);
+        order.setOperatorId(userId);
+        order.setOperatorName(username);
+        order.setRemark(orderRemark);
+        order.setBizDate(bizDate);
+        order.setFinishTime(bizDate);
+        if (!stockOrderService.save(order)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫伝票の保存に失敗しました");
+        }
+
+        for (OrderWorkingItem working : workingItems) {
+            StockOrderItem item = new StockOrderItem();
+            item.setOrderId(order.getId());
+            item.setGoodsId(working.goods.getId());
+            item.setSkuId(working.sku.getId());
+            item.setSkuCode(working.sku.getSkuCode());
+            item.setGoodsName(working.goods.getName());
+            item.setEnglishName(working.goods.getEnglishName());
+            item.setBrandId(working.goods.getBrandId());
+            item.setSeriesId(working.goods.getSeriesId());
+            item.setCategoryId(working.goods.getCategoryId());
+            item.setMakerId(working.goods.getMakerId());
+            item.setStockTypeId(working.stock.getStockTypeId());
+            item.setStockTypeName(working.stockTypeName);
+            item.setBeforeQty(working.beforeQty);
+            item.setChangeQty(working.changeQty);
+            item.setAfterQty(working.afterQty);
+            item.setPrice(working.stock.getPrice());
+            item.setCurrency(working.stock.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : working.stock.getCurrency());
+            item.setRemark(working.remark == null ? orderRemark : working.remark);
+            item.setBizDate(bizDate);
+            if (!stockOrderItemService.save(item)) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫明細の保存に失敗しました");
+            }
+
+            working.stock.setCurrentQty(working.afterQty);
+            if (!this.updateById(working.stock)) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫更新に失敗しました");
+            }
+
+            StockRecord record = new StockRecord();
+            record.setBizNo(order.getOrderNo());
+            record.setOrderId(order.getId());
+            record.setOrderItemId(item.getId());
+            record.setStockId(working.stock.getId());
+            record.setGoodsId(item.getGoodsId());
+            record.setSkuId(item.getSkuId());
+            record.setSkuCode(item.getSkuCode());
+            record.setGoodsName(item.getGoodsName());
+            record.setEnglishName(item.getEnglishName());
+            record.setBrandId(item.getBrandId());
+            record.setBrandName(item.getBrandName());
+            record.setSeriesId(item.getSeriesId());
+            record.setSeriesName(item.getSeriesName());
+            record.setCategoryId(item.getCategoryId());
+            record.setCategoryName(item.getCategoryName());
+            record.setStockTypeId(item.getStockTypeId());
+            record.setStockTypeName(item.getStockTypeName());
+            record.setMakerId(item.getMakerId());
+            record.setMakerName(item.getMakerName());
+            record.setWarehouseId(order.getWarehouseId());
+            record.setBeforeQty(working.beforeQty);
+            record.setChangeQty(working.changeQty);
+            record.setAfterQty(working.afterQty);
+            record.setOrderType(order.getOrderType());
+            record.setSourceType(order.getSourceType());
+            record.setPrice(item.getPrice());
+            record.setCurrency(item.getCurrency());
+            record.setPriceUpdateTime(working.stock.getPriceUpdateTime());
+            record.setRequesterId(order.getRequesterId());
+            record.setRequesterName(order.getRequesterName());
+            record.setOperatorId(order.getOperatorId());
+            record.setOperatorName(order.getOperatorName());
+            record.setRemark(item.getRemark());
+            record.setBizDate(order.getBizDate());
+            if (!stockRecordService.save(record)) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫履歴の保存に失敗しました");
+            }
+
+            if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
+                notifyInbound(item.getSkuCode(), working.changeQty, working.afterQty, order.getId());
+            } else {
+                notifyLowStock(item.getSkuCode(), working.afterQty, order.getId());
+            }
+        }
+        return order.getId();
+    }
+
     private Stock requireStock(Long stockId) {
         Stock stock = this.getByIdNotDeleted(stockId);
         if (stock == null) {
@@ -403,6 +575,17 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private int safeInt(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private static class OrderWorkingItem {
+        private Stock stock;
+        private Goods goods;
+        private GoodsSku sku;
+        private String stockTypeName;
+        private int changeQty;
+        private int beforeQty;
+        private int afterQty;
+        private String remark;
     }
 
     private void notifyInbound(String skuCode, int qty, int afterQty, Long sourceId) {

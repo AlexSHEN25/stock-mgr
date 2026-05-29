@@ -4,6 +4,7 @@ import co.handk.common.enums.StatusEnum;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateOperateLogDTO {
@@ -21,5 +22,6 @@ public class UpdateOperateLogDTO {
     private String responseData;
     private StatusEnum status;
     private String errorMsg;
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer costTime;
 }

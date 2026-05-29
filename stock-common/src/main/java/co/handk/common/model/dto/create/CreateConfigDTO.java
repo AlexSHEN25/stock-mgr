@@ -2,6 +2,7 @@ package co.handk.common.model.dto.create;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateConfigDTO {

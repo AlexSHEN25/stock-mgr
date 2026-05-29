@@ -5,6 +5,7 @@ import co.handk.common.enums.StatusEnum;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateSeriesDTO {

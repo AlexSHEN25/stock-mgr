@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateStockRecordDTO {
@@ -40,15 +41,19 @@ public class UpdateStockRecordDTO {
     private String makerName;
     private Long warehouseId;
     @NotNull(message = "変更前数量は必須です")
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer beforeQty;
     @NotNull(message = "変更数量は必須です")
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer changeQty;
     @NotNull(message = "変更後数量は必須です")
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer afterQty;
     @NotNull(message = "入出庫種別は必須です")
     private Integer orderType;
     @NotNull(message = "ソース種別は必須です")
     private Integer sourceType;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal price;
     private String currency;
     private LocalDateTime priceUpdateTime;

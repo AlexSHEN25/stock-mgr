@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateRequestItemDTO {
@@ -32,11 +33,16 @@ public class UpdateRequestItemDTO {
     private Long makerId;
     private String makerName;
     private Long warehouseId;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal price;
     private String currency;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal discount;
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer requestQty;
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer approveQty;
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer outQty;
     private Long stockRecordId;
     private String remark;

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateStockOrderDTO {
@@ -25,6 +26,7 @@ public class UpdateStockOrderDTO {
     private Integer sourceType;
 
     private Long sourceId;
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer totalQty;
     private Long stockTypeId;
     private Integer state;

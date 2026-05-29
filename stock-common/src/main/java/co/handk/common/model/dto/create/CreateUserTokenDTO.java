@@ -6,6 +6,7 @@ import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateUserTokenDTO {

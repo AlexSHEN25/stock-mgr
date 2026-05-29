@@ -32,6 +32,7 @@ import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -255,6 +256,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         inboundOrder.setOperatorId(loginUserId);
         inboundOrder.setOperatorName(form.getUsername());
         inboundOrder.setRemark("申請書再入庫: " + form.getBizNo());
+        inboundOrder.setBizDate(LocalDateTime.now());
 
         int totalQty = 0;
         for (RequestItem item : items) {
@@ -299,6 +301,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             orderItem.setPrice(reqItem.getPrice());
             orderItem.setCurrency(reqItem.getCurrency());
             orderItem.setRemark("申請書再入庫明細");
+            orderItem.setBizDate(LocalDateTime.now());
             if (!stockOrderItemService.save(orderItem)) {
                 throw new RuntimeException("入庫伝票明細の保存に失敗しました");
             }

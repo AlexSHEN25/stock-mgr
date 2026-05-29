@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.util.List;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateRoleDTO {

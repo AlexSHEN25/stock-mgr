@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateCustomerLevelDTO {
@@ -14,6 +15,7 @@ public class UpdateCustomerLevelDTO {
 
     @NotBlank(message = "名称は必須項目です")
     private String name;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal discount;
     private String remark;
     private StatusEnum status;

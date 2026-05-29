@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateRequestFormDTO {
@@ -31,10 +32,13 @@ public class UpdateRequestFormDTO {
 
     private Long warehouseId;
 
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer totalQty;
 
+    @PositiveOrZero(message = "0以上で入力してください")
     private Integer requestQty;
 
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal totalAmt;
 
     private Integer state;

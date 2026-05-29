@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateGoodsDTO {
@@ -28,9 +29,12 @@ public class CreateGoodsDTO {
     private Long skuId;
     private String skuCode;
     private String skuName;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal price;
     private String currency;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal costPrice;
+    @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal updatePrice;
     private LocalDateTime priceUpdateTime;
     private String barcode;

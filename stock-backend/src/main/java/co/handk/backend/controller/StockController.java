@@ -6,6 +6,7 @@ import co.handk.backend.service.StockService;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockDTO;
+import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
@@ -49,6 +50,11 @@ public class StockController {
     @PostMapping("/outbound")
     public Long outbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
         return stockService.outbound(dto);
+    }
+
+    @PostMapping("/submit")
+    public Long submit(@RequestBody @NotNull @Valid StockOrderSubmitDTO dto) {
+        return stockService.submitOrder(dto);
     }
 
     @PostMapping("/inbound/approve/{orderId}")

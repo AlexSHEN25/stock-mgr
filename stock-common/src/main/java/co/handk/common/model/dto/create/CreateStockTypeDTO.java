@@ -3,6 +3,7 @@ package co.handk.common.model.dto.create;
 import jakarta.validation.constraints.NotBlank;
 import co.handk.common.enums.StatusEnum;
 import lombok.Data;
+import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateStockTypeDTO {
