@@ -29,9 +29,7 @@ public class StockRecordVO extends BaseVO {
     private Long makerId;
     private String makerName;
     private Long warehouseId;
-    private Integer beforeQty;
     private Integer changeQty;
-    private Integer afterQty;
     private Integer orderType;
     private Integer sourceType;
     private BigDecimal price;

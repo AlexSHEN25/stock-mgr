@@ -15,6 +15,7 @@ import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import co.handk.common.model.vo.RequestCandidateItemVO;
 import co.handk.common.model.vo.RequestFormVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -326,18 +327,29 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("request_id", requestId)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         Map<Long, RequestItem> selectedMap = new HashMap<>();
+        Map<String, RequestItem> selectedBySkuMap = new HashMap<>();
         for (RequestItem requestItem : existing) {
+            if (!Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(requestItem.getState())) {
+                continue;
+            }
             if (requestItem.getStockRecordId() != null) {
                 selectedMap.put(requestItem.getStockRecordId(), requestItem);
+            }
+            if (requestItem.getGoodsId() != null && requestItem.getSkuId() != null) {
+                selectedBySkuMap.put(requestItem.getGoodsId() + "_" + requestItem.getSkuId(), requestItem);
             }
         }
 
         List<RequestCandidateItemVO> result = new ArrayList<>();
         for (StockRecord record : records) {
             RequestItem selected = selectedMap.get(record.getId());
+            if (selected == null && record.getGoodsId() != null && record.getSkuId() != null) {
+                selected = selectedBySkuMap.get(record.getGoodsId() + "_" + record.getSkuId());
+            }
             RequestCandidateItemVO vo = new RequestCandidateItemVO();
+            vo.setStockRecordId(record.getId());
             vo.setStockOrderId(record.getOrderId());
-            vo.setStockOrderItemId(record.getId());
+            vo.setStockOrderItemId(record.getOrderItemId());
             vo.setOrderNo(record.getBizNo());
             vo.setOrderType(record.getOrderType());
             vo.setBizDate(record.getBizDate());
@@ -351,15 +363,20 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             vo.setStockTypeName(record.getStockTypeName());
             vo.setMakerName(record.getMakerName());
             StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
-            int remainingQty = orderItem == null || orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
-            int selectedQty = selected == null || selected.getRequestQty() == null
-                    || !Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(selected.getState())
-                    ? 0 : selected.getRequestQty();
+            int remainingQty = orderItem == null || orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty());
+            int selectedQty = 0;
+            if (selected != null) {
+                if (selected.getRequestQty() != null) {
+                    selectedQty = Math.abs(selected.getRequestQty());
+                } else {
+                    int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
+                    selectedQty = Math.max(0, originalQty - remainingQty);
+                }
+            }
             vo.setChangeQty(remainingQty + selectedQty);
             vo.setPrice(record.getPrice());
             vo.setCurrency(record.getCurrency());
-            vo.setSelected(selected != null && selected.getState() != null
-                    && selected.getState().equals(StockBizConstant.REQUEST_ITEM_STATE_ADDED));
+            vo.setSelected(selected != null);
             vo.setRequestItemState(selected == null ? null : selected.getState());
             vo.setRequestItemId(selected == null ? null : selected.getId());
             result.add(vo);
@@ -390,9 +407,26 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     .eq("stock_record_id", stockRecordId)
                     .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
+            if (existing == null) {
+                existing = requestItemService.getOne(new QueryWrapper<RequestItem>()
+                        .eq("request_id", form.getId())
+                        .eq("goods_id", stockRecord.getGoodsId())
+                        .eq("sku_id", stockRecord.getSkuId())
+                        .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                        .last("LIMIT 1"));
+            }
 
             int currentQty = existing == null || !Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(existing.getState())
-                    || existing.getRequestQty() == null ? 0 : existing.getRequestQty();
+                    || existing.getRequestQty() == null ? 0 : Math.abs(existing.getRequestQty());
+            StockOrderItem sourceOrderItem = stockOrderItemService.getByIdNotDeleted(stockRecord.getOrderItemId());
+            int remainingQty = sourceOrderItem == null || sourceOrderItem.getChangeQty() == null
+                    ? 0 : Math.abs(sourceOrderItem.getChangeQty());
+            int originalQty = stockRecord.getChangeQty() == null ? 0 : Math.abs(stockRecord.getChangeQty());
+            int maxRequestQty = Math.max(remainingQty + currentQty, originalQty);
+            if (requestedQty > maxRequestQty) {
+                throw new RuntimeException("request qty cannot be greater than outbound qty");
+            }
             int deltaQty = requestedQty - currentQty;
             applyOutboundRemainderDelta(stockRecord, deltaQty);
 
@@ -451,7 +485,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
 
         for (RequestItem requestItem : existing) {
-            int currentQty = requestItem.getRequestQty() == null ? 0 : requestItem.getRequestQty();
+            int currentQty = requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
             StockRecord record = requireSourceStockRecord(form, requestItem.getStockRecordId());
             applyOutboundRemainderDelta(record, -currentQty);
             requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_REMOVED);
@@ -662,22 +696,36 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (orderItem == null) {
             throw new RuntimeException("source outbound item not found");
         }
-        int originalQty = record.getChangeQty() == null ? 0 : record.getChangeQty();
-        int currentQty = orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
+        int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
+        int currentQty = orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty());
         int nextQty = currentQty - deltaQty;
         if (nextQty < 0 || nextQty > originalQty) {
             throw new RuntimeException("request quantity exceeds source outbound remaining quantity");
         }
-        orderItem.setChangeQty(nextQty);
-        if (!stockOrderItemService.updateById(orderItem)) {
-            throw new RuntimeException("failed to update source outbound item");
+        int affected = stockOrderItemService.getBaseMapper().update(
+                null,
+                new LambdaUpdateWrapper<StockOrderItem>()
+                        .eq(StockOrderItem::getId, orderItem.getId())
+                        .eq(StockOrderItem::getDeleted, DeleteEnum.UNDELETED.getCode())
+                        .eq(StockOrderItem::getChangeQty, currentQty)
+                        .set(StockOrderItem::getChangeQty, nextQty)
+        );
+        if (affected <= 0) {
+            throw new RuntimeException("source outbound item changed concurrently, please retry");
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
         if (order != null) {
             int totalQty = order.getTotalQty() == null ? 0 : order.getTotalQty();
-            order.setTotalQty(totalQty - deltaQty);
-            if (!stockOrderService.updateById(order)) {
-                throw new RuntimeException("failed to update source outbound order");
+            int orderAffected = stockOrderService.getBaseMapper().update(
+                    null,
+                    new LambdaUpdateWrapper<StockOrder>()
+                            .eq(StockOrder::getId, order.getId())
+                            .eq(StockOrder::getDeleted, DeleteEnum.UNDELETED.getCode())
+                            .eq(StockOrder::getTotalQty, totalQty)
+                            .set(StockOrder::getTotalQty, totalQty - deltaQty)
+            );
+            if (orderAffected <= 0) {
+                throw new RuntimeException("source outbound order changed concurrently, please retry");
             }
         }
     }
@@ -694,7 +742,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
                     .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
-            int requestQty = requestItem == null || requestItem.getRequestQty() == null ? 0 : requestItem.getRequestQty();
+            int requestQty = requestItem == null || requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
             if (requestQty + remainingQty != originalQty) {
                 throw new RuntimeException("request and outbound quantities are inconsistent");
             }
@@ -808,7 +856,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         int totalQty = 0;
         BigDecimal totalAmt = BigDecimal.ZERO;
         for (RequestItem item : items) {
-            totalQty += item.getRequestQty() == null ? 0 : item.getRequestQty();
+            totalQty += item.getRequestQty() == null ? 0 : Math.abs(item.getRequestQty());
             totalAmt = totalAmt.add(safeAmount(item.getTotalAmt()));
         }
         form.setTotalQty(totalQty);

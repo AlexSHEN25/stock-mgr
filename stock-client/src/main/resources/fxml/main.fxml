@@ -116,14 +116,14 @@
                     <Button text="%main.btn.reset" onAction="#onRefresh"/>
                     <Button text="%main.btn.prev" onAction="#onPrevPage"/>
                     <Button text="%main.btn.next" onAction="#onNextPage"/>
-                    <Button text="%main.btn.create" onAction="#onAdd" styleClass="success-btn"/>
-                    <Button text="%main.btn.inlineEdit" onAction="#onInlineEdit"/>
-                    <Button text="%main.btn.save" onAction="#onInlineSave" styleClass="success-btn"/>
-                    <Button text="%main.btn.cancel" onAction="#onInlineCancel"/>
-                    <Button text="%main.btn.edit" onAction="#onEdit"/>
-                    <Button text="%main.btn.batchDelete" onAction="#onBatchDelete" styleClass="danger-btn"/>
+                    <Button fx:id="addButton" text="%main.btn.create" onAction="#onAdd" styleClass="success-btn"/>
+                    <Button fx:id="inlineEditButton" text="%main.btn.inlineEdit" onAction="#onInlineEdit"/>
+                    <Button fx:id="inlineSaveButton" text="%main.btn.save" onAction="#onInlineSave" styleClass="success-btn"/>
+                    <Button fx:id="inlineCancelButton" text="%main.btn.cancel" onAction="#onInlineCancel"/>
+                    <Button fx:id="editButton" text="%main.btn.edit" onAction="#onEdit"/>
+                    <Button fx:id="batchDeleteButton" text="%main.btn.batchDelete" onAction="#onBatchDelete" styleClass="danger-btn"/>
                     <TextField fx:id="deleteIdField" promptText="%main.delete.id" prefWidth="90"/>
-                    <Button text="%main.btn.delete" onAction="#onDelete" styleClass="danger-btn"/>
+                    <Button fx:id="deleteButton" text="%main.btn.delete" onAction="#onDelete" styleClass="danger-btn"/>
                 </FlowPane>
             </VBox>
 

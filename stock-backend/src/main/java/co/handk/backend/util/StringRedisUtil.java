@@ -4,6 +4,7 @@ import jakarta.annotation.Resource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -34,6 +35,10 @@ public class StringRedisUtil {
 
     public Long getExpire(String key, TimeUnit unit) {
         return stringRedisTemplate.getExpire(key, unit);
+    }
+
+    public Boolean setIfAbsent(String key, String value, long timeout, TimeUnit unit) {
+        return stringRedisTemplate.opsForValue().setIfAbsent(key, value, Duration.ofMillis(unit.toMillis(timeout)));
     }
 
 }

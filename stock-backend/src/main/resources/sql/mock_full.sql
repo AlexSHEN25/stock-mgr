@@ -229,9 +229,9 @@ INSERT INTO t_stock_order_item(id, order_id, goods_id, sku_id, sku_code, goods_n
                                maker_id, maker_name, before_qty, change_qty, after_qty, price, currency, biz_date, remark,
                                deleted, created_by, updated_by)
 VALUES (1, 1, 1, 1, 'SKU-MC-001', '抹茶クッキー', 'Matcha Cookie', 1, 'サクラ', 1, '春シリーズ', 1, '食品', 1, '通常品',
-        1, '東京工場', 120, -10, 110, 298.00, 'JPY', NOW(), '出庫', 0, 3, 1),
+        1, '東京工場', 120, 10, 110, 298.00, 'JPY', NOW(), '出庫', 0, 3, 1),
        (2, 1, 1, 2, 'SKU-MC-002', '抹茶クッキー', 'Matcha Cookie', 1, 'サクラ', 1, '春シリーズ', 1, '食品', 1, '通常品',
-        1, '東京工場', 80, -20, 60, 598.00, 'JPY', NOW(), '出庫', 0, 3, 1),
+        1, '東京工場', 80, 20, 60, 598.00, 'JPY', NOW(), '出庫', 0, 3, 1),
        (3, 2, 2, 3, 'SKU-DT-001', '洗剤A', 'Detergent A', 2, '富士', 2, '標準シリーズ', 2, '日用品', 1, '通常品',
         2, '大阪工場', 200, 50, 250, 420.00, 'JPY', NOW(), '入庫', 0, 3, 1);
 
@@ -242,10 +242,10 @@ INSERT INTO t_stock_record(id, biz_no, order_id, order_item_id, stock_id, goods_
                            customer_name, requester_id, requester_name, operator_id, operator_name, biz_date, remark, deleted,
                            created_by, updated_by)
 VALUES (1, 'SR-20260507-001', 1, 1, 1, 1, 1, 'SKU-MC-001', '抹茶クッキー', 'Matcha Cookie', 1, 'サクラ', 1,
-        '春シリーズ', 1, '食品', 1, '通常品', 1, '東京工場', 1, 120, -10, 110, 2, 3, 298.00, 'JPY', NOW(), 1,
+        '春シリーズ', 1, '食品', 1, '通常品', 1, '東京工場', 1, 120, 10, 110, 2, 3, 298.00, 'JPY', NOW(), 1,
         '山田商事', 2, 'sales01', 3, 'warehouse01', NOW(), '出庫記録', 0, 3, 1),
        (2, 'SR-20260507-002', 1, 2, 2, 1, 2, 'SKU-MC-002', '抹茶クッキー', 'Matcha Cookie', 1, 'サクラ', 1,
-        '春シリーズ', 1, '食品', 1, '通常品', 1, '東京工場', 1, 80, -20, 60, 2, 3, 598.00, 'JPY', NOW(), 1, '山田商事',
+        '春シリーズ', 1, '食品', 1, '通常品', 1, '東京工場', 1, 80, 20, 60, 2, 3, 598.00, 'JPY', NOW(), 1, '山田商事',
         2, 'sales01', 3, 'warehouse01', NOW(), '出庫記録', 0, 3, 1),
        (3, 'SR-20260507-003', 2, 3, 3, 2, 3, 'SKU-DT-001', '洗剤A', 'Detergent A', 2, '富士', 2, '標準シリーズ', 2,
         '日用品', 1, '通常品', 2, '大阪工場', 2, 200, 50, 250, 1, 4, 420.00, 'JPY', NOW(), NULL, NULL, 3, 'warehouse01',

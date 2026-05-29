@@ -7,19 +7,25 @@ import co.handk.backend.exception.BusinessException;
 import co.handk.backend.exception.LoginException;
 import co.handk.backend.mapper.MessageMapper;
 import co.handk.backend.service.MessageService;
+import co.handk.backend.service.PermissionQueryService;
 import co.handk.common.constant.MessageBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.query.MessageQueryDTO;
 import co.handk.common.model.vo.MessageVO;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, MessageVO>
         implements MessageService {
+
+    private final PermissionQueryService permissionQueryService;
 
     private static final String MESSAGE_LOGIN_REQUIRED = "ログインしてください";
     private static final String MESSAGE_NOT_FOUND = "メッセージが見つかりません";
@@ -48,8 +54,42 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
     @Override
     public PageResult<MessageVO> page(MessageQueryDTO query) {
         MessageQueryDTO actualQuery = query == null ? new MessageQueryDTO() : query;
-        actualQuery.setUserId(UserContext.getUserIdOrDefault());
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean queryAll = Boolean.TRUE.equals(actualQuery.getAll())
+                || "all".equalsIgnoreCase(actualQuery.getScope());
+        if (!queryAll || !permissionQueryService.isSuperAdmin(userId)) {
+            actualQuery.setUserId(userId);
+        }
         return super.page(actualQuery);
+    }
+
+    @Override
+    protected <Q> QueryWrapper<Message> buildWrapper(Q dto) {
+        QueryWrapper<Message> wrapper = new QueryWrapper<>();
+        wrapper.eq("deleted", DeleteEnum.UNDELETED.getCode());
+        if (!(dto instanceof MessageQueryDTO query)) {
+            return wrapper;
+        }
+        if (query.getType() != null) {
+            wrapper.eq("type", query.getType());
+        }
+        if (query.getUserId() != null) {
+            wrapper.eq("user_id", query.getUserId());
+        }
+        if (query.getMessage() != null && !query.getMessage().isBlank()) {
+            wrapper.like("message", query.getMessage().trim());
+        }
+        if (query.getSourceId() != null) {
+            wrapper.eq("source_id", query.getSourceId());
+        }
+        if (query.getIsRead() != null) {
+            wrapper.eq("is_read", query.getIsRead());
+        }
+        if (query.getState() != null) {
+            wrapper.eq("state", query.getState());
+        }
+        // all/scope are query control flags, not physical columns in t_message.
+        return wrapper;
     }
 
     @Override

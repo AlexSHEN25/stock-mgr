@@ -13,4 +13,6 @@ public class MessageQueryDTO extends PageQuery {
     private Integer sourceId;
     private Integer isRead;
     private Integer state;
+    private Boolean all;
+    private String scope;
 }

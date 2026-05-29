@@ -30,9 +30,12 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -68,6 +71,13 @@ public class MainController {
     @FXML private Label pageInfoLabel;
     @FXML private Label messageLabel;
     @FXML private TextField deleteIdField;
+    @FXML private Button addButton;
+    @FXML private Button inlineEditButton;
+    @FXML private Button inlineSaveButton;
+    @FXML private Button inlineCancelButton;
+    @FXML private Button editButton;
+    @FXML private Button batchDeleteButton;
+    @FXML private Button deleteButton;
     @FXML private TableView<Map<String, Object>> dataTable;
     @FXML private FlowPane queryFieldsPane;
 
@@ -133,7 +143,7 @@ public class MainController {
     @FXML
     private void onAdd() {
         if (isReadOnlyModule()) {
-            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
             return;
         }
         openFormDialog(UiText.ACTION_CREATE, false);
@@ -142,7 +152,7 @@ public class MainController {
     @FXML
     private void onInlineEdit() {
         if (isReadOnlyModule()) {
-            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
             return;
         }
         Map<String, Object> selected = currentWorkingRow();
@@ -159,7 +169,7 @@ public class MainController {
     @FXML
     private void onInlineSave() {
         if (isReadOnlyModule()) {
-            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
             return;
         }
         if (inlineEditingRow == null) {
@@ -201,7 +211,7 @@ public class MainController {
     @FXML
     private void onEdit() {
         if (isReadOnlyModule()) {
-            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
             return;
         }
         if (currentWorkingRow() == null) {
@@ -214,7 +224,7 @@ public class MainController {
     @FXML
     private void onBatchDelete() {
         if (isReadOnlyModule()) {
-            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
             return;
         }
         List<Map<String, Object>> checkedRows = checkedRows();
@@ -238,7 +248,7 @@ public class MainController {
     @FXML
     private void onDelete() {
         if (isReadOnlyModule()) {
-            messageLabel.setText("操作ログは閲覧のみ可能です。");
+            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
             return;
         }
         String id = deleteIdField.getText();
@@ -290,6 +300,7 @@ public class MainController {
         inlineEditingRow = null;
         inlineBackup = null;
         rebuildQueryFields();
+        applyActionPolicy();
         loadData();
     }
 
@@ -307,6 +318,18 @@ public class MainController {
             queryControls.put(field, control);
         }
         Platform.runLater(this::focusFirstQueryField);
+    }
+
+    private void applyActionPolicy() {
+        ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
+        addButton.setDisable(!policy.canCreate);
+        inlineEditButton.setDisable(!policy.canInlineEdit);
+        inlineSaveButton.setDisable(!policy.canInlineEdit);
+        inlineCancelButton.setDisable(!policy.canInlineEdit);
+        editButton.setDisable(!policy.canEdit);
+        batchDeleteButton.setDisable(!policy.canBatchDelete);
+        deleteIdField.setDisable(!policy.canDelete);
+        deleteButton.setDisable(!policy.canDelete);
     }
 
     private Control createControl(String field) {
@@ -533,7 +556,109 @@ public class MainController {
         if (action.type == ModuleMeta.RowActionType.DOWNLOAD_REQUEST_FORM) {
             return createDownloadActionColumn();
         }
+        if (action.type == ModuleMeta.RowActionType.PREVIEW_FIELDS) {
+            return createPreviewFieldsActionColumn(UiText.byKey(action.titleKey), action.detailFields);
+        }
+        if (action.type == ModuleMeta.RowActionType.MARK_READ) {
+            return createMarkReadActionColumn(UiText.byKey(action.titleKey));
+        }
         return createDetailActionColumn(UiText.byKey(action.titleKey), action.targetModule, action.filterField);
+    }
+
+    private TableColumn<Map<String, Object>, Void> createMarkReadActionColumn(String title) {
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>(title);
+        col.setPrefWidth(90);
+        col.setSortable(false);
+        col.setReorderable(false);
+        col.setCellFactory(param -> new TableCell<>() {
+            private final Button btn = new Button(title);
+            {
+                btn.setOnAction(event -> {
+                    Map<String, Object> row = getTableView().getItems().get(getIndex());
+                    Object id = row.get(Field.ID);
+                    if (id == null) {
+                        messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
+                        return;
+                    }
+                    try {
+                        JSONObject json = tableActionService.readMessage(String.valueOf(id));
+                        if (uiFeedback.isSuccess(json)) {
+                            row.put("isRead", 1);
+                            dataTable.refresh();
+                            messageLabel.setText(UiText.byKey("msg.readDone"));
+                        } else {
+                            messageLabel.setText(uiFeedback.resolveMessage(json, UiText.byKey("msg.readFail")));
+                        }
+                    } catch (Exception ex) {
+                        messageLabel.setText(UiText.byKey("msg.readFail") + ": " + ex.getMessage());
+                    }
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
+                Map<String, Object> row = getTableView().getItems().get(getIndex());
+                boolean unread = !String.valueOf(row.getOrDefault("isRead", "0")).equals("1");
+                setGraphic(unread ? btn : null);
+            }
+        });
+        return col;
+    }
+
+    private TableColumn<Map<String, Object>, Void> createPreviewFieldsActionColumn(String title, List<String> fields) {
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>(title);
+        col.setPrefWidth(90);
+        col.setSortable(false);
+        col.setReorderable(false);
+        col.setCellFactory(param -> new TableCell<>() {
+            private final Button btn = new Button(title);
+            {
+                btn.setOnAction(event -> {
+                    Map<String, Object> row = getTableView().getItems().get(getIndex());
+                    showFieldPreview(title, row, fields);
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btn);
+            }
+        });
+        return col;
+    }
+
+    private void showFieldPreview(String title, Map<String, Object> row, List<String> fields) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+
+        GridPane content = new GridPane();
+        content.setHgap(12);
+        content.setVgap(8);
+
+        int line = 0;
+        for (String field : fields) {
+            Label keyLabel = new Label(ModuleMeta.normalizeTitle(field));
+            TextArea valueArea = new TextArea(stringValue(row.get(field)));
+            valueArea.setEditable(false);
+            valueArea.setWrapText(true);
+            valueArea.setPrefRowCount(1);
+            valueArea.setMaxHeight(60);
+            GridPane.setHgrow(valueArea, Priority.ALWAYS);
+            content.add(keyLabel, 0, line);
+            content.add(valueArea, 1, line);
+            line++;
+        }
+        alert.getDialogPane().setContent(content);
+        alert.showAndWait();
+    }
+
+    private String stringValue(Object val) {
+        return val == null ? "" : String.valueOf(val);
     }
 
     private TableColumn<Map<String, Object>, Void> createDownloadActionColumn() {
@@ -637,7 +762,7 @@ public class MainController {
     private TableColumn<Map<String, Object>, String> createTextColumn(String key) {
         TableColumn<Map<String, Object>, String> col = new TableColumn<>(columnTitle(key));
         col.setPrefWidth("id".equals(key) ? 90 : 150);
-        col.setEditable(true);
+        col.setEditable(!ModuleMeta.isInlineReadonlyField(key));
         col.setCellFactory(TextFieldTableCell.forTableColumn());
         col.setCellValueFactory(cell -> {
             Object v = cell.getValue().getOrDefault(key, "");
@@ -655,6 +780,10 @@ public class MainController {
             return new SimpleStringProperty(String.valueOf(v));
         });
         col.setOnEditCommit(evt -> {
+            if (ModuleMeta.isInlineReadonlyField(key)) {
+                dataTable.refresh();
+                return;
+            }
             Map<String, Object> row = evt.getRowValue();
             if (row == null) {
                 return;

@@ -44,5 +44,9 @@ public class TableActionService {
             return ApiClient.getBytes(ApiPath.REQUEST_FORM_DOWNLOAD_V2_PREFIX + id + ApiPath.REQUEST_FORM_DOWNLOAD_V2_SUFFIX);
         }
     }
-}
 
+    public JSONObject readMessage(String id) throws Exception {
+        String res = ApiClient.put("/message/read/" + id, "{}");
+        return new JSONObject(res);
+    }
+}

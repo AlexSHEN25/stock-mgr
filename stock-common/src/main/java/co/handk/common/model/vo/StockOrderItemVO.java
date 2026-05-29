@@ -24,9 +24,7 @@ public class StockOrderItemVO extends BaseVO {
     private String stockTypeName;
     private Long makerId;
     private String makerName;
-    private Integer beforeQty;
     private Integer changeQty;
-    private Integer afterQty;
     private BigDecimal price;
     private String currency;
     private String remark;

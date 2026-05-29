@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 @Data
 public class RequestCandidateItemVO {
+    private Long stockRecordId;
     private Long stockOrderId;
     private Long stockOrderItemId;
     private String orderNo;
@@ -28,4 +29,3 @@ public class RequestCandidateItemVO {
     private Integer requestItemState;
     private Long requestItemId;
 }
-
