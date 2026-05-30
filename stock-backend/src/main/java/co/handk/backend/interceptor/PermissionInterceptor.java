@@ -2,7 +2,7 @@ package co.handk.backend.interceptor;
 
 import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.constant.SecurityConstant;
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.Permission;
 import co.handk.backend.exception.AccessDeniedException;
 import co.handk.backend.service.PermissionQueryService;

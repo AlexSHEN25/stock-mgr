@@ -12,11 +12,13 @@ import static co.handk.client.constant.AppConstants.Module.USER;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
 import org.json.JSONObject;
 
 public final class ModuleMeta {
@@ -143,6 +145,9 @@ public final class ModuleMeta {
     private static final String MODULE_ROLE_PERMISSION = "rolePermission";
     private static final String MODULE_USER_TOKEN = "userToken";
     private static final String DEFAULT_FIELD_TITLE = "\u9805\u76ee";
+    private static final Set<String> ALWAYS_HIDDEN_COLUMNS = Set.of("beforeqty", "afterqty");
+    private static final Set<String> GOODS_HIDDEN_ID_COLUMNS = Set.of("brandid", "seriesid", "categoryid", "makerid");
+    private static final Set<String> GOODS_DETAIL_ONLY_COLUMNS = Set.of("costprice", "updateprice", "priceupdatetime", "barcode", "weight", "volume", "imageurl");
 
     private static final Map<String, List<String>> QUERY_FIELDS = new HashMap<>();
     private static final Map<String, List<String>> FORM_FIELDS = new HashMap<>();
@@ -253,6 +258,7 @@ public final class ModuleMeta {
         RELATION_FIELD_MODULE.put("approverId", USER);
 
         NAME_TO_ID_FIELD.put("deptName", "deptId");
+        NAME_TO_ID_FIELD.put("parentName", "parentId");
         NAME_TO_ID_FIELD.put("roleName", "roleId");
         NAME_TO_ID_FIELD.put("permissionName", "permissionId");
         NAME_TO_ID_FIELD.put("permissionNames", "permissionIds");
@@ -269,6 +275,10 @@ public final class ModuleMeta {
         NAME_TO_ID_FIELD.put("sourceOrderNo", "sourceOrderId");
         NAME_TO_ID_FIELD.put("customerName", "customerId");
         NAME_TO_ID_FIELD.put("levelName", "levelId");
+        NAME_TO_ID_FIELD.put("userName", "userId");
+        NAME_TO_ID_FIELD.put("requesterName", "requesterId");
+        NAME_TO_ID_FIELD.put("operatorName", "operatorId");
+        NAME_TO_ID_FIELD.put("approverName", "approverId");
         NAME_TO_ID_FIELD.put("ownerUserName", "ownerUserId");
         NAME_TO_ID_FIELD.put("ownerDeptName", "ownerDeptId");
 
@@ -304,6 +314,9 @@ public final class ModuleMeta {
         ));
         putOptions(MODULE_STOCK_RECORD + ".sourceType", List.of(
                 new Option("\u6ce8\u6587", "1"), new Option("\u8fd4\u54c1", "2"), new Option("\u7533\u8acb\u66f8", "3"), new Option("\u624b\u52d5", "4")
+        ));
+        putOptions(MODULE_STOCK_RECORD + ".state", List.of(
+                new Option("\u8349\u7a3f", "0"), new Option("\u5be9\u67fb\u4e2d", "1"), new Option("\u5b8c\u4e86", "2"), new Option("\u53d6\u6d88", "3")
         ));
         putOptions(MODULE_MESSAGE + ".isRead", List.of(
                 new Option("\u672a\u8aad", "0"), new Option("\u65e2\u8aad", "1")
@@ -376,6 +389,14 @@ public final class ModuleMeta {
         return QUERY_FIELDS.getOrDefault(moduleKey, List.of("name"));
     }
 
+    public static List<String> visibleQueryFields(String moduleKey) {
+        List<String> fields = new ArrayList<>(queryFields(moduleKey));
+        if (STOCK_ORDER_ITEM.equals(moduleKey)) {
+            fields.remove("orderId");
+        }
+        return fields;
+    }
+
     public static List<String> formFields(String moduleKey) {
         return FORM_FIELDS.getOrDefault(moduleKey, List.of());
     }
@@ -385,16 +406,49 @@ public final class ModuleMeta {
     }
 
     public static List<String> orderedColumns(String moduleKey, Iterable<String> keys) {
-        LinkedHashSet<String> ordered = new LinkedHashSet<>();
-        ordered.add(ID);
-        ordered.addAll(queryFields(moduleKey));
-        ordered.addAll(PREFERRED_COLUMNS.getOrDefault(moduleKey, List.of()));
+        List<String> rawKeys = new ArrayList<>();
         for (String key : keys) {
-            ordered.add(key);
+            if (key != null && !key.isBlank()) {
+                rawKeys.add(key);
+            }
         }
-        ordered.remove("__selected");
-        ordered.removeAll(HIDDEN_LIST_FIELDS.getOrDefault(moduleKey, List.of()));
-        return new ArrayList<>(ordered);
+        if (rawKeys.isEmpty()) {
+            return List.of();
+        }
+
+        Set<String> lowerKeySet = new HashSet<>();
+        for (String key : rawKeys) {
+            lowerKeySet.add(key.toLowerCase(Locale.ROOT));
+        }
+
+        List<String> filtered = new ArrayList<>();
+        for (String key : rawKeys) {
+            String low = key.toLowerCase(Locale.ROOT);
+            if ("__selected".equals(low)) {
+                continue;
+            }
+            if (HIDDEN_LIST_FIELDS.getOrDefault(moduleKey, List.of()).contains(key)) {
+                continue;
+            }
+            if (ALWAYS_HIDDEN_COLUMNS.contains(low)) {
+                continue;
+            }
+            if ("status".equals(low) && lowerKeySet.contains("statusdesc")) {
+                continue;
+            }
+            if (GOODS.equals(moduleKey) && (GOODS_HIDDEN_ID_COLUMNS.contains(low) || GOODS_DETAIL_ONLY_COLUMNS.contains(low))) {
+                continue;
+            }
+            if (shouldHideIdField(key, low, lowerKeySet)) {
+                continue;
+            }
+            filtered.add(key);
+        }
+
+        if (GOODS.equals(moduleKey)) {
+            return sortGoodsColumns(filtered);
+        }
+        return sortDefaultColumns(filtered);
     }
 
     public static FieldType fieldType(String moduleKey, String field) {
@@ -452,7 +506,7 @@ public final class ModuleMeta {
                 return value;
             }
         }
-        return DEFAULT_FIELD_TITLE;
+        return autoLabelFromField(key);
     }
 
     public static List<DependencyRule> dependencyRules(String moduleKey) {
@@ -506,5 +560,118 @@ public final class ModuleMeta {
 
     private static boolean isBlank(Object value) {
         return value == null || String.valueOf(value).trim().isEmpty();
+    }
+
+    private static boolean shouldHideIdField(String key, String low, Set<String> lowerKeySet) {
+        if ("id".equals(low)) {
+            return false;
+        }
+        if (!(low.endsWith("id") || low.endsWith("ids"))) {
+            return false;
+        }
+
+        String base = low.endsWith("ids") ? low.substring(0, low.length() - 3) : low.substring(0, low.length() - 2);
+        if (lowerKeySet.contains(base + "name") || lowerKeySet.contains(base + "names")) {
+            return true;
+        }
+
+        for (Map.Entry<String, String> entry : NAME_TO_ID_FIELD.entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(key) && lowerKeySet.contains(entry.getKey().toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return RELATION_FIELD_MODULE.containsKey(key) && lowerKeySet.contains((base + "name").toLowerCase(Locale.ROOT));
+    }
+
+    private static List<String> sortDefaultColumns(List<String> columns) {
+        if (columns.isEmpty()) {
+            return columns;
+        }
+        List<String> head = new ArrayList<>();
+        List<String> tail = new ArrayList<>();
+        boolean hasId = false;
+        for (String key : columns) {
+            String low = key.toLowerCase(Locale.ROOT);
+            if ("id".equals(low)) {
+                hasId = true;
+                continue;
+            }
+            if ("createtime".equals(low) || "updatetime".equals(low)) {
+                tail.add(key);
+            } else {
+                head.add(key);
+            }
+        }
+
+        List<String> sorted = new ArrayList<>();
+        if (hasId) {
+            sorted.add(ID);
+        }
+        sorted.addAll(head);
+        sorted.addAll(tail);
+        return sorted;
+    }
+
+    private static List<String> sortGoodsColumns(List<String> columns) {
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        for (String key : PREFERRED_COLUMNS.getOrDefault(GOODS, List.of())) {
+            if (containsIgnoreCase(columns, key)) {
+                ordered.add(findOriginalKey(columns, key));
+            }
+        }
+        for (String key : columns) {
+            ordered.add(key);
+        }
+        return new ArrayList<>(ordered);
+    }
+
+    private static boolean containsIgnoreCase(List<String> keys, String target) {
+        for (String key : keys) {
+            if (key.equalsIgnoreCase(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String findOriginalKey(List<String> keys, String target) {
+        for (String key : keys) {
+            if (key.equalsIgnoreCase(target)) {
+                return key;
+            }
+        }
+        return target;
+    }
+
+    private static String autoLabelFromField(String key) {
+        if (key == null || key.isBlank()) {
+            return DEFAULT_FIELD_TITLE;
+        }
+        String text = key.trim();
+        String lower = text.toLowerCase(Locale.ROOT);
+        if ("id".equals(lower)) return "ID";
+        if ("createtime".equals(lower)) return "\u4f5c\u6210\u65e5\u6642";
+        if ("updatetime".equals(lower)) return "\u66f4\u65b0\u65e5\u6642";
+        if ("statusdesc".equals(lower) || "status".equals(lower)) return "\u72b6\u614b";
+        if (text.endsWith("Names")) return readable(text.substring(0, text.length() - 5)) + "\u540d";
+        if (text.endsWith("Name")) return readable(text.substring(0, text.length() - 4)) + "\u540d";
+        if (text.endsWith("Ids")) return readable(text.substring(0, text.length() - 3)) + "ID\u4e00\u89a7";
+        if (text.endsWith("Id")) return readable(text.substring(0, text.length() - 2)) + "ID";
+        if (text.endsWith("Code")) return readable(text.substring(0, text.length() - 4)) + "\u30b3\u30fc\u30c9";
+        if (text.endsWith("Time") || text.endsWith("Date")) {
+            return readable(text.replaceAll("(Time|Date)$", "")) + "\u65e5\u6642";
+        }
+        return readable(text);
+    }
+
+    private static String readable(String value) {
+        String text = String.valueOf(value)
+                .replaceAll("([a-z])([A-Z])", "$1 $2")
+                .replace('_', ' ')
+                .trim();
+        if (text.isEmpty()) {
+            return DEFAULT_FIELD_TITLE;
+        }
+        return Character.toUpperCase(text.charAt(0)) + text.substring(1);
     }
 }

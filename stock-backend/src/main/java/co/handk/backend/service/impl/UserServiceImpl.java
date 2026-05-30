@@ -2,8 +2,7 @@ package co.handk.backend.service.impl;
 
 import co.handk.backend.config.AvatarStorageProperties;
 import co.handk.backend.constant.MessageKeyConstant;
-import co.handk.backend.constant.UploadBizType;
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.Dept;
 import co.handk.backend.entity.Role;
 import co.handk.backend.entity.User;

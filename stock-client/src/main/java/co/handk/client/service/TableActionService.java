@@ -57,4 +57,9 @@ public class TableActionService {
         String res = ApiClient.put(ApiPath.MESSAGE_READ_PREFIX + id, "{}");
         return new JSONObject(res);
     }
+
+    public JSONObject readAllMessages() throws Exception {
+        String res = ApiClient.put(ApiPath.MESSAGE_READ_ALL, "{}");
+        return new JSONObject(res);
+    }
 }

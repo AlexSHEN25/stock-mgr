@@ -1,6 +1,6 @@
 package co.handk.backend.controller;
 
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.LoginService;
 import co.handk.backend.service.UserService;

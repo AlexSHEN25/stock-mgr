@@ -1,6 +1,6 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.User;
 import co.handk.backend.entity.UserToken;
 import co.handk.backend.mapper.UserMapper;

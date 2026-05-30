@@ -1,7 +1,9 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.context.UserContext;
+import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.*;
+import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.RequestFormMapper;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.service.*;
@@ -25,6 +27,8 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -43,7 +47,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,11 +58,50 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, RequestForm, RequestFormVO>
         implements RequestFormService {
+    private static final String TEMPLATE_CODE_A = "A";
+    private static final String TEMPLATE_CODE_B = "B";
+    private static final String TEMPLATE_CODE_C = "C";
     private static final String TEMPLATE_DEFAULT = "template/request_form_template.xlsx";
     private static final String TEMPLATE_A = "template/request_form_template_A.xlsx";
     private static final String TEMPLATE_B = "template/request_form_template_B.xlsx";
     private static final String TEMPLATE_C = "template/request_form_template_C.xlsx";
+    private static final String CONFIG_TEMPLATE_DEFAULT = "request.form.template.default";
     private static final String FORMAT_PDF = "pdf";
+    private static final String REMARK_REAPPLY_INBOUND = "Reapply inbound for request form: ";
+    private static final String REMARK_REAPPLY_INBOUND_ITEM = "Reapply inbound from request form";
+    private static final String DEFAULT_ERROR_CODE = "RF000";
+    private static final Map<String, String> ERROR_CODE_BY_MESSAGE = Map.ofEntries(
+            Map.entry("request form operation failed", DEFAULT_ERROR_CODE),
+            Map.entry("request form not found", "RF001"),
+            Map.entry("request form source outbound order is required", "RF002"),
+            Map.entry("source outbound order not found", "RF003"),
+            Map.entry("source outbound order is not owned by current user", "RF004"),
+            Map.entry("selected stock record is not available", "RF005"),
+            Map.entry("source outbound item not found", "RF006"),
+            Map.entry("requested qty must be >= 0", "RF007"),
+            Map.entry("requested qty cannot exceed available outbound qty", "RF008"),
+            Map.entry("source outbound item changed concurrently, please retry", "RF009"),
+            Map.entry("source outbound order changed concurrently, please retry", "RF010"),
+            Map.entry("source outbound stock record not found", "RF011"),
+            Map.entry("failed to save request item", "RF012"),
+            Map.entry("failed to add request item", "RF013"),
+            Map.entry("failed to update request item", "RF014"),
+            Map.entry("failed to remove request item", "RF015"),
+            Map.entry("request and outbound quantities are inconsistent", "RF016"),
+            Map.entry("request form pdf generation failed", "RF017"),
+            Map.entry("request form workbook generation failed", "RF018"),
+            Map.entry("customer is not owned by current user", "RF019"),
+            Map.entry("knife and handle quantities must match", "RF020"),
+            Map.entry("source outbound order has no items", "RF021"),
+            Map.entry("no source outbound items selected", "RF022"),
+            Map.entry("failed to save request form", "RF023"),
+            Map.entry("failed to update request form", "RF024"),
+            Map.entry("request form has no active items", "RF025"),
+            Map.entry("failed to create inbound order", "RF026"),
+            Map.entry("stock not found for request item", "RF027"),
+            Map.entry("failed to save inbound order item", "RF028"),
+            Map.entry("request form is not owned by current user", "RF029")
+    );
 
     @Autowired private StockOrderService stockOrderService;
     @Autowired private StockOrderItemService stockOrderItemService;
@@ -159,27 +201,27 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     public Long createFromOutbound(CreateRequestFromOutboundDTO dto) {
         StockOrder outboundOrder = stockOrderService.getByIdNotDeleted(dto.getStockOrderId());
         if (outboundOrder == null) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("source outbound order not found");
         }
         if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(outboundOrder.getOrderType())) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("source outbound order not found");
         }
 
         Long loginUserId = UserContext.getUserIdOrDefault();
         if (!loginUserId.equals(outboundOrder.getRequesterId()) && !loginUserId.equals(outboundOrder.getOperatorId())) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("source outbound order is not owned by current user");
         }
 
         List<StockOrderItem> allItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
                 .eq("order_id", outboundOrder.getId())
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         if (allItems.isEmpty()) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("source outbound order has no items");
         }
 
         List<StockOrderItem> selectedItems = filterItems(allItems, dto.getStockOrderItemIds());
         if (selectedItems.isEmpty()) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("no source outbound items selected");
         }
 
         User user = userService.getByIdNotDeleted(loginUserId);
@@ -200,7 +242,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         BigDecimal totalAmt = BigDecimal.ZERO;
 
         if (!this.save(form)) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("failed to save request form");
         }
 
         for (StockOrderItem orderItem : selectedItems) {
@@ -211,7 +253,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (stockRecord == null) {
-                throw new RuntimeException("source outbound stock record not found");
+                throw fail("source outbound stock record not found");
             }
             int requestQty = stockRecord.getChangeQty() == null ? 0 : Math.abs(stockRecord.getChangeQty());
             RequestItem requestItem = buildRequestItemFromStockRecord(form, stockRecord, dto.getRemark());
@@ -220,7 +262,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             requestItem.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestQty)));
             applyOutboundRemainderDelta(stockRecord, requestQty);
             if (!requestItemService.save(requestItem)) {
-                throw new RuntimeException("failed to save request item");
+                throw fail("failed to save request item");
             }
 
             totalQty += requestQty;
@@ -230,7 +272,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         form.setRequestQty(totalQty);
         form.setTotalAmt(totalAmt);
         if (!this.updateById(form)) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("failed to update request form");
         }
         validateSourceBalance(form);
         return form.getId();
@@ -241,7 +283,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     public Long reapplyInbound(Long requestId) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form not found");
         }
 
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
@@ -249,7 +291,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         if (items.isEmpty()) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form has no active items");
         }
 
         Long loginUserId = UserContext.getUserIdOrDefault();
@@ -265,7 +307,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         inboundOrder.setRequesterName(form.getUsername());
         inboundOrder.setOperatorId(loginUserId);
         inboundOrder.setOperatorName(form.getUsername());
-        inboundOrder.setRemark("鬯ｯ・ｯ繝ｻ・ｨ郢晢ｽｻ繝ｻ・ｾ鬮ｯ蜈ｷ・ｽ・ｹ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｽ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｳ鬯ｯ・ｯ繝ｻ・ｮ郢晢ｽｻ繝ｻ・ｫ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｲ鬯ｮ・ｯ陷茨ｽｷ繝ｻ・ｽ繝ｻ・ｹ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｺ鬯ｮ・ｯ雋・ｽｷ髫ｱ・ｿ鬯ｮ・ｴ隲帙・・ｽ・ｫ繝ｻ・､髯ｷ・ｻ繝ｻ・ｵ郢晢ｽｻ繝ｻ・ｮ髯橸ｽｳ髣鯉ｽｨ繝ｻ・ｽ繝ｻ・ｿ郢晢ｽｻ繝ｻ・ｫ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬯ｯ・ｮ繝ｻ・ｯ髮九・・ｽ・ｯ郢晢ｽｻ繝ｻ・ｶ郢晢ｽｻ繝ｻ・｣驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｫ: " + form.getBizNo());
+        inboundOrder.setRemark(REMARK_REAPPLY_INBOUND + form.getBizNo());
         inboundOrder.setBizDate(LocalDate.now());
 
         int totalQty = 0;
@@ -275,13 +317,13 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         inboundOrder.setTotalQty(totalQty);
         inboundOrder.setStockTypeId(items.get(0).getStockTypeId());
         if (!stockOrderService.save(inboundOrder)) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("failed to create inbound order");
         }
 
         for (RequestItem reqItem : items) {
             Stock stock = findStock(reqItem.getGoodsId(), reqItem.getSkuId(), reqItem.getWarehouseId(), reqItem.getStockTypeId());
             if (stock == null) {
-                throw new RuntimeException("request form operation failed");
+                throw fail("stock not found for request item");
             }
 
             int beforeQty = stock.getCurrentQty() == null ? 0 : stock.getCurrentQty();
@@ -310,25 +352,25 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             orderItem.setAfterQty(afterQty);
             orderItem.setPrice(reqItem.getPrice());
             orderItem.setCurrency(reqItem.getCurrency());
-            orderItem.setRemark("鬯ｯ・ｯ繝ｻ・ｨ郢晢ｽｻ繝ｻ・ｾ鬮ｯ蜈ｷ・ｽ・ｹ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｽ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｳ鬯ｯ・ｯ繝ｻ・ｮ郢晢ｽｻ繝ｻ・ｫ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｲ鬯ｮ・ｯ陷茨ｽｷ繝ｻ・ｽ繝ｻ・ｹ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｺ鬯ｮ・ｯ雋・ｽｷ髫ｱ・ｿ鬯ｮ・ｴ隲帙・・ｽ・ｫ繝ｻ・､髯ｷ・ｻ繝ｻ・ｵ郢晢ｽｻ繝ｻ・ｮ髯橸ｽｳ髣鯉ｽｨ繝ｻ・ｽ繝ｻ・ｿ郢晢ｽｻ繝ｻ・ｫ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ鬯ｯ・ｮ繝ｻ・ｯ髮九・・ｽ・ｯ郢晢ｽｻ繝ｻ・ｶ郢晢ｽｻ繝ｻ・｣驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｫ鬯ｯ・ｮ繝ｻ・ｫ郢晢ｽｻ繝ｻ・ｴ鬮｣蛹・ｽｽ・ｳ髫ｶ蜴・ｽｽ・ｸ郢晢ｽｻ繝ｻ・ｽ郢晢ｽｻ繝ｻ・ｮ鬯ｮ・｣鬲・ｼ夲ｽｽ・ｽ繝ｻ・ｨ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｽ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｴ鬩幢ｽ｢隴趣ｽ｢繝ｻ・ｽ繝ｻ・ｻ驛｢譎｢・ｽ・ｻ郢晢ｽｻ繝ｻ・ｰ");
+            orderItem.setRemark(REMARK_REAPPLY_INBOUND_ITEM);
             orderItem.setBizDate(LocalDate.now());
             if (!stockOrderItemService.save(orderItem)) {
-                throw new RuntimeException("request form operation failed");
+                throw fail("failed to save inbound order item");
             }
         }
 
         form.setState(StockBizConstant.REQUEST_STATE_REINBOUND_APPLIED);
         if (!this.updateById(form)) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("failed to update request form");
         }
         return inboundOrder.getId();
     }
 
-        @Override
+    @Override
     public List<RequestCandidateItemVO> listCandidateItems(Long requestId) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form not found");
         }
         requireOwned(form);
 
@@ -398,12 +440,12 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return result;
     }
 
-        @Override
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean addItemsFromStockOrder(RequestFormItemBatchDTO dto) {
         RequestForm form = this.getByIdNotDeleted(dto.getRequestId());
         if (form == null) {
-            throw new RuntimeException("request form not found");
+            throw fail("request form not found");
         }
         requireOwned(form);
         Map<Long, Integer> requestedQuantities = resolveRequestedQuantities(dto);
@@ -432,7 +474,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 requestItem.setOutQty(requestedQty);
                 requestItem.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestedQty)));
                 if (!saveOrReactivateRequestItem(form.getId(), stockRecordId, requestItem, dto.getRemark())) {
-                    throw new RuntimeException("failed to add request item");
+                    throw fail("failed to add request item");
                 }
             } else {
                 existing.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
@@ -446,7 +488,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     existing.setRemark(dto.getRemark());
                 }
                 if (!requestItemService.updateById(existing)) {
-                    throw new RuntimeException("failed to update request item");
+                    throw fail("failed to update request item");
                 }
             }
         }
@@ -461,7 +503,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     public Boolean removeItemsFromRequest(RequestFormItemBatchDTO dto) {
         RequestForm form = this.getByIdNotDeleted(dto.getRequestId());
         if (form == null) {
-            throw new RuntimeException("request form not found");
+            throw fail("request form not found");
         }
         requireOwned(form);
         requireOwnedSourceOutbound(form);
@@ -486,7 +528,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             applyOutboundRemainderDelta(record, -currentQty);
             requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_REMOVED);
             if (!requestItemService.updateById(requestItem)) {
-                throw new RuntimeException("failed to remove request item");
+                throw fail("failed to remove request item");
             }
         }
         validateSourceBalance(form);
@@ -506,7 +548,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     public void downloadBDeptRequestForm(Long requestId, HttpServletResponse response) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form not found");
         }
 
         try (XSSFWorkbook workbook = buildRequestWorkbook(form)) {
@@ -518,20 +560,19 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             workbook.write(response.getOutputStream());
             response.flushBuffer();
         } catch (IOException e) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form workbook generation failed", e);
         }
     }
 
     private void downloadRequestFormPdf(Long requestId, HttpServletResponse response) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form not found");
         }
-        List<RequestItem> items = listRequestItems(requestId);
-        Customer customer = form.getCustomerId() == null ? null : customerService.getByIdNotDeleted(form.getCustomerId());
 
-        try (PDDocument document = new PDDocument()) {
-            writeRequestPdf(document, form, customer, items);
+        try (XSSFWorkbook workbook = buildRequestWorkbook(form);
+             PDDocument document = new PDDocument()) {
+            writeRequestPdf(document, workbook);
             String filename = "request_" + form.getBizNo() + ".pdf";
             response.setContentType("application/pdf");
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -540,16 +581,17 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             document.save(response.getOutputStream());
             response.flushBuffer();
         } catch (IOException e) {
-            throw new RuntimeException("request form pdf generation failed");
+            throw fail("request form pdf generation failed", e);
         }
     }
 
     private XSSFWorkbook buildRequestWorkbook(RequestForm form) throws IOException {
         List<RequestItem> items = listRequestItems(form.getId());
         Customer customer = form.getCustomerId() == null ? null : customerService.getByIdNotDeleted(form.getCustomerId());
-        InputStream templateInput = openTemplateInputStream(form);
-        XSSFWorkbook workbook = new XSSFWorkbook(templateInput);
-        templateInput.close();
+        XSSFWorkbook workbook;
+        try (InputStream templateInput = openTemplateInputStream(form)) {
+            workbook = new XSSFWorkbook(templateInput);
+        }
         Sheet sheet = workbook.getSheetAt(0);
         workbook.setSheetName(0, safeSheetName(form.getBizNo()));
         while (workbook.getNumberOfSheets() > 1) {
@@ -565,48 +607,112 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("request_id", requestId)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         if (items == null || items.isEmpty()) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form has no active items");
         }
         return items;
     }
 
-    private void writeRequestPdf(PDDocument document, RequestForm form, Customer customer, List<RequestItem> items)
-            throws IOException {
-        PdfPageWriter writer = new PdfPageWriter(document);
-        writer.addPage();
-        writer.text("REQUEST FORM", 18, true);
-        writer.text("Request No: " + safe(form.getBizNo()), 10, false);
-        writer.text("Date: " + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-M-d")), 10, false);
-        if (customer != null) {
-            writer.text("MESSRS: " + safe(customer.getName()), 10, false);
-            writer.text("Address: " + safe(customer.getAddress()), 10, false);
-            writer.text("Tel: " + safe(customer.getPhone()) + "    EMAIL: " + safe(customer.getEmail()), 10, false);
-        }
-        writer.text("Total Qty: " + (form.getRequestQty() == null ? 0 : form.getRequestQty())
-                + "    Total Amount: " + formatCurrency(CommonConstant.DEFAULT_CURRENCY_JPY, form.getTotalAmt()), 10, false);
-        writer.blank(8);
-        writer.text("No.  Brand  Item  Qty  Unit Price  Amount  SKU  Remark", 9, true);
-        writer.line();
-        int index = 1;
-        for (RequestItem item : items) {
-            writer.text(index + ".  "
-                    + truncate(safe(item.getBrandName()), 12) + "  "
-                    + truncate(safe(item.getGoodsName()), 24) + "  "
-                    + (item.getRequestQty() == null ? 0 : item.getRequestQty()) + "  "
-                    + formatCurrency(item.getCurrency(), item.getPrice()) + "  "
-                    + formatCurrency(item.getCurrency(), item.getTotalAmt()) + "  "
-                    + truncate(safe(item.getSkuCode()), 16) + "  "
-                    + truncate(safe(item.getRemark()), 18), 8, false);
-            index++;
-        }
-        writer.close();
-    }
+    private void writeRequestPdf(PDDocument document, XSSFWorkbook workbook) throws IOException {
+        Sheet sheet = workbook.getSheetAt(0);
+        DataFormatter formatter = new DataFormatter();
+        FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
 
-    private String truncate(String value, int maxLength) {
-        if (value == null || value.length() <= maxLength) {
-            return value;
+        int minRow = Integer.MAX_VALUE;
+        int maxRow = -1;
+        int maxCol = -1;
+        for (int r = 0; r <= sheet.getLastRowNum(); r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) {
+                continue;
+            }
+            short rowLastCell = row.getLastCellNum();
+            if (rowLastCell <= 0) {
+                continue;
+            }
+            for (int c = 0; c < rowLastCell; c++) {
+                Cell cell = row.getCell(c);
+                String text = cell == null ? "" : formatter.formatCellValue(cell, evaluator);
+                if (text != null && !text.isBlank()) {
+                    minRow = Math.min(minRow, r);
+                    maxRow = Math.max(maxRow, r);
+                    maxCol = Math.max(maxCol, c);
+                }
+            }
         }
-        return value.substring(0, Math.max(0, maxLength - 3)) + "...";
+        if (maxRow < 0 || maxCol < 0) {
+            PDPage emptyPage = new PDPage(PDRectangle.A4);
+            document.addPage(emptyPage);
+            return;
+        }
+
+        final float marginX = 24F;
+        final float marginY = 24F;
+        final float pageWidth = PDRectangle.A4.getWidth();
+        final float pageHeight = PDRectangle.A4.getHeight();
+        final float printableWidth = pageWidth - marginX * 2F;
+        final float printableHeight = pageHeight - marginY * 2F;
+        final float fontSize = 6.5F;
+        final float textPaddingX = 1.5F;
+        final float textPaddingY = 1.5F;
+
+        float[] colWidths = new float[maxCol + 1];
+        float totalWidth = 0F;
+        for (int c = 0; c <= maxCol; c++) {
+            float width = (float) sheet.getColumnWidthInPixels(c);
+            if (width <= 0F) {
+                width = 24F;
+            }
+            colWidths[c] = width;
+            totalWidth += width;
+        }
+        float scale = totalWidth <= 0F ? 1F : printableWidth / totalWidth;
+        if (scale > 1F) {
+            scale = 1F;
+        }
+
+        PDPage page = new PDPage(PDRectangle.A4);
+        document.addPage(page);
+        PDPageContentStream content = new PDPageContentStream(document, page);
+        float yTop = pageHeight - marginY;
+        PDFont font = PDType1Font.HELVETICA;
+
+        for (int r = minRow; r <= maxRow; r++) {
+            Row row = sheet.getRow(r);
+            float rowHeight = row == null ? sheet.getDefaultRowHeightInPoints() : row.getHeightInPoints();
+            if (rowHeight <= 0F) {
+                rowHeight = sheet.getDefaultRowHeightInPoints();
+            }
+            rowHeight *= scale;
+            if (yTop - rowHeight < marginY) {
+                content.close();
+                page = new PDPage(PDRectangle.A4);
+                document.addPage(page);
+                content = new PDPageContentStream(document, page);
+                yTop = pageHeight - marginY;
+            }
+            float x = marginX;
+            for (int c = 0; c <= maxCol; c++) {
+                float cellWidth = colWidths[c] * scale;
+                content.addRect(x, yTop - rowHeight, cellWidth, rowHeight);
+                content.stroke();
+
+                String text = "";
+                if (row != null) {
+                    Cell cell = row.getCell(c);
+                    text = cell == null ? "" : formatter.formatCellValue(cell, evaluator);
+                }
+                if (text != null && !text.isBlank()) {
+                    content.beginText();
+                    content.setFont(font, fontSize);
+                    content.newLineAtOffset(x + textPaddingX, yTop - rowHeight + textPaddingY);
+                    content.showText(sanitizePdfText(text));
+                    content.endText();
+                }
+                x += cellWidth;
+            }
+            yTop -= rowHeight;
+        }
+        content.close();
     }
 
     private String sanitizePdfText(String value) {
@@ -619,64 +725,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             sb.append(ch >= 32 && ch <= 126 ? ch : '?');
         }
         return sb.toString();
-    }
-
-    private final class PdfPageWriter {
-        private static final float MARGIN = 42F;
-        private static final float BOTTOM_MARGIN = 42F;
-        private final PDDocument document;
-        private final PDFont regularFont = PDType1Font.HELVETICA;
-        private final PDFont boldFont = PDType1Font.HELVETICA_BOLD;
-        private PDPageContentStream content;
-        private float y;
-
-        private PdfPageWriter(PDDocument document) {
-            this.document = document;
-        }
-
-        private void addPage() throws IOException {
-            close();
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
-            content = new PDPageContentStream(document, page);
-            y = page.getMediaBox().getHeight() - MARGIN;
-        }
-
-        private void text(String value, int fontSize, boolean bold) throws IOException {
-            ensureSpace(fontSize + 8);
-            content.beginText();
-            content.setFont(bold ? boldFont : regularFont, fontSize);
-            content.newLineAtOffset(MARGIN, y);
-            content.showText(sanitizePdfText(value));
-            content.endText();
-            y -= fontSize + 7F;
-        }
-
-        private void line() throws IOException {
-            ensureSpace(8);
-            content.moveTo(MARGIN, y);
-            content.lineTo(PDRectangle.A4.getWidth() - MARGIN, y);
-            content.stroke();
-            y -= 8F;
-        }
-
-        private void blank(float height) throws IOException {
-            ensureSpace(height);
-            y -= height;
-        }
-
-        private void ensureSpace(float height) throws IOException {
-            if (content == null || y - height < BOTTOM_MARGIN) {
-                addPage();
-            }
-        }
-
-        private void close() throws IOException {
-            if (content != null) {
-                content.close();
-                content = null;
-            }
-        }
     }
 
     private InputStream openTemplateInputStream(RequestForm form) throws IOException {
@@ -701,64 +749,56 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (configuredTemplate != null && !configuredTemplate.isBlank()) {
             return configuredTemplate;
         }
-        String deptName = form == null || form.getDeptName() == null ? "" : form.getDeptName().toUpperCase();
-        if (deptName.contains("A")) {
-            return TEMPLATE_A;
-        }
-        if (deptName.contains("B")) {
-            return TEMPLATE_B;
-        }
-        if (deptName.contains("C")) {
-            return TEMPLATE_C;
-        }
-        Long deptId = form == null ? null : form.getDeptId();
-        if (deptId != null) {
-            if (deptId == 1L) {
-                return TEMPLATE_A;
-            }
-            if (deptId == 2L) {
-                return TEMPLATE_B;
-            }
-            if (deptId == 3L) {
-                return TEMPLATE_C;
-            }
-        }
-        return TEMPLATE_A;
+        return getTemplatePathByCode(resolveTemplateCode(form));
     }
 
     private String resolveTemplatePathFromConfig(RequestForm form) {
-        String configKey = resolveTemplateConfigKey(form);
+        String configKey = resolveTemplateConfigKeyByCode(resolveTemplateCode(form));
         String value = getConfigValueByName(configKey);
         if (value == null || value.isBlank()) {
-            value = getConfigValueByName("request.form.template.default");
+            value = getConfigValueByName(CONFIG_TEMPLATE_DEFAULT);
         }
         return normalizeTemplatePath(value);
     }
 
-    private String resolveTemplateConfigKey(RequestForm form) {
+    private String resolveTemplateCode(RequestForm form) {
         String deptName = form == null || form.getDeptName() == null ? "" : form.getDeptName().toUpperCase();
         if (deptName.contains("A")) {
-            return "request.form.template.A";
+            return TEMPLATE_CODE_A;
         }
         if (deptName.contains("B")) {
-            return "request.form.template.B";
+            return TEMPLATE_CODE_B;
         }
         if (deptName.contains("C")) {
-            return "request.form.template.C";
+            return TEMPLATE_CODE_C;
         }
         Long deptId = form == null ? null : form.getDeptId();
         if (deptId != null) {
             if (deptId == 1L) {
-                return "request.form.template.A";
+                return TEMPLATE_CODE_A;
             }
             if (deptId == 2L) {
-                return "request.form.template.B";
+                return TEMPLATE_CODE_B;
             }
             if (deptId == 3L) {
-                return "request.form.template.C";
+                return TEMPLATE_CODE_C;
             }
         }
-        return "request.form.template.A";
+        return TEMPLATE_CODE_A;
+    }
+
+    private String resolveTemplateConfigKeyByCode(String code) {
+        return "request.form.template." + code;
+    }
+
+    private String getTemplatePathByCode(String code) {
+        if (TEMPLATE_CODE_B.equals(code)) {
+            return TEMPLATE_B;
+        }
+        if (TEMPLATE_CODE_C.equals(code)) {
+            return TEMPLATE_C;
+        }
+        return TEMPLATE_A;
     }
 
     private String getConfigValueByName(String name) {
@@ -873,7 +913,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return selected;
     }
 
-    
+
     private List<Long> normalizeStockRecordIds(List<Long> ids) {
         java.util.LinkedHashSet<Long> uniq = new java.util.LinkedHashSet<>();
         if (ids != null) {
@@ -895,7 +935,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 }
                 int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
                 if (qty < 0) {
-                    throw new RuntimeException("requested qty must be >= 0");
+                    throw fail("requested qty must be >= 0");
                 }
                 if (qty > 0) {
                     quantities.merge(item.getStockRecordId(), qty, Integer::sum);
@@ -917,18 +957,18 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     private StockOrder requireOwnedSourceOutbound(RequestForm form) {
         if (form.getSourceOrderId() == null) {
-            throw new RuntimeException("request form source outbound order is required");
+            throw fail("request form source outbound order is required");
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(form.getSourceOrderId());
         if (order == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
-            throw new RuntimeException("source outbound order not found");
+            throw fail("source outbound order not found");
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (permissionQueryService.isSuperAdmin(userId)) {
             return order;
         }
         if (!userId.equals(order.getRequesterId()) && !userId.equals(order.getOperatorId())) {
-            throw new RuntimeException("source outbound order is not owned by current user");
+            throw fail("source outbound order is not owned by current user");
         }
         return order;
     }
@@ -937,7 +977,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         StockRecord record = stockRecordService.getByIdNotDeleted(stockRecordId);
         if (record == null || !form.getSourceOrderId().equals(record.getOrderId())
                 || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(record.getOrderType())) {
-            throw new RuntimeException("selected stock record is not available");
+            throw fail("selected stock record is not available");
         }
         return record;
     }
@@ -948,14 +988,14 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
         if (orderItem == null) {
-            throw new RuntimeException("source outbound item not found");
+            throw fail("source outbound item not found");
         }
         int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
         Integer currentRaw = orderItem.getChangeQty();
         int currentQty = currentRaw == null ? 0 : Math.abs(currentRaw);
         int nextQty = currentQty - deltaQty;
         if (nextQty < 0 || nextQty > originalQty) {
-            throw new RuntimeException("requested qty cannot exceed available outbound qty");
+            throw fail("requested qty cannot exceed available outbound qty");
         }
         int affected = stockOrderItemService.getBaseMapper().update(
                 null,
@@ -966,7 +1006,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                         .set(StockOrderItem::getChangeQty, nextQty)
         );
         if (affected <= 0) {
-            throw new RuntimeException("source outbound item changed concurrently, please retry");
+            throw fail("source outbound item changed concurrently, please retry");
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
         if (order != null) {
@@ -980,7 +1020,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                             .set(StockOrder::getTotalQty, totalQty - deltaQty)
             );
             if (orderAffected <= 0) {
-                throw new RuntimeException("source outbound order changed concurrently, please retry");
+                throw fail("source outbound order changed concurrently, please retry");
             }
         }
     }
@@ -988,7 +1028,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private void applyOutboundRemainderByRequested(StockRecord record, int requestedQty, int currentRequestQty) {
         StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
         if (orderItem == null) {
-            throw new RuntimeException("source outbound item not found");
+            throw fail("source outbound item not found");
         }
         int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
         Integer currentRaw = orderItem.getChangeQty();
@@ -999,7 +1039,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             maxRequestQty = originalQty;
         }
         if (requestedQty < 0 || requestedQty > maxRequestQty) {
-            throw new RuntimeException("requested qty cannot exceed available outbound qty"
+            throw fail("requested qty cannot exceed available outbound qty"
                     + ", stockRecordId=" + record.getId()
                     + ", available=" + maxRequestQty
                     + ", requested=" + requestedQty);
@@ -1007,7 +1047,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
         int targetRemainingQty = currentRemainingQty + Math.max(0, currentRequestQty) - requestedQty;
         if (targetRemainingQty < 0 || targetRemainingQty > originalQty) {
-            throw new RuntimeException("requested qty cannot exceed available outbound qty"
+            throw fail("requested qty cannot exceed available outbound qty"
                     + ", stockRecordId=" + record.getId()
                     + ", available=" + maxRequestQty
                     + ", requested=" + requestedQty
@@ -1024,7 +1064,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                         .set(StockOrderItem::getChangeQty, targetRemainingQty)
         );
         if (affected <= 0) {
-            throw new RuntimeException("source outbound item changed concurrently, please retry");
+            throw fail("source outbound item changed concurrently, please retry");
         }
 
         StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
@@ -1040,11 +1080,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                             .set(StockOrder::getTotalQty, Math.max(0, totalQty + delta))
             );
             if (orderAffected <= 0) {
-                throw new RuntimeException("source outbound order changed concurrently, please retry");
+                throw fail("source outbound order changed concurrently, please retry");
             }
         }
     }
-private void validateSourceBalance(RequestForm form) {
+    private void validateSourceBalance(RequestForm form) {
         List<StockRecord> records = listSourceOutboundRecords(form);
         for (StockRecord record : records) {
             int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
@@ -1058,7 +1098,7 @@ private void validateSourceBalance(RequestForm form) {
                     .last("LIMIT 1"));
             int requestQty = requestItem == null || requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
             if (requestQty + remainingQty != originalQty) {
-                throw new RuntimeException("request and outbound quantities are inconsistent");
+                throw fail("request and outbound quantities are inconsistent");
             }
         }
     }
@@ -1161,7 +1201,7 @@ private void validateSourceBalance(RequestForm form) {
     private void recalculateRequestFormSummary(Long requestId) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form not found");
         }
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
@@ -1177,7 +1217,7 @@ private void validateSourceBalance(RequestForm form) {
         form.setRequestQty(totalQty);
         form.setTotalAmt(totalAmt);
         if (!this.updateById(form)) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("failed to update request form");
         }
     }
 
@@ -1239,7 +1279,7 @@ private void validateSourceBalance(RequestForm form) {
             }
         }
         if (knifeQty > 0 && handleQty > 0 && knifeQty != handleQty) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("knife and handle quantities must match");
         }
     }
 
@@ -1258,7 +1298,7 @@ private void validateSourceBalance(RequestForm form) {
     private boolean containsTypeKeyword(String value, String keyword) {
         return value != null && value.contains(keyword);
     }
-private Set<Long> findAvailableOrderItemIds(Long userId, Long warehouseId) {
+    private Set<Long> findAvailableOrderItemIds(Long userId, Long warehouseId) {
         List<StockOrder> orders = listAvailableOrdersForRequest(userId, warehouseId);
         java.util.HashSet<Long> ids = new java.util.HashSet<>();
         if (orders.isEmpty()) {
@@ -1305,7 +1345,7 @@ private Set<Long> findAvailableOrderItemIds(Long userId, Long warehouseId) {
         }
         Customer customer = customerService.getByIdNotDeleted(customerId);
         if (customer == null || !userId.equals(customer.getOwnerUserId())) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("customer is not owned by current user");
         }
     }
 
@@ -1315,8 +1355,34 @@ private Set<Long> findAvailableOrderItemIds(Long userId, Long warehouseId) {
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId) && !userId.equals(form.getUserId())) {
-            throw new RuntimeException("request form operation failed");
+            throw fail("request form is not owned by current user");
         }
+    }
+
+    private BusinessException fail(String message) {
+        return new BusinessException(MessageKeyConstant.ERROR_RUNTIME, withErrorCode(message));
+    }
+
+    private BusinessException fail(String message, Throwable cause) {
+        return new BusinessException(MessageKeyConstant.ERROR_RUNTIME, withErrorCode(message), cause);
+    }
+
+    private String withErrorCode(String message) {
+        String code = resolveErrorCode(message);
+        return "[" + code + "] " + message;
+    }
+
+    private String resolveErrorCode(String message) {
+        if (message == null || message.isBlank()) {
+            return DEFAULT_ERROR_CODE;
+        }
+        for (Map.Entry<String, String> entry : ERROR_CODE_BY_MESSAGE.entrySet()) {
+            String knownMessage = entry.getKey();
+            if (message.equals(knownMessage) || message.startsWith(knownMessage + ",")) {
+                return entry.getValue();
+            }
+        }
+        return DEFAULT_ERROR_CODE;
     }
 
     @Override

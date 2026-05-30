@@ -7,6 +7,7 @@ public final class AppConstants {
 
     public static final class Module {
         public static final String USER = "user";
+        public static final String MESSAGE = "message";
         public static final String GOODS = "goods";
         public static final String GOODS_SKU = "goodsSku";
         public static final String SERIES = "series";
@@ -30,6 +31,10 @@ public final class AppConstants {
         public static final String ORDER_ID = "orderId";
         public static final String REQUEST_ID = "requestId";
         public static final String STATUS = "status";
+        public static final String STATE = "state";
+        public static final String IS_READ = "isRead";
+        public static final String CREATE_TIME = "createTime";
+        public static final String UPDATE_TIME = "updateTime";
 
         private Field() {
         }
@@ -48,6 +53,7 @@ public final class AppConstants {
         public static final String REQUEST_FORM_DOWNLOAD_V2_SUFFIX = "/download";
         public static final String REQUEST_FORM_PDF_V2_SUFFIX = "/pdf";
         public static final String MESSAGE_READ_PREFIX = "/message/read/";
+        public static final String MESSAGE_READ_ALL = "/message/read-all";
 
         private ApiPath() {
         }

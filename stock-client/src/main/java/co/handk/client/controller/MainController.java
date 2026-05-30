@@ -74,6 +74,7 @@ public class MainController {
     @FXML private Label messageLabel;
     @FXML private TextField deleteIdField;
     @FXML private Button addButton;
+    @FXML private Button readAllButton;
     @FXML private Button inlineEditButton;
     @FXML private Button inlineSaveButton;
     @FXML private Button inlineCancelButton;
@@ -103,6 +104,7 @@ public class MainController {
         dataTable.setTableMenuButtonVisible(true);
         dataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
         rebuildQueryFields();
+        applyActionPolicy();
         messageLabel.setText(UiText.MSG_FIRST_GUIDE);
         Platform.runLater(this::focusFirstQueryField);
         loadData();
@@ -145,7 +147,7 @@ public class MainController {
     @FXML
     private void onAdd() {
         if (isReadOnlyModule()) {
-            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
+            messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
         openFormDialog(UiText.ACTION_CREATE, false);
@@ -154,7 +156,7 @@ public class MainController {
     @FXML
     private void onInlineEdit() {
         if (isReadOnlyModule()) {
-            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
+            messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
         Map<String, Object> selected = currentWorkingRow();
@@ -169,9 +171,27 @@ public class MainController {
     }
 
     @FXML
+    private void onReadAll() {
+        if (!Module.MESSAGE.equals(currentModule)) {
+            return;
+        }
+        try {
+            JSONObject json = tableActionService.readAllMessages();
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText(UiText.MSG_READ_ALL_DONE);
+                loadData();
+            } else {
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_READ_ALL_FAIL));
+            }
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_READ_ALL_FAIL + ": " + ex.getMessage());
+        }
+    }
+
+    @FXML
     private void onInlineSave() {
         if (isReadOnlyModule()) {
-            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
+            messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
         if (inlineEditingRow == null) {
@@ -213,7 +233,7 @@ public class MainController {
     @FXML
     private void onEdit() {
         if (isReadOnlyModule()) {
-            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
+            messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
         if (currentWorkingRow() == null) {
@@ -226,7 +246,7 @@ public class MainController {
     @FXML
     private void onBatchDelete() {
         if (isReadOnlyModule()) {
-            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
+            messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
         List<Map<String, Object>> checkedRows = checkedRows();
@@ -250,7 +270,7 @@ public class MainController {
     @FXML
     private void onDelete() {
         if (isReadOnlyModule()) {
-            messageLabel.setText(UiText.byKey("msg.readonlyModule"));
+            messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
         String id = deleteIdField.getText();
@@ -309,7 +329,7 @@ public class MainController {
     private void rebuildQueryFields() {
         queryFieldsPane.getChildren().clear();
         queryControls.clear();
-        for (String field : ModuleMeta.queryFields(currentModule)) {
+        for (String field : ModuleMeta.visibleQueryFields(currentModule)) {
             Label label = new Label(ModuleMeta.normalizeTitle(field));
             label.setStyle("-fx-text-fill:#4b5563;");
             Control control = createControl(field);
@@ -324,7 +344,11 @@ public class MainController {
 
     private void applyActionPolicy() {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
+        boolean messageModule = Module.MESSAGE.equals(currentModule);
         addButton.setDisable(!policy.canCreate);
+        readAllButton.setVisible(messageModule);
+        readAllButton.setManaged(messageModule);
+        readAllButton.setDisable(!messageModule);
         inlineEditButton.setDisable(!policy.canInlineEdit);
         inlineSaveButton.setDisable(!policy.canInlineEdit);
         inlineCancelButton.setDisable(!policy.canInlineEdit);
@@ -335,12 +359,14 @@ public class MainController {
     }
 
     private Control createControl(String field) {
+        String displayField = field;
         ModuleMeta.FieldType type = ModuleMeta.fieldType(currentModule, field);
         if (type == ModuleMeta.FieldType.SELECT) {
             ComboBox<Option> combo = new ComboBox<>();
             for (ModuleMeta.Option option : ModuleMeta.selectOptions(currentModule, field)) {
                 combo.getItems().add(new Option(option.label, option.value));
             }
+            combo.setPromptText(queryPlaceholder(displayField, true));
             return combo;
         }
         String relationField = ModuleMeta.mapNameFieldToIdField(field);
@@ -354,28 +380,26 @@ public class MainController {
             if (relationModule != null) {
                 combo.getItems().addAll(fetchRelationOptions(relationModule));
             }
+            combo.setPromptText(queryPlaceholder(displayField, true));
             return combo;
         }
-        return new TextField();
+        TextField textField = new TextField();
+        textField.setPromptText(queryPlaceholder(displayField, false));
+        return textField;
+    }
+
+    private String queryPlaceholder(String field, boolean selectMode) {
+        if ("deptName".equals(field)) {
+            return UiText.MSG_SELECT_DEPT;
+        }
+        return ModuleMeta.normalizeTitle(field) + (selectMode ? UiText.MSG_SELECT_SUFFIX : UiText.MSG_SEARCH_SUFFIX);
     }
 
     private List<Option> fetchRelationOptions(String module) {
         List<Option> options = new ArrayList<>();
         try {
-            JSONObject wrapper = dataService.fetchPage(module, 1, 50, Map.of());
-            JSONObject data = wrapper.optJSONObject("data");
-            if (data == null) {
-                return options;
-            }
-            JSONArray records = data.optJSONArray("records");
-            if (records == null) {
-                return options;
-            }
-            for (int i = 0; i < records.length(); i++) {
-                JSONObject r = records.getJSONObject(i);
-                String id = String.valueOf(r.opt("id"));
-                String label = r.optString("name", r.optString("username", r.optString("code", String.format(UiText.RELATION_FALLBACK_PATTERN, id))));
-                options.add(new Option(label, id));
+            for (Map<String, String> item : dataService.fetchSimpleRelationOptions(module, Map.of())) {
+                options.add(new Option(item.get("label"), item.get("value")));
             }
         } catch (Exception ex) {
             LOGGER.log(Level.WARNING, "Load relation options failed. module=" + module, ex);
@@ -466,7 +490,7 @@ public class MainController {
         for (Map.Entry<String, Object> entry : row.entrySet()) {
             String key = entry.getKey();
             if (SELECTED_KEY.equals(key) || key.endsWith("Name") || key.endsWith("Desc")
-                    || "createTime".equals(key) || "updateTime".equals(key)) {
+                    || Field.CREATE_TIME.equals(key) || Field.UPDATE_TIME.equals(key)) {
                 continue;
             }
             Object val = entry.getValue();
@@ -586,15 +610,15 @@ public class MainController {
                     try {
                         JSONObject json = tableActionService.readMessage(String.valueOf(id));
                         if (uiFeedback.isSuccess(json)) {
-                            row.put("isRead", 1);
-                            row.put("state", 1);
+                            row.put(Field.IS_READ, 1);
+                            row.put(Field.STATE, 1);
                             dataTable.refresh();
-                            messageLabel.setText(UiText.byKey("msg.readDone"));
+                            messageLabel.setText(UiText.MSG_READ_DONE);
                         } else {
-                            messageLabel.setText(uiFeedback.resolveMessage(json, UiText.byKey("msg.readFail")));
+                            messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_READ_FAIL));
                         }
                     } catch (Exception ex) {
-                        messageLabel.setText(UiText.byKey("msg.readFail") + ": " + ex.getMessage());
+                        messageLabel.setText(UiText.MSG_READ_FAIL + ": " + ex.getMessage());
                     }
                 });
             }
@@ -606,7 +630,9 @@ public class MainController {
                     return;
                 }
                 Map<String, Object> row = getTableView().getItems().get(getIndex());
-                Object rawRead = row.containsKey("isRead") ? row.get("isRead") : row.getOrDefault("state", "0");
+                Object rawRead = row.containsKey(Field.IS_READ)
+                        ? row.get(Field.IS_READ)
+                        : row.getOrDefault(Field.STATE, "0");
                 boolean unread = !"1".equals(String.valueOf(rawRead));
                 setGraphic(unread ? btn : null);
             }
@@ -775,7 +801,7 @@ public class MainController {
 
     private TableColumn<Map<String, Object>, String> createTextColumn(String key) {
         TableColumn<Map<String, Object>, String> col = new TableColumn<>(columnTitle(key));
-        col.setPrefWidth("id".equals(key) ? 90 : 150);
+        col.setPrefWidth(("id".equalsIgnoreCase(key) || (Module.GOODS.equals(currentModule) && Field.SKU_ID.equalsIgnoreCase(key))) ? 90 : 150);
         col.setEditable(!ModuleMeta.isInlineReadonlyField(key));
         col.setCellFactory(TextFieldTableCell.forTableColumn());
         col.setCellValueFactory(cell -> {
@@ -868,7 +894,13 @@ public class MainController {
     }
 
     private String columnTitle(String key) {
-        return Field.ID.equals(key) ? UiText.FIELD_ID : ModuleMeta.normalizeTitle(key);
+        if (Field.ID.equalsIgnoreCase(key)) {
+            return UiText.FIELD_ID;
+        }
+        if (Module.GOODS.equals(currentModule) && Field.SKU_ID.equalsIgnoreCase(key)) {
+            return UiText.FIELD_ID;
+        }
+        return ModuleMeta.normalizeTitle(key);
     }
 
     private String normalizeEnumValue(String value) {

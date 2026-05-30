@@ -1,7 +1,7 @@
 package co.handk.backend.aspect;
 
 import co.handk.backend.constant.OperateLogConstant;
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.OperateLog;
 import co.handk.backend.entity.User;
 import co.handk.backend.service.OperateLogService;

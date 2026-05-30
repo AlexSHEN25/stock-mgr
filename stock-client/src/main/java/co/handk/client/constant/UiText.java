@@ -66,6 +66,14 @@ public final class UiText {
     public static final String MSG_LOGIN_TOKEN_EMPTY = t("msg.loginTokenEmpty");
     public static final String MSG_REQUEST_FAILED_PREFIX = t("msg.requestFailedPrefix");
     public static final String MSG_LOGIN_FAILED_DEFAULT = t("msg.loginFailedDefault");
+    public static final String MSG_READ_ALL_DONE = t("msg.readAllDone");
+    public static final String MSG_READ_ALL_FAIL = t("msg.readAllFail");
+    public static final String MSG_READ_DONE = t("msg.readDone");
+    public static final String MSG_READ_FAIL = t("msg.readFail");
+    public static final String MSG_READONLY_MODULE = t("msg.readonlyModule");
+    public static final String MSG_SELECT_DEPT = t("msg.selectDept");
+    public static final String MSG_SEARCH_SUFFIX = t("msg.searchSuffix");
+    public static final String MSG_SELECT_SUFFIX = t("msg.selectSuffix");
 
     public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
     public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");

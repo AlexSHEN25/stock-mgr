@@ -114,6 +114,7 @@
                 <FlowPane hgap="8" vgap="8">
                     <Button text="%main.btn.search" onAction="#onSearch" styleClass="primary-btn"/>
                     <Button text="%main.btn.reset" onAction="#onRefresh"/>
+                    <Button fx:id="readAllButton" text="%main.btn.readAll" onAction="#onReadAll" visible="false" managed="false"/>
                     <Button text="%main.btn.prev" onAction="#onPrevPage"/>
                     <Button text="%main.btn.next" onAction="#onNextPage"/>
                     <Button fx:id="addButton" text="%main.btn.create" onAction="#onAdd" styleClass="success-btn"/>

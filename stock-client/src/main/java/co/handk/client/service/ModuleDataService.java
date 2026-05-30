@@ -65,11 +65,12 @@ public class ModuleDataService {
         for (int i = 0; i < records.length(); i++) {
             JSONObject row = records.getJSONObject(i);
             String id = String.valueOf(row.opt("id"));
-            String label = row.optString("name",
+            String label = row.optString("orderNo",
+                    row.optString("name",
                     row.optString("goodsName",
                             row.optString("skuName",
                                     row.optString("username",
-                                            row.optString("code", String.format(UiText.RELATION_FALLBACK_PATTERN, id))))));
+                                            row.optString("code", String.format(UiText.RELATION_FALLBACK_PATTERN, id)))))));
             options.add(Map.of("label", label, "value", id));
         }
         return options;

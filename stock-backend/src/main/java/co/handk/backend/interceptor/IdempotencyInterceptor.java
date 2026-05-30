@@ -1,7 +1,7 @@
 package co.handk.backend.interceptor;
 
 import co.handk.backend.constant.MessageKeyConstant;
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.RedisKey;

@@ -2,7 +2,7 @@ package co.handk.backend.interceptor;
 
 import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.constant.SecurityConstant;
-import co.handk.backend.context.UserContext;
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.UserToken;
 import co.handk.backend.exception.LoginException;
 import co.handk.backend.mapper.UserTokenMapper;
