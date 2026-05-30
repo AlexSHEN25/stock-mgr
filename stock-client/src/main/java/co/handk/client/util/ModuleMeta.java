@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
+import org.json.JSONObject;
 
 public final class ModuleMeta {
 
@@ -93,6 +94,32 @@ public final class ModuleMeta {
         }
     }
 
+    public static final class FormValueRule {
+        public final String targetField;
+        public final String sourceField;
+        public final String defaultValue;
+        public final String clearWhenBlankField;
+
+        private FormValueRule(String targetField, String sourceField, String defaultValue, String clearWhenBlankField) {
+            this.targetField = targetField;
+            this.sourceField = sourceField;
+            this.defaultValue = defaultValue;
+            this.clearWhenBlankField = clearWhenBlankField;
+        }
+
+        public static FormValueRule copyIfBlank(String targetField, String sourceField) {
+            return new FormValueRule(targetField, sourceField, null, null);
+        }
+
+        public static FormValueRule defaultIfBlank(String targetField, String defaultValue) {
+            return new FormValueRule(targetField, null, defaultValue, null);
+        }
+
+        public static FormValueRule clearWhenBlank(String targetField, String clearWhenBlankField) {
+            return new FormValueRule(targetField, null, null, clearWhenBlankField);
+        }
+    }
+
     private static final String MODULE_DEPT = "dept";
     private static final String MODULE_WAREHOUSE = "warehouse";
     private static final String MODULE_ROLE = "role";
@@ -115,7 +142,7 @@ public final class ModuleMeta {
     private static final String MODULE_USER_ROLE = "userRole";
     private static final String MODULE_ROLE_PERMISSION = "rolePermission";
     private static final String MODULE_USER_TOKEN = "userToken";
-    private static final String DEFAULT_FIELD_TITLE = "項目";
+    private static final String DEFAULT_FIELD_TITLE = "\u9805\u76ee";
 
     private static final Map<String, List<String>> QUERY_FIELDS = new HashMap<>();
     private static final Map<String, List<String>> FORM_FIELDS = new HashMap<>();
@@ -127,7 +154,9 @@ public final class ModuleMeta {
     private static final Map<String, List<DependencyRule>> DEPENDENCY_RULES = new HashMap<>();
     private static final Map<String, List<RowAction>> ROW_ACTIONS = new HashMap<>();
     private static final Map<String, List<String>> HIDDEN_LIST_FIELDS = new HashMap<>();
+    private static final Map<String, List<String>> PREFERRED_COLUMNS = new HashMap<>();
     private static final Map<String, ModuleActionPolicy> ACTION_POLICIES = new HashMap<>();
+    private static final Map<String, List<FormValueRule>> FORM_VALUE_RULES = new HashMap<>();
     private static final List<String> INLINE_READONLY_FIELDS = List.of(
             "id", "createTime", "updateTime", "statusDesc", "beforeQty", "afterQty"
     );
@@ -139,7 +168,7 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(MODULE_WAREHOUSE, List.of(ID, "name", "code", "address", "managerId", "status"));
         QUERY_FIELDS.put(MODULE_ROLE, List.of(ID, "name", "code", "permissionNames", "remark", "status"));
         QUERY_FIELDS.put(MODULE_PERMISSION, List.of(ID, "name", "code", "module", "type", "parentId", "path", "sort", "icon", "component", "status"));
-        QUERY_FIELDS.put(GOODS, List.of(ID, "name", "englishName", "seriesId", "brandId", "categoryId", "makerId", "sort", "status", "isHot"));
+        QUERY_FIELDS.put(GOODS, List.of("name", "skuCode", "brandId", "seriesId", "categoryId", "makerId", "status"));
         QUERY_FIELDS.put(MODULE_GOODS_LEVEL_PRICE, List.of(ID, "goodsId", "skuId", "skuCode", "levelId", "price", "currency", "discount", "effectiveTime", "expireTime", "status"));
         QUERY_FIELDS.put(MODULE_MAKER, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(MODULE_BRAND, List.of(ID, "name", "englishName", "image", "content", "status"));
@@ -251,25 +280,36 @@ public final class ModuleMeta {
         setType("isHot", FieldType.SELECT);
         RELATION_FIELD_MODULE.keySet().forEach(key -> setType(key, FieldType.RELATION));
 
-        putOptions("status", List.of(new Option("有効", "1"), new Option("無効", "0")));
+        putOptions("status", List.of(new Option("\u6709\u52b9", "1"), new Option("\u7121\u52b9", "0")));
         putOptions(STOCK_ORDER + ".orderType", List.of(
-                new Option("入庫", "1"), new Option("出庫", "2"), new Option("調整", "3"),
-                new Option("棚卸", "4"), new Option("移動", "5"), new Option("返品", "6")
+                new Option("\u5165\u5eab", "1"), new Option("\u51fa\u5eab", "2"), new Option("\u8abf\u6574", "3"),
+                new Option("\u68da\u5378", "4"), new Option("\u79fb\u52d5", "5"), new Option("\u8fd4\u54c1", "6")
         ));
         putOptions(STOCK_ORDER + ".sourceType", List.of(
-                new Option("注文", "1"), new Option("返品", "2"), new Option("申請書", "3"), new Option("手動", "4")
+                new Option("\u6ce8\u6587", "1"), new Option("\u8fd4\u54c1", "2"), new Option("\u7533\u8acb\u66f8", "3"), new Option("\u624b\u52d5", "4")
         ));
         putOptions(STOCK_ORDER + ".state", List.of(
-                new Option("草稿", "0"), new Option("審査中", "1"), new Option("完了", "2"), new Option("取消", "3")
+                new Option("\u8349\u7a3f", "0"), new Option("\u5be9\u67fb\u4e2d", "1"), new Option("\u5b8c\u4e86", "2"), new Option("\u53d6\u6d88", "3")
         ));
         putOptions(REQUEST_FORM + ".state", List.of(
-                new Option("草稿", "0"), new Option("審査中", "1"), new Option("完了", "2"), new Option("取消", "3")
+                new Option("\u8349\u7a3f", "0"), new Option("\u5be9\u67fb\u4e2d", "1"), new Option("\u5b8c\u4e86", "2"), new Option("\u53d6\u6d88", "3")
         ));
         putOptions(MODULE_STOCK + ".sourceType", List.of(
-                new Option("自社入庫（承認必須）", "1"), new Option("再販売入庫（即時入庫）", "2")
+                new Option("\u81ea\u793e\u5165\u5eab\uff08\u627f\u8a8d\u5fc5\u9808\uff09", "1"),
+                new Option("\u518d\u8ca9\u58f2\u5165\u5eab\uff08\u5373\u6642\u5165\u5eab\uff09", "2")
+        ));
+        putOptions(MODULE_STOCK_RECORD + ".orderType", List.of(
+                new Option("\u5165\u5eab", "1"), new Option("\u51fa\u5eab", "2"), new Option("\u8abf\u6574", "3"),
+                new Option("\u68da\u5378", "4"), new Option("\u79fb\u52d5", "5"), new Option("\u8fd4\u54c1", "6")
+        ));
+        putOptions(MODULE_STOCK_RECORD + ".sourceType", List.of(
+                new Option("\u6ce8\u6587", "1"), new Option("\u8fd4\u54c1", "2"), new Option("\u7533\u8acb\u66f8", "3"), new Option("\u624b\u52d5", "4")
         ));
         putOptions(MODULE_MESSAGE + ".isRead", List.of(
-                new Option("未読", "0"), new Option("既読", "1")
+                new Option("\u672a\u8aad", "0"), new Option("\u65e2\u8aad", "1")
+        ));
+        putOptions(MODULE_MESSAGE + ".state", List.of(
+                new Option("\u672a\u8aad", "0"), new Option("\u65e2\u8aad", "1")
         ));
 
         DEPENDENCY_RULES.put(GOODS, List.of(
@@ -302,12 +342,26 @@ public final class ModuleMeta {
 
         HIDDEN_LIST_FIELDS.put(GOODS_SKU, List.of("costPrice", "updatePrice", "priceUpdateTime", "barcode", "weight", "volume"));
         HIDDEN_LIST_FIELDS.put(MODULE_GOODS_IMAGE, List.of("imageUrl"));
+        PREFERRED_COLUMNS.put(GOODS, List.of(
+                "skuId", "goodsName", "name", "goodsId", "englishName", "customerCode", "brandName", "seriesName",
+                "categoryName", "makerName", "stockTypeName", "skuCode", "skuName", "specSummary", "barcode",
+                "weight", "volume", "price", "costPrice", "updatePrice", "oldPrice", "newPrice", "discount",
+                "currency", "currentQty", "lockQty", "beforeQty", "changeQty", "afterQty", "statusDesc", "status",
+                "mainImage", "imageUrl", "priceUpdateTime", "effectiveTime", "expireTime", "remark", "description",
+                "sort", "version", "createdBy", "updatedBy", "createTime", "updateTime"
+        ));
 
         ACTION_POLICIES.put(MODULE_STOCK_RECORD, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_PRICE_RECORD, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_OPERATE_LOG, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_MESSAGE, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(GOODS, new ModuleActionPolicy(true, false, true, true, true));
+
+        FORM_VALUE_RULES.put(GOODS, List.of(
+                FormValueRule.copyIfBlank("skuName", "name"),
+                FormValueRule.defaultIfBlank("currency", "JPY"),
+                FormValueRule.clearWhenBlank("priceUpdateTime", "updatePrice")
+        ));
     }
 
     private static void setType(String field, FieldType type) {
@@ -334,6 +388,7 @@ public final class ModuleMeta {
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
         ordered.add(ID);
         ordered.addAll(queryFields(moduleKey));
+        ordered.addAll(PREFERRED_COLUMNS.getOrDefault(moduleKey, List.of()));
         for (String key : keys) {
             ordered.add(key);
         }
@@ -423,5 +478,33 @@ public final class ModuleMeta {
             }
         }
         return false;
+    }
+
+    public static JSONObject applyFormValueRules(String moduleKey, JSONObject dto) {
+        if (dto == null) {
+            return new JSONObject();
+        }
+        for (FormValueRule rule : FORM_VALUE_RULES.getOrDefault(moduleKey, List.of())) {
+            if (rule.defaultValue != null) {
+                if (isBlank(dto.opt(rule.targetField))) {
+                    dto.put(rule.targetField, rule.defaultValue);
+                }
+                continue;
+            }
+            if (rule.sourceField != null) {
+                if (isBlank(dto.opt(rule.targetField)) && !isBlank(dto.opt(rule.sourceField))) {
+                    dto.put(rule.targetField, String.valueOf(dto.opt(rule.sourceField)).trim());
+                }
+                continue;
+            }
+            if (rule.clearWhenBlankField != null && isBlank(dto.opt(rule.clearWhenBlankField))) {
+                dto.remove(rule.targetField);
+            }
+        }
+        return dto;
+    }
+
+    private static boolean isBlank(Object value) {
+        return value == null || String.valueOf(value).trim().isEmpty();
     }
 }

@@ -83,8 +83,15 @@ public class RequestFormController {
     }
 
     @GetMapping({"/{id}/download", "/download/{id}"})
-    public void download(@PathVariable("id") @NotNull Long id, HttpServletResponse response) {
-        requestFormService.downloadBDeptRequestForm(id, response);
+    public void download(@PathVariable("id") @NotNull Long id,
+                         @RequestParam(value = "format", defaultValue = "excel") String format,
+                         HttpServletResponse response) {
+        requestFormService.downloadRequestForm(id, format, response);
+    }
+
+    @GetMapping({"/{id}/pdf", "/pdf/{id}"})
+    public void downloadPdf(@PathVariable("id") @NotNull Long id, HttpServletResponse response) {
+        requestFormService.downloadRequestForm(id, "pdf", response);
     }
 }
 

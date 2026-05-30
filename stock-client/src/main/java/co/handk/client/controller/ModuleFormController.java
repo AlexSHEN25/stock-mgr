@@ -74,6 +74,7 @@ public class ModuleFormController {
         errorLabel.setText("");
         try {
             JSONObject dto = toJson();
+            dto = ModuleMeta.applyFormValueRules(module, dto);
             if (editMode && !dto.has("id")) {
                 errorLabel.setText(UiText.MSG_EDIT_ID_REQUIRED);
                 return;

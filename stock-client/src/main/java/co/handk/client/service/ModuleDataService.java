@@ -1,5 +1,6 @@
 package co.handk.client.service;
 
+import co.handk.client.constant.UiText;
 import co.handk.client.constant.ModuleEndpointStrategy;
 import co.handk.client.util.ApiClient;
 import org.json.JSONArray;
@@ -68,7 +69,7 @@ public class ModuleDataService {
                     row.optString("goodsName",
                             row.optString("skuName",
                                     row.optString("username",
-                                            row.optString("code", "ID:" + id)))));
+                                            row.optString("code", String.format(UiText.RELATION_FALLBACK_PATTERN, id))))));
             options.add(Map.of("label", label, "value", id));
         }
         return options;

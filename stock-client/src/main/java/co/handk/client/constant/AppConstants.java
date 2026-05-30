@@ -46,9 +46,10 @@ public final class AppConstants {
         public static final String REQUEST_FORM_DOWNLOAD_V1 = "/requestForm/download/";
         public static final String REQUEST_FORM_DOWNLOAD_V2_PREFIX = "/requestForm/";
         public static final String REQUEST_FORM_DOWNLOAD_V2_SUFFIX = "/download";
+        public static final String REQUEST_FORM_PDF_V2_SUFFIX = "/pdf";
+        public static final String MESSAGE_READ_PREFIX = "/message/read/";
 
         private ApiPath() {
         }
     }
 }
-

@@ -35,6 +35,7 @@ import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
@@ -45,6 +46,9 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -61,9 +65,7 @@ import static co.handk.client.constant.AppConstants.Module;
 public class MainController {
 
     private static final String SELECTED_KEY = "__selected";
-    private static final String MODULE_OPERATE_LOG = "operateLog";
-    private static final String MODULE_STOCK_RECORD = "stockRecord";
-    private static final String MODULE_PRICE_RECORD = "priceRecord";
+    private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     @FXML private Label currentUserLabel;
@@ -372,7 +374,7 @@ public class MainController {
             for (int i = 0; i < records.length(); i++) {
                 JSONObject r = records.getJSONObject(i);
                 String id = String.valueOf(r.opt("id"));
-                String label = r.optString("name", r.optString("username", r.optString("code", "ID:" + id)));
+                String label = r.optString("name", r.optString("username", r.optString("code", String.format(UiText.RELATION_FALLBACK_PATTERN, id))));
                 options.add(new Option(label, id));
             }
         } catch (Exception ex) {
@@ -446,6 +448,7 @@ public class MainController {
 
     private void submitForm(boolean editMode, JSONObject dto) {
         try {
+            dto = ModuleMeta.applyFormValueRules(currentModule, dto);
             JSONObject json = dataService.save(currentModule, editMode, dto);
             if (uiFeedback.isSuccess(json)) {
                 messageLabel.setText(uiFeedback.saveSuccess(editMode));
@@ -491,7 +494,7 @@ public class MainController {
             }
             dto.put(key, val);
         }
-        return dto;
+        return ModuleMeta.applyFormValueRules(currentModule, dto);
     }
 
     private void loadData() {
@@ -584,6 +587,7 @@ public class MainController {
                         JSONObject json = tableActionService.readMessage(String.valueOf(id));
                         if (uiFeedback.isSuccess(json)) {
                             row.put("isRead", 1);
+                            row.put("state", 1);
                             dataTable.refresh();
                             messageLabel.setText(UiText.byKey("msg.readDone"));
                         } else {
@@ -602,7 +606,8 @@ public class MainController {
                     return;
                 }
                 Map<String, Object> row = getTableView().getItems().get(getIndex());
-                boolean unread = !String.valueOf(row.getOrDefault("isRead", "0")).equals("1");
+                Object rawRead = row.containsKey("isRead") ? row.get("isRead") : row.getOrDefault("state", "0");
+                boolean unread = !"1".equals(String.valueOf(rawRead));
                 setGraphic(unread ? btn : null);
             }
         });
@@ -663,38 +668,49 @@ public class MainController {
 
     private TableColumn<Map<String, Object>, Void> createDownloadActionColumn() {
         TableColumn<Map<String, Object>, Void> col = new TableColumn<>(UiText.ACTION_DOWNLOAD);
-        col.setPrefWidth(120);
+        col.setPrefWidth(140);
         col.setSortable(false);
         col.setReorderable(false);
         col.setCellFactory(param -> new TableCell<>() {
-            private final Button btn = new Button(UiText.ACTION_DOWNLOAD);
+            private final Button excelBtn = new Button(UiText.ACTION_DOWNLOAD_EXCEL);
+            private final Button pdfBtn = new Button(UiText.ACTION_DOWNLOAD_PDF);
+            private final HBox box = new HBox(6, excelBtn, pdfBtn);
             {
-                btn.setOnAction(event -> {
+                excelBtn.setOnAction(event -> {
                     Map<String, Object> row = getTableView().getItems().get(getIndex());
                     Object id = row.get(Field.ID);
                     if (id == null) {
                         messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
                         return;
                     }
-                    downloadRequestForm(String.valueOf(id));
+                    downloadRequestForm(String.valueOf(id), false);
+                });
+                pdfBtn.setOnAction(event -> {
+                    Map<String, Object> row = getTableView().getItems().get(getIndex());
+                    Object id = row.get(Field.ID);
+                    if (id == null) {
+                        messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
+                        return;
+                    }
+                    downloadRequestForm(String.valueOf(id), true);
                 });
             }
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : btn);
+                setGraphic(empty ? null : box);
             }
         });
         return col;
     }
 
-    private void downloadRequestForm(String id) {
+    private void downloadRequestForm(String id, boolean pdf) {
         try {
-            byte[] bytes = tableActionService.downloadRequestForm(id);
+            byte[] bytes = tableActionService.downloadRequestForm(id, pdf ? "pdf" : "excel");
             FileChooser chooser = new FileChooser();
             chooser.setTitle(UiText.TITLE_SAVE_FILE);
-            chooser.setInitialFileName(String.format(UiText.DOWNLOAD_FILENAME_PATTERN, id));
-            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx"));
+            chooser.setInitialFileName(String.format(pdf ? UiText.DOWNLOAD_PDF_FILENAME_PATTERN : UiText.DOWNLOAD_FILENAME_PATTERN, id));
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(pdf ? "PDF" : "Excel", pdf ? "*.pdf" : "*.xlsx"));
             Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
             File target = chooser.showSaveDialog(owner);
             if (target == null) {
@@ -726,9 +742,7 @@ public class MainController {
                     }
                     switchModule(targetModule, title);
                     Control control = queryControls.get(filterField);
-                    if (control instanceof TextField tf) {
-                        tf.setText(String.valueOf(id));
-                    }
+                    setControlValue(control, String.valueOf(id));
                     pageNum = 1;
                     loadData();
                 });
@@ -777,7 +791,7 @@ public class MainController {
             if (option != null) {
                 return new SimpleStringProperty(option.label);
             }
-            return new SimpleStringProperty(String.valueOf(v));
+            return new SimpleStringProperty(formatCellValue(key, v));
         });
         col.setOnEditCommit(evt -> {
             if (ModuleMeta.isInlineReadonlyField(key)) {
@@ -800,8 +814,61 @@ public class MainController {
         return col;
     }
 
+    private void setControlValue(Control control, String value) {
+        if (control instanceof TextField tf) {
+            tf.setText(value);
+            return;
+        }
+        if (control instanceof ComboBox<?> combo) {
+            @SuppressWarnings("unchecked")
+            ComboBox<Option> cb = (ComboBox<Option>) combo;
+            Option found = null;
+            for (Option option : cb.getItems()) {
+                if (String.valueOf(option.value).equals(value)) {
+                    found = option;
+                    break;
+                }
+            }
+            if (found != null) {
+                cb.setValue(found);
+            } else {
+                Option fallback = new Option(value, value);
+                cb.getItems().add(fallback);
+                cb.setValue(fallback);
+            }
+        }
+    }
+
+    private String formatCellValue(String key, Object value) {
+        if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value);
+        if (text.isBlank()) {
+            return "";
+        }
+        String lower = key == null ? "" : key.toLowerCase();
+        if (lower.contains("time") || lower.contains("date")) {
+            return tryFormatDateTime(text);
+        }
+        return text;
+    }
+
+    private String tryFormatDateTime(String text) {
+        try {
+            return LocalDateTime.parse(text).format(DISPLAY_TIME);
+        } catch (Exception ignored) {
+            // continue
+        }
+        try {
+            return OffsetDateTime.parse(text).toLocalDateTime().format(DISPLAY_TIME);
+        } catch (Exception ignored) {
+            return text;
+        }
+    }
+
     private String columnTitle(String key) {
-        return Field.ID.equals(key) ? "ID" : ModuleMeta.normalizeTitle(key);
+        return Field.ID.equals(key) ? UiText.FIELD_ID : ModuleMeta.normalizeTitle(key);
     }
 
     private String normalizeEnumValue(String value) {
@@ -858,9 +925,8 @@ public class MainController {
     }
 
     private boolean isReadOnlyModule() {
-        return MODULE_OPERATE_LOG.equals(currentModule)
-                || MODULE_STOCK_RECORD.equals(currentModule)
-                || MODULE_PRICE_RECORD.equals(currentModule);
+        ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
+        return !policy.canCreate && !policy.canInlineEdit && !policy.canEdit && !policy.canBatchDelete && !policy.canDelete;
     }
 
     private void focusFirstQueryField() {

@@ -23,6 +23,8 @@ public final class UiText {
     public static final String ACTION_ORDER_DETAIL = t("action.orderDetail");
     public static final String ACTION_REQUEST_DETAIL = t("action.requestDetail");
     public static final String ACTION_DOWNLOAD = t("action.download");
+    public static final String ACTION_DOWNLOAD_EXCEL = t("action.downloadExcel");
+    public static final String ACTION_DOWNLOAD_PDF = t("action.downloadPdf");
 
     public static final String TITLE_CONFIRM_BATCH_DELETE = t("title.confirmBatchDelete");
     public static final String TITLE_CONFIRM_DELETE = t("title.confirmDelete");
@@ -67,7 +69,10 @@ public final class UiText {
 
     public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
     public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");
+    public static final String DOWNLOAD_PDF_FILENAME_PATTERN = t("format.downloadPdfFilename");
     public static final String DELETE_ID_PATTERN = t("format.deleteId");
+    public static final String RELATION_FALLBACK_PATTERN = t("format.relationFallback");
+    public static final String FIELD_ID = t("field.id");
 
     public static String byKey(String key) {
         return t(key);

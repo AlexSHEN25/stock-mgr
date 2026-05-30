@@ -1,6 +1,7 @@
 package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.util.List;
@@ -25,7 +26,11 @@ public class RequestFormItemBatchDTO {
 
     @Data
     public static class Item {
+        @NotNull(message = "stockRecordIdは必須です")
         private Long stockRecordId;
+
+        @NotNull(message = "requestQtyは必須です")
+        @PositiveOrZero(message = "requestQtyは0以上で入力してください")
         private Integer requestQty;
     }
 }

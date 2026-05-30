@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS `t_user`;
+﻿DROP TABLE IF EXISTS `t_user`;
 create TABLE `t_user`
 (
     `id`          BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT COMMENT 'ID',

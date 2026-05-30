@@ -23,5 +23,7 @@ public interface RequestFormService extends BaseService<RequestForm, RequestForm
 
     Boolean removeItemsFromRequest(RequestFormItemBatchDTO dto);
 
+    void downloadRequestForm(Long requestId, String format, HttpServletResponse response);
+
     void downloadBDeptRequestForm(Long requestId, HttpServletResponse response);
 }
