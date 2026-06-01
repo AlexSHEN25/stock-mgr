@@ -51,9 +51,10 @@
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
                                 <Button text="%main.menu.stock" userData="stock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.stockOrder" userData="stockOrder" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.stockOrderItem" userData="stockOrderItem" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockType" userData="stockType" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockRecord" userData="stockRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="%main.menu.stockOrder" userData="stockOrder" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.priceRecord" userData="priceRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                             </VBox>
                         </content>
@@ -96,6 +97,7 @@
             <Label fx:id="pageTitleLabel" text="%main.page.dashboard" styleClass="page-title"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Label fx:id="currentUserLabel" text="-" styleClass="user-chip"/>
+            <Button text="%main.changePassword" onAction="#onChangePassword" styleClass="link-btn"/>
             <Button text="%main.logout" onAction="#onLogout" styleClass="link-btn"/>
         </HBox>
     </top>

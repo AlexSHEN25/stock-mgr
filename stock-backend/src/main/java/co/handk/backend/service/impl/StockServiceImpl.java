@@ -15,6 +15,7 @@ import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
 import co.handk.backend.service.MessageService;
+import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.PriceRecordService;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.backend.service.StockOrderService;
@@ -25,6 +26,7 @@ import co.handk.backend.service.UserService;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
@@ -70,6 +72,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private MessageService messageService;
     @Autowired
     private PriceRecordService priceRecordService;
+    @Autowired
+    private PermissionQueryService permissionQueryService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -120,23 +124,22 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long inbound(StockOperateDTO dto) {
-        Stock stock = requireStock(dto.getStockId());
+        Stock stock = resolveInboundStock(dto);
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
         String stockTypeName = getStockTypeName(stock.getStockTypeId());
 
-        int scene = dto.getSourceType() == null ? StockBizConstant.INBOUND_SCENE_RESALE : dto.getSourceType();
-        boolean needApprove = scene == StockBizConstant.INBOUND_SCENE_SELF;
-
+        int scene = resolveInboundScene(dto.getSourceType());
         int beforeQty = safeInt(stock.getCurrentQty());
         int afterQty = beforeQty + dto.getQuantity();
 
-        int state = needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED;
-        int sourceType = needApprove ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
+        int sourceType = scene == StockBizConstant.INBOUND_SCENE_SELF
+                ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
+        boolean needApprove = scene == StockBizConstant.INBOUND_SCENE_SELF;
 
-        StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType, state);
+        StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType,
+                needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
         saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
-
         if (!needApprove) {
             updateStockQuantityWithVersion(stock, afterQty);
             saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
@@ -162,24 +165,26 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         int afterQty = beforeQty - dto.getQuantity();
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_OUTBOUND,
-                StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_FINISHED);
+                StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING);
         saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
-
-        updateStockQuantityWithVersion(stock, afterQty);
-            saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
-        notifyLowStock(sku.getSkuCode(), afterQty, order.getId());
         return order.getId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean approveInbound(Long orderId, Boolean approved, String approveRemark) {
+    public Boolean approveOrder(Long orderId, Boolean approved, String approveRemark) {
+        Long approverId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(approverId)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "only administrators can approve stock orders");
+        }
         StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         if (order == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
         }
-        if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())) {
+        if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
+                && !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
         }
@@ -188,7 +193,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
         }
 
-        order.setApproverId(UserContext.getUserIdOrDefault());
+        order.setApproverId(approverId);
         User approver = userService.getByIdNotDeleted(order.getApproverId());
         order.setApproverName(approver == null ? null : approver.getUsername());
         order.setApproveTime(LocalDateTime.now());
@@ -219,8 +224,22 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
 
             int beforeQty = safeInt(stock.getCurrentQty());
-            int afterQty = beforeQty + safeInt(item.getChangeQty());
+            int changeQty = safeInt(item.getChangeQty());
+            int afterQty = Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
+                    ? beforeQty + changeQty : beforeQty - changeQty;
+            if (afterQty < 0) {
+                notifyInsufficientStock(item.getSkuCode(), changeQty, beforeQty, stock.getId());
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "insufficient stock for approved outbound order: SKU[" + item.getSkuCode() + "]");
+            }
             updateStockQuantityWithVersion(stock, afterQty);
+            item.setBeforeQty(beforeQty);
+            item.setAfterQty(afterQty);
+            if (!stockOrderItemService.updateById(item)) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "failed to update approved inbound item");
+            }
 
             StockRecord record = new StockRecord();
             record.setBizNo(order.getOrderNo());
@@ -262,7 +281,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
             }
 
-            notifyInbound(item.getSkuCode(), safeInt(item.getChangeQty()), afterQty, order.getId());
+            if (Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())) {
+                notifyInbound(item.getSkuCode(), changeQty, afterQty, order.getId());
+            } else {
+                notifyLowStock(item.getSkuCode(), afterQty, order.getId());
+            }
         }
 
         order.setState(StockBizConstant.ORDER_STATE_FINISHED);
@@ -338,7 +361,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             totalQty += qty;
         }
 
-        int sourceType = dto.getSourceType() == null ? StockBizConstant.SOURCE_TYPE_MANUAL : dto.getSourceType();
+        boolean selfInbound = orderType == StockBizConstant.ORDER_TYPE_INBOUND
+                && resolveInboundScene(dto.getSourceType()) == StockBizConstant.INBOUND_SCENE_SELF;
+        int sourceType = selfInbound ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
+        boolean needApprove = orderType == StockBizConstant.ORDER_TYPE_OUTBOUND || selfInbound;
         StockOrder order = new StockOrder();
         order.setOrderNo(generateOrderNo(orderType));
         order.setOrderType(orderType);
@@ -346,7 +372,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setSourceType(sourceType);
         order.setTotalQty(totalQty);
         order.setStockTypeId(stockTypeId);
-        order.setState(StockBizConstant.ORDER_STATE_FINISHED);
+        order.setState(needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
         Long userId = UserContext.getUserIdOrDefault();
         User user = userService.getByIdNotDeleted(userId);
         String username = user == null ? null : user.getUsername();
@@ -356,7 +382,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setOperatorName(username);
         order.setRemark(orderRemark);
         order.setBizDate(bizDate);
-        order.setFinishTime(LocalDateTime.now());
+        if (!needApprove) {
+            order.setFinishTime(LocalDateTime.now());
+        }
         if (!stockOrderService.save(order)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
@@ -388,6 +416,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
             }
 
+            if (needApprove) {
+                continue;
+            }
             updateStockQuantityWithVersion(working.stock, working.afterQty);
 
             StockRecord record = new StockRecord();
@@ -444,6 +475,44 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (stock == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
+        }
+        return stock;
+    }
+
+    private Stock resolveInboundStock(StockOperateDTO dto) {
+        if (dto.getStockId() != null) {
+            return requireStock(dto.getStockId());
+        }
+        if (dto.getGoodsId() == null || dto.getSkuId() == null || dto.getWarehouseId() == null
+                || dto.getStockTypeId() == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "goodsId, skuId, warehouseId and stockTypeId are required for inbound");
+        }
+        Goods goods = requireGoods(dto.getGoodsId());
+        GoodsSku sku = requireSku(dto.getSkuId(), goods.getId());
+        Stock existing = findStock(goods.getId(), sku.getId(), Long.valueOf(dto.getWarehouseId()), dto.getStockTypeId());
+        if (existing != null) {
+            return existing;
+        }
+
+        Stock stock = new Stock();
+        stock.setGoodsId(dto.getGoodsId());
+        stock.setGoodsName(goods.getName());
+        stock.setSkuId(sku.getId());
+        stock.setSkuCode(sku.getSkuCode());
+        stock.setWarehouseId(dto.getWarehouseId());
+        stock.setCurrentQty(0);
+        stock.setLockQty(0);
+        stock.setPrice(sku.getPrice());
+        stock.setCurrency(sku.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : sku.getCurrency());
+        stock.setPriceUpdateTime(sku.getPriceUpdateTime());
+        stock.setStockTypeId(dto.getStockTypeId());
+        stock.setStatus(StatusEnum.NOMAL.getCode());
+        stock.setVersion(0L);
+        if (!this.save(stock)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "failed to initialize stock for inbound");
         }
         return stock;
     }
@@ -612,6 +681,15 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private int safeInt(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    private int resolveInboundScene(Integer sourceType) {
+        int scene = sourceType == null ? StockBizConstant.INBOUND_SCENE_RESALE : sourceType;
+        if (scene != StockBizConstant.INBOUND_SCENE_SELF && scene != StockBizConstant.INBOUND_SCENE_RESALE) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "invalid inbound source type");
+        }
+        return scene;
     }
 
     private void updateStockQuantityWithVersion(Stock stock, int afterQty) {

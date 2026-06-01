@@ -7,17 +7,24 @@ import lombok.Data;
 @Data
 public class StockOperateDTO {
 
-    @NotNull(message = "在庫商品IDは必須です")
     private Long stockId;
 
-    @NotNull(message = "数量は必須です")
-    @Min(value = 1, message = "数量は1以上で入力してください")
+    private Integer goodsId;
+
+    private Long skuId;
+
+    private Integer warehouseId;
+
+    private Long stockTypeId;
+
+    @NotNull(message = "quantity is required")
+    @Min(value = 1, message = "quantity must be at least 1")
     private Integer quantity;
 
     /**
-     * 入庫のみ有効
-     * 1: 自社入庫（承認必要）
-     * 2: 再販入庫（即時反映）
+     * Inbound only:
+     * 1: self inbound (approval required)
+     * 2: resale inbound (immediate)
      */
     private Integer sourceType;
 

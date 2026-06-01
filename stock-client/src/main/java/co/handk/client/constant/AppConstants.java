@@ -14,6 +14,7 @@ public final class AppConstants {
         public static final String CATEGORY = "category";
         public static final String STOCK_ORDER = "stockOrder";
         public static final String STOCK_ORDER_ITEM = "stockOrderItem";
+        public static final String STOCK = "stock";
         public static final String REQUEST_FORM = "requestForm";
         public static final String REQUEST_ITEM = "requestItem";
 
@@ -45,6 +46,8 @@ public final class AppConstants {
         public static final String USER_PAGE = "/user/page";
         public static final String USER_LOGIN = "/user/login";
         public static final String USER_LOGOUT = "/user/logout";
+        public static final String USER_PASSWORD_PREFIX = "/user/";
+        public static final String USER_PASSWORD_SUFFIX = "/password";
         public static final String GOODS_SKU_PAGE = "/goodsSku/page";
         public static final String GOODS_PAGE = "/goods/page";
         public static final String SERIES_PAGE = "/series/page";
@@ -54,6 +57,7 @@ public final class AppConstants {
         public static final String REQUEST_FORM_PDF_V2_SUFFIX = "/pdf";
         public static final String MESSAGE_READ_PREFIX = "/message/read/";
         public static final String MESSAGE_READ_ALL = "/message/read-all";
+        public static final String STOCK_INBOUND = "/stock/inbound";
 
         private ApiPath() {
         }

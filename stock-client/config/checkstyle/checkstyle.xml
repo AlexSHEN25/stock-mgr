@@ -7,7 +7,7 @@
 
     <module name="RegexpSingleline">
         <property name="id" value="forbidSilentIgnoredCatch"/>
-        <property name="format" value="catch\\s*\\(\\s*Exception\\s+ignored\\s*\\)"/>
+        <property name="format" value="catch\s*\(\s*Exception\s+ignored\s*\)"/>
         <property name="message" value="Do not silently ignore exceptions. Log context or handle explicitly."/>
         <property name="fileExtensions" value="java"/>
     </module>

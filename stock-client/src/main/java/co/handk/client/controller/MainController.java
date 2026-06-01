@@ -5,8 +5,9 @@ import co.handk.client.constant.UiText;
 import co.handk.client.model.Session;
 import co.handk.client.service.ModuleDataService;
 import co.handk.client.service.TableActionService;
+import co.handk.client.service.TableRowService;
 import co.handk.client.service.UiFeedbackService;
-import co.handk.client.util.ApiClient;
+import co.handk.client.service.UserAccountService;
 import co.handk.client.util.ModuleMeta;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -25,6 +26,8 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -46,9 +49,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -58,14 +58,12 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static co.handk.client.constant.AppConstants.ApiPath;
 import static co.handk.client.constant.AppConstants.Field;
 import static co.handk.client.constant.AppConstants.Module;
 
 public class MainController {
 
     private static final String SELECTED_KEY = "__selected";
-    private static final DateTimeFormatter DISPLAY_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     @FXML private Label currentUserLabel;
@@ -91,7 +89,9 @@ public class MainController {
     private final Map<String, Control> queryControls = new LinkedHashMap<>();
     private final ModuleDataService dataService = new ModuleDataService();
     private final TableActionService tableActionService = new TableActionService();
+    private final TableRowService tableRowService = new TableRowService();
     private final UiFeedbackService uiFeedback = new UiFeedbackService();
+    private final UserAccountService userAccountService = new UserAccountService();
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
 
@@ -199,7 +199,7 @@ public class MainController {
             return;
         }
         try {
-            JSONObject dto = normalizeRowForUpdate(inlineEditingRow);
+            JSONObject dto = tableRowService.normalizeForUpdate(currentModule, inlineEditingRow, SELECTED_KEY);
             JSONObject json = dataService.save(currentModule, true, dto);
             if (uiFeedback.isSuccess(json)) {
                 messageLabel.setText(UiText.MSG_INLINE_UPDATE_SUCCESS);
@@ -220,7 +220,7 @@ public class MainController {
             messageLabel.setText(UiText.MSG_INLINE_EDIT_NONE);
             return;
         }
-        SimpleBooleanProperty selectedProperty = selectedProperty(inlineEditingRow);
+        SimpleBooleanProperty selectedProperty = tableRowService.selectedProperty(inlineEditingRow, SELECTED_KEY);
         inlineEditingRow.clear();
         inlineEditingRow.putAll(inlineBackup);
         inlineEditingRow.put(SELECTED_KEY, selectedProperty);
@@ -254,10 +254,7 @@ public class MainController {
             messageLabel.setText(UiText.MSG_BATCH_DELETE_CHECK);
             return;
         }
-        List<String> ids = new ArrayList<>();
-        for (Map<String, Object> row : checkedRows) {
-            ids.add(resolveRecordId(row));
-        }
+        List<String> ids = tableRowService.resolveRecordIds(checkedRows);
         if (!confirm(UiText.TITLE_CONFIRM_BATCH_DELETE, String.format(UiText.MSG_CONFIRM_BATCH_DELETE, ids.size()))) {
             messageLabel.setText(UiText.MSG_BATCH_DELETE_CANCELLED);
             return;
@@ -297,13 +294,60 @@ public class MainController {
     }
 
     @FXML
+    private void onChangePassword() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(UiText.TITLE_CHANGE_PASSWORD);
+        dialog.setHeaderText(null);
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
+
+        PasswordField passwordField = new PasswordField();
+        PasswordField confirmPasswordField = new PasswordField();
+        passwordField.setPromptText(UiText.FIELD_NEW_PASSWORD);
+        confirmPasswordField.setPromptText(UiText.FIELD_CONFIRM_PASSWORD);
+
+        GridPane content = new GridPane();
+        content.setHgap(10);
+        content.setVgap(10);
+        content.add(new Label(UiText.FIELD_NEW_PASSWORD), 0, 0);
+        content.add(passwordField, 1, 0);
+        content.add(new Label(UiText.FIELD_CONFIRM_PASSWORD), 0, 1);
+        content.add(confirmPasswordField, 1, 1);
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        Optional<ButtonType> result = dialog.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
+        String password = passwordField.getText();
+        if (password == null || password.isBlank()) {
+            messageLabel.setText(UiText.MSG_NEW_PASSWORD_REQUIRED);
+            return;
+        }
+        if (!password.equals(confirmPasswordField.getText())) {
+            messageLabel.setText(UiText.MSG_PASSWORD_MISMATCH);
+            return;
+        }
+        try {
+            JSONObject json = userAccountService.changePassword(Session.getUserId(), password);
+            messageLabel.setText(uiFeedback.isSuccess(json)
+                    ? UiText.MSG_PASSWORD_CHANGE_SUCCESS
+                    : uiFeedback.resolveMessage(json, UiText.MSG_PASSWORD_CHANGE_FAILED));
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_PASSWORD_CHANGE_FAILED + ": " + ex.getMessage());
+        }
+    }
+
+    @FXML
     private void onLogout() {
         if (!confirm(UiText.TITLE_CONFIRM_LOGOUT, UiText.MSG_CONFIRM_LOGOUT)) {
             return;
         }
         try {
-            String res = ApiClient.post(ApiPath.USER_LOGOUT, "{}");
-            JSONObject json = new JSONObject(res);
+            JSONObject json = userAccountService.logout();
             if (uiFeedback.isSuccess(json)) {
                 Session.clear();
                 app.showLogin();
@@ -485,42 +529,6 @@ public class MainController {
         }
     }
 
-    private JSONObject normalizeRowForUpdate(Map<String, Object> row) {
-        JSONObject dto = new JSONObject();
-        for (Map.Entry<String, Object> entry : row.entrySet()) {
-            String key = entry.getKey();
-            if (SELECTED_KEY.equals(key) || key.endsWith("Name") || key.endsWith("Desc")
-                    || Field.CREATE_TIME.equals(key) || Field.UPDATE_TIME.equals(key)) {
-                continue;
-            }
-            Object val = entry.getValue();
-            if (val == null) {
-                continue;
-            }
-            if (val instanceof String s) {
-                String text = s.trim();
-                if (text.isEmpty()) {
-                    continue;
-                }
-                ModuleMeta.FieldType type = ModuleMeta.fieldType(currentModule, key);
-                try {
-                    if (type == ModuleMeta.FieldType.NUMBER) {
-                        dto.put(key, text.contains(".") ? Double.parseDouble(text) : Long.parseLong(text));
-                    } else {
-                        dto.put(key, text);
-                    }
-                    continue;
-                } catch (Exception ex) {
-                    LOGGER.log(Level.WARNING, "Numeric parse fallback. module=" + currentModule + ", field=" + key + ", value=" + text, ex);
-                    dto.put(key, text);
-                    continue;
-                }
-            }
-            dto.put(key, val);
-        }
-        return ModuleMeta.applyFormValueRules(currentModule, dto);
-    }
-
     private void loadData() {
         try {
             JSONObject wrapper = dataService.fetchPage(currentModule, pageNum, PAGE_SIZE, buildQueryParams());
@@ -553,19 +561,9 @@ public class MainController {
 
     private void buildTable(JSONArray records) {
         dataTable.getColumns().clear();
-        ObservableList<Map<String, Object>> rows = FXCollections.observableArrayList();
-        LinkedHashSet<String> keys = new LinkedHashSet<>();
-
-        for (int i = 0; i < records.length(); i++) {
-            JSONObject item = records.getJSONObject(i);
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put(SELECTED_KEY, new SimpleBooleanProperty(false));
-            for (String key : item.keySet()) {
-                row.put(key, item.opt(key));
-                keys.add(key);
-            }
-            rows.add(row);
-        }
+        ObservableList<Map<String, Object>> rows = FXCollections.observableArrayList(
+                tableRowService.createRows(records, SELECTED_KEY));
+        LinkedHashSet<String> keys = tableRowService.visibleKeys(rows, SELECTED_KEY);
 
         dataTable.getColumns().add(createSelectColumn(rows));
         for (String key : ModuleMeta.orderedColumns(currentModule, keys)) {
@@ -785,7 +783,8 @@ public class MainController {
     private TableColumn<Map<String, Object>, Boolean> createSelectColumn(ObservableList<Map<String, Object>> rows) {
         TableColumn<Map<String, Object>, Boolean> column = new TableColumn<>();
         CheckBox selectAll = new CheckBox();
-        selectAll.setOnAction(event -> rows.forEach(row -> selectedProperty(row).set(selectAll.isSelected())));
+        selectAll.setOnAction(event -> rows.forEach(
+                row -> tableRowService.selectedProperty(row, SELECTED_KEY).set(selectAll.isSelected())));
         column.setGraphic(selectAll);
         column.setEditable(true);
         column.setSortable(false);
@@ -793,7 +792,7 @@ public class MainController {
         column.setPrefWidth(46);
         column.setMinWidth(46);
         column.setMaxWidth(46);
-        column.setCellValueFactory(cell -> selectedProperty(cell.getValue()));
+        column.setCellValueFactory(cell -> tableRowService.selectedProperty(cell.getValue(), SELECTED_KEY));
         column.setCellFactory(CheckBoxTableCell.forTableColumn(column));
         column.getStyleClass().add("select-column");
         return column;
@@ -804,21 +803,8 @@ public class MainController {
         col.setPrefWidth(("id".equalsIgnoreCase(key) || (Module.GOODS.equals(currentModule) && Field.SKU_ID.equalsIgnoreCase(key))) ? 90 : 150);
         col.setEditable(!ModuleMeta.isInlineReadonlyField(key));
         col.setCellFactory(TextFieldTableCell.forTableColumn());
-        col.setCellValueFactory(cell -> {
-            Object v = cell.getValue().getOrDefault(key, "");
-            if (Field.STATUS.equals(key)) {
-                String normalized = normalizeEnumValue(String.valueOf(v));
-                ModuleMeta.Option opt = ModuleMeta.optionByValue(currentModule, key, normalized);
-                if (opt != null) {
-                    return new SimpleStringProperty(opt.label);
-                }
-            }
-            ModuleMeta.Option option = ModuleMeta.optionByValue(currentModule, key, String.valueOf(v));
-            if (option != null) {
-                return new SimpleStringProperty(option.label);
-            }
-            return new SimpleStringProperty(formatCellValue(key, v));
-        });
+        col.setCellValueFactory(cell ->
+                new SimpleStringProperty(tableRowService.displayCellValue(currentModule, key, cell.getValue())));
         col.setOnEditCommit(evt -> {
             if (ModuleMeta.isInlineReadonlyField(key)) {
                 dataTable.refresh();
@@ -831,7 +817,7 @@ public class MainController {
             String val = evt.getNewValue();
             if (ModuleMeta.fieldType(currentModule, key) == ModuleMeta.FieldType.SELECT) {
                 ModuleMeta.Option byLabel = ModuleMeta.optionByLabel(currentModule, key, val);
-                row.put(key, byLabel != null ? byLabel.value : normalizeEnumValue(val));
+                row.put(key, byLabel != null ? byLabel.value : tableRowService.normalizeEnumValue(val));
             } else {
                 row.put(key, val);
             }
@@ -865,34 +851,6 @@ public class MainController {
         }
     }
 
-    private String formatCellValue(String key, Object value) {
-        if (value == null) {
-            return "";
-        }
-        String text = String.valueOf(value);
-        if (text.isBlank()) {
-            return "";
-        }
-        String lower = key == null ? "" : key.toLowerCase();
-        if (lower.contains("time") || lower.contains("date")) {
-            return tryFormatDateTime(text);
-        }
-        return text;
-    }
-
-    private String tryFormatDateTime(String text) {
-        try {
-            return LocalDateTime.parse(text).format(DISPLAY_TIME);
-        } catch (Exception ignored) {
-            // continue
-        }
-        try {
-            return OffsetDateTime.parse(text).toLocalDateTime().format(DISPLAY_TIME);
-        } catch (Exception ignored) {
-            return text;
-        }
-    }
-
     private String columnTitle(String key) {
         if (Field.ID.equalsIgnoreCase(key)) {
             return UiText.FIELD_ID;
@@ -903,57 +861,15 @@ public class MainController {
         return ModuleMeta.normalizeTitle(key);
     }
 
-    private String normalizeEnumValue(String value) {
-        if (value == null) {
-            return "";
-        }
-        if ("ENABLE".equalsIgnoreCase(value)) {
-            return "1";
-        }
-        if ("DISABLE".equalsIgnoreCase(value)) {
-            return "0";
-        }
-        return value;
-    }
-
-    private String resolveRecordId(Map<String, Object> row) {
-        Object id = row.get(Field.ID);
-        if (id == null) {
-            id = row.get(Field.SKU_ID);
-        }
-        return id == null ? "" : String.valueOf(id);
-    }
-
-    private SimpleBooleanProperty selectedProperty(Map<String, Object> row) {
-        Object selected = row.get(SELECTED_KEY);
-        if (selected instanceof SimpleBooleanProperty property) {
-            return property;
-        }
-        SimpleBooleanProperty property = new SimpleBooleanProperty(false);
-        row.put(SELECTED_KEY, property);
-        return property;
-    }
-
     private List<Map<String, Object>> checkedRows() {
-        List<Map<String, Object>> rows = new ArrayList<>();
-        if (dataTable.getItems() == null) {
-            return rows;
-        }
-        for (Map<String, Object> row : dataTable.getItems()) {
-            if (selectedProperty(row).get()) {
-                rows.add(row);
-            }
-        }
-        return rows;
+        return tableRowService.checkedRows(dataTable.getItems(), SELECTED_KEY);
     }
 
     private Map<String, Object> currentWorkingRow() {
-        Map<String, Object> selected = dataTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            return selected;
-        }
-        List<Map<String, Object>> checkedRows = checkedRows();
-        return checkedRows.isEmpty() ? null : checkedRows.get(0);
+        return tableRowService.currentWorkingRow(
+                dataTable.getSelectionModel().getSelectedItem(),
+                dataTable.getItems(),
+                SELECTED_KEY);
     }
 
     private boolean isReadOnlyModule() {

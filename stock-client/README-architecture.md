@@ -17,8 +17,10 @@
 - `service`
   - `ModuleDataService`: CRUD/page/query orchestration through strategy.
   - `TableActionService`: table-level actions and row/batch operation helpers.
+  - `TableRowService`: table row creation, selection state, normalization, display formatting, and record ID resolution.
   - `DependencyResolver`: form linkage option loading and cascade clear behavior.
   - `UiFeedbackService`: unified user feedback and common notifications.
+  - `UserAccountService`: account actions such as logout and password change.
 - `controller`
   - `MainController`, `ModuleFormController`, `LoginController`: event orchestration only.
   - Controllers should not contain module special-cases or API path assembly.
@@ -54,3 +56,5 @@
 - No path normalization patch in business call sites.
 - No silent catches.
 - New module behavior is configurable through metadata/strategy, not if-else patches.
+- Keep desktop menu order and module metadata aligned with the Web admin presets; protect known parity rules with `WebPageAlignmentTest`.
+- Keep payload exclusions metadata-driven; do not drop editable fields through broad name-suffix matching.

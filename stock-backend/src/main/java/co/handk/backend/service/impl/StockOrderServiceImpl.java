@@ -66,6 +66,13 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
         validateRequiredDateByOrderType(dto);
+        if (dto instanceof CreateStockOrderDTO createDto && isInboundOrOutbound(createDto.getOrderType())) {
+            createDto.setState(StockBizConstant.ORDER_STATE_APPROVING);
+            createDto.setApproverId(null);
+            createDto.setApproverName(null);
+            createDto.setApproveTime(null);
+            createDto.setFinishTime(null);
+        }
         return super.saveByDto(dto);
     }
 
@@ -77,7 +84,18 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             return super.updateByDto(dto);
         }
         StockOrder before = getByIdNotDeleted(updateDto.getId());
+        if (isInboundOrOutbound(updateDto.getOrderType())
+                && Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(updateDto.getState())
+                && (before == null || !Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(before.getState()))) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    "stock orders can only be completed through administrator approval");
+        }
         Integer beforeState = before == null ? null : before.getState();
+        if (Integer.valueOf(StockBizConstant.ORDER_STATE_APPROVING).equals(beforeState)
+                && !Integer.valueOf(StockBizConstant.ORDER_STATE_APPROVING).equals(updateDto.getState())) {
+            throw new BusinessException(
+                    MessageKeyConstant.ERROR_RUNTIME, "pending stock orders must be completed through the approval endpoint");
+        }
         boolean updated = super.updateByDto(dto);
         if (!updated) {
             return false;
@@ -118,6 +136,11 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             return true;
         }
         return !beforeState.equals(afterState);
+    }
+
+    private boolean isInboundOrOutbound(Integer orderType) {
+        return Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(orderType)
+                || Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(orderType);
     }
 
     private void notifyStockOrderStateChanged(StockOrder order, Integer beforeState, Integer afterState) {

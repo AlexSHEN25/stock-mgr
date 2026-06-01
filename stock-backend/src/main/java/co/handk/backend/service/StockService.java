@@ -17,5 +17,5 @@ public interface StockService extends BaseService<Stock, StockVO> {
 
     Long submitOrder(StockOrderSubmitDTO dto);
 
-    Boolean approveInbound(Long orderId, Boolean approved, String approveRemark);
+    Boolean approveOrder(Long orderId, Boolean approved, String approveRemark);
 }

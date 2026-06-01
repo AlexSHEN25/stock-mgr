@@ -32,6 +32,13 @@ public final class ModuleEndpointStrategy {
                 PATH_PREFIX + AppConstants.Module.USER + "/{id}",
                 PATH_PREFIX + AppConstants.Module.USER + "/{id}"
         ));
+        CONFIGS.put(AppConstants.Module.STOCK, new EndpointConfig(
+                HttpMethod.GET,
+                PATH_PREFIX + AppConstants.Module.STOCK + AppConstants.ApiPath.PAGE_SUFFIX,
+                AppConstants.ApiPath.STOCK_INBOUND,
+                PATH_PREFIX + AppConstants.Module.STOCK,
+                PATH_PREFIX + AppConstants.Module.STOCK + "/{id}"
+        ));
     }
 
     private static EndpointConfig defaultConfig(String moduleKey) {

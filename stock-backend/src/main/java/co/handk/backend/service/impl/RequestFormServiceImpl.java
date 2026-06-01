@@ -52,7 +52,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -429,7 +428,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     selectedQty = Math.max(0, originalQty - remainingQty);
                 }
             }
-            vo.setChangeQty(remainingQty + selectedQty);
+            int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
+            vo.setChangeQty(Math.min(originalQty, remainingQty + selectedQty));
             vo.setPrice(record.getPrice());
             vo.setCurrency(record.getCurrency());
             vo.setSelected(selected != null);
@@ -525,7 +525,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         for (RequestItem requestItem : existing) {
             int currentQty = requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
             StockRecord record = requireSourceStockRecord(form, requestItem.getStockRecordId());
-            applyOutboundRemainderDelta(record, -currentQty);
+            applyOutboundRemainderByRequested(record, 0, currentQty);
             requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_REMOVED);
             if (!requestItemService.updateById(requestItem)) {
                 throw fail("failed to remove request item");
@@ -1034,7 +1034,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         Integer currentRaw = orderItem.getChangeQty();
         int currentRemainingQty = currentRaw == null ? 0 : Math.abs(currentRaw);
 
-        int maxRequestQty = currentRemainingQty + Math.max(0, currentRequestQty);
+        int reflectedCurrentRequestQty = Math.min(
+                Math.max(0, currentRequestQty),
+                Math.max(0, originalQty - currentRemainingQty)
+        );
+        int maxRequestQty = currentRemainingQty + reflectedCurrentRequestQty;
         if (maxRequestQty > originalQty) {
             maxRequestQty = originalQty;
         }
@@ -1045,7 +1049,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     + ", requested=" + requestedQty);
         }
 
-        int targetRemainingQty = currentRemainingQty + Math.max(0, currentRequestQty) - requestedQty;
+        int targetRemainingQty = currentRemainingQty + reflectedCurrentRequestQty - requestedQty;
         if (targetRemainingQty < 0 || targetRemainingQty > originalQty) {
             throw fail("requested qty cannot exceed available outbound qty"
                     + ", stockRecordId=" + record.getId()
@@ -1131,40 +1135,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    private RequestItem buildRequestItemFromOrder(RequestForm form, StockOrderItem orderItem, String remark) {
-        RequestItem requestItem = new RequestItem();
-        requestItem.setRequestId(form.getId());
-        requestItem.setGoodsId(orderItem.getGoodsId());
-        requestItem.setSkuId(orderItem.getSkuId());
-        requestItem.setSkuCode(orderItem.getSkuCode());
-        requestItem.setGoodsName(orderItem.getGoodsName());
-        requestItem.setEnglishName(orderItem.getEnglishName());
-        requestItem.setBrandId(orderItem.getBrandId());
-        requestItem.setBrandName(orderItem.getBrandName());
-        requestItem.setSeriesId(orderItem.getSeriesId());
-        requestItem.setSeriesName(orderItem.getSeriesName());
-        requestItem.setCategoryId(orderItem.getCategoryId());
-        requestItem.setCategoryName(orderItem.getCategoryName());
-        requestItem.setStockTypeId(orderItem.getStockTypeId());
-        requestItem.setStockTypeName(orderItem.getStockTypeName());
-        requestItem.setMakerId(orderItem.getMakerId());
-        requestItem.setMakerName(orderItem.getMakerName());
-        requestItem.setWarehouseId(form.getWarehouseId());
-        requestItem.setPrice(orderItem.getPrice());
-        requestItem.setExchangeRate(BigDecimal.ONE);
-        requestItem.setCurrency(orderItem.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : orderItem.getCurrency());
-        requestItem.setDiscount(BigDecimal.ONE);
-        requestItem.setRequestQty(orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty()));
-        requestItem.setApproveQty(0);
-        requestItem.setOutQty(orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty()));
-        requestItem.setTotalAmt(safeAmount(orderItem.getPrice())
-                .multiply(BigDecimal.valueOf(orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty()))));
-        requestItem.setStockRecordId(null);
-        requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
-        requestItem.setRemark(remark);
-        return requestItem;
-    }
-
     private RequestItem buildRequestItemFromStockRecord(RequestForm form, StockRecord record, String remark) {
         RequestItem requestItem = new RequestItem();
         requestItem.setRequestId(form.getId());
@@ -1221,45 +1191,12 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
     }
 
-    private List<StockOrder> listAvailableOrdersForRequest(Long userId, Long warehouseId) {
-        QueryWrapper<StockOrder> wrapper = new QueryWrapper<StockOrder>()
-                .eq("deleted", DeleteEnum.UNDELETED.getCode());
-        if (warehouseId != null) {
-            wrapper.eq("warehouse_id", warehouseId);
-        }
-        if (!permissionQueryService.isSuperAdmin(userId)) {
-            wrapper.and(w -> w.eq("requester_id", userId).or().eq("operator_id", userId));
-        }
-        return stockOrderService.list(wrapper);
-    }
-
-    private List<StockRecord> listAvailableStockRecordsForRequest(Long userId, Long warehouseId) {
-        QueryWrapper<StockRecord> wrapper = new QueryWrapper<StockRecord>()
-                .eq("deleted", DeleteEnum.UNDELETED.getCode());
-        if (warehouseId != null) {
-            wrapper.eq("warehouse_id", warehouseId);
-        }
-        if (!permissionQueryService.isSuperAdmin(userId)) {
-            wrapper.and(w -> w.eq("requester_id", userId).or().eq("operator_id", userId));
-        }
-        return stockRecordService.list(wrapper);
-    }
-
     private List<StockRecord> listSourceOutboundRecords(RequestForm form) {
         requireOwnedSourceOutbound(form);
         return stockRecordService.list(new QueryWrapper<StockRecord>()
                 .eq("order_id", form.getSourceOrderId())
                 .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
-    }
-
-    private Set<Long> findAvailableStockRecordIds(Long userId, Long warehouseId) {
-        List<StockRecord> records = listAvailableStockRecordsForRequest(userId, warehouseId);
-        java.util.HashSet<Long> ids = new java.util.HashSet<>();
-        for (StockRecord record : records) {
-            ids.add(record.getId());
-        }
-        return ids;
     }
 
     private void validateKnifeHandleQuantity(Long requestId) {
@@ -1298,25 +1235,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private boolean containsTypeKeyword(String value, String keyword) {
         return value != null && value.contains(keyword);
     }
-    private Set<Long> findAvailableOrderItemIds(Long userId, Long warehouseId) {
-        List<StockOrder> orders = listAvailableOrdersForRequest(userId, warehouseId);
-        java.util.HashSet<Long> ids = new java.util.HashSet<>();
-        if (orders.isEmpty()) {
-            return ids;
-        }
-        List<Long> orderIds = new ArrayList<>();
-        for (StockOrder order : orders) {
-            orderIds.add(order.getId());
-        }
-        List<StockOrderItem> orderItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
-                .in("order_id", orderIds)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
-        for (StockOrderItem item : orderItems) {
-            ids.add(item.getId());
-        }
-        return ids;
-    }
-
     private Stock findStock(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
         QueryWrapper<Stock> wrapper = new QueryWrapper<Stock>()
                 .eq("goods_id", goodsId)

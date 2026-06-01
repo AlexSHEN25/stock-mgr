@@ -31,6 +31,7 @@ public final class UiText {
     public static final String TITLE_CONFIRM_LOGOUT = t("title.confirmLogout");
     public static final String TITLE_SAVE_FILE = t("title.saveFile");
     public static final String TITLE_LOGIN_FAILED = t("title.loginFailed");
+    public static final String TITLE_CHANGE_PASSWORD = t("title.changePassword");
 
     public static final String MSG_CONFIRM_BATCH_DELETE = t("msg.confirmBatchDelete");
     public static final String MSG_CONFIRM_DELETE = t("msg.confirmDelete");
@@ -74,6 +75,10 @@ public final class UiText {
     public static final String MSG_SELECT_DEPT = t("msg.selectDept");
     public static final String MSG_SEARCH_SUFFIX = t("msg.searchSuffix");
     public static final String MSG_SELECT_SUFFIX = t("msg.selectSuffix");
+    public static final String MSG_NEW_PASSWORD_REQUIRED = t("msg.newPasswordRequired");
+    public static final String MSG_PASSWORD_MISMATCH = t("msg.passwordMismatch");
+    public static final String MSG_PASSWORD_CHANGE_SUCCESS = t("msg.passwordChangeSuccess");
+    public static final String MSG_PASSWORD_CHANGE_FAILED = t("msg.passwordChangeFailed");
 
     public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
     public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");
@@ -81,6 +86,8 @@ public final class UiText {
     public static final String DELETE_ID_PATTERN = t("format.deleteId");
     public static final String RELATION_FALLBACK_PATTERN = t("format.relationFallback");
     public static final String FIELD_ID = t("field.id");
+    public static final String FIELD_NEW_PASSWORD = t("field.newPassword");
+    public static final String FIELD_CONFIRM_PASSWORD = t("field.confirmPassword");
 
     public static String byKey(String key) {
         return t(key);

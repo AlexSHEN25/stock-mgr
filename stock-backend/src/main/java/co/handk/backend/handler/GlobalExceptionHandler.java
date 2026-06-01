@@ -47,6 +47,12 @@ public class GlobalExceptionHandler {
         return Result.fail(ResultCode.VALIDATE_ERROR, MessageKeyConstant.ERROR_VALIDATE, message);
     }
 
+    @ExceptionHandler(BusinessException.class)
+    public Result<?> handleBusinessException(BusinessException e) {
+        log.warn("Business request rejected: type={}, message={}", e.getClass().getName(), safeMessage(e));
+        return Result.fail(ResultCode.ERROR, e.getMessageKey(), safeMessage(e));
+    }
+
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e) {
         log.error(
@@ -62,9 +68,6 @@ public class GlobalExceptionHandler {
         }
         if (e instanceof AccessDeniedException ex) {
             return Result.fail(ResultCode.FORBIDDEN, ex.getMessageKey(), i18n(ex.getMessageKey()));
-        }
-        if (e instanceof BusinessException ex) {
-            return Result.fail(ResultCode.ERROR, ex.getMessageKey(), safeMessage(ex));
         }
         if (e instanceof DataAccessException) {
             return Result.fail(ResultCode.ERROR, MessageKeyConstant.ERROR_RUNTIME, safeMessage(e));

@@ -106,6 +106,9 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                 && !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
             return;
         }
+        if (!Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(order.getState())) {
+            return;
+        }
 
         StockRecord record = stockRecordService.getOne(new LambdaQueryWrapper<StockRecord>()
                 .eq(StockRecord::getOrderItemId, item.getId())

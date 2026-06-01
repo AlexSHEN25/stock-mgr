@@ -69,7 +69,14 @@ public class StockController {
     public Boolean approveInbound(@PathVariable("orderId") @NotNull Long orderId,
                                   @RequestParam("approved") @NotNull Boolean approved,
                                   @RequestParam(value = "remark", required = false) String remark) {
-        return stockService.approveInbound(orderId, approved, remark);
+        return stockService.approveOrder(orderId, approved, remark);
+    }
+
+    @PostMapping("/approve/{orderId}")
+    public Boolean approveOrder(@PathVariable("orderId") @NotNull Long orderId,
+                                @RequestParam("approved") @NotNull Boolean approved,
+                                @RequestParam(value = "remark", required = false) String remark) {
+        return stockService.approveOrder(orderId, approved, remark);
     }
 
     @DeleteMapping("/{id}")
