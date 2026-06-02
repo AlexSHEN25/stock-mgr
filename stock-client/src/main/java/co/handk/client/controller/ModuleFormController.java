@@ -38,13 +38,29 @@ public class ModuleFormController {
     private boolean editMode;
     private final Map<String, Control> controls = new LinkedHashMap<>();
     private Map<String, Object> sourceValues = Map.of();
+    private List<String> formFields = List.of();
     private final ModuleDataService dataService = new ModuleDataService();
     private final DependencyResolver dependencyResolver = new DependencyResolver();
 
     public void configure(String module, String title, boolean editMode, Map<String, Object> source) {
+        configure(module, title, editMode, source, List.of());
+    }
+
+    public void configure(
+            String module,
+            String title,
+            boolean editMode,
+            Map<String, Object> source,
+            Iterable<String> availableFields) {
         this.module = module;
         this.editMode = editMode;
         this.sourceValues = source == null ? Map.of() : source;
+        Set<String> fallbackFields = new LinkedHashSet<>();
+        if (availableFields != null) {
+            availableFields.forEach(fallbackFields::add);
+        }
+        fallbackFields.addAll(this.sourceValues.keySet());
+        this.formFields = ModuleMeta.resolvedFormFields(module, fallbackFields);
         this.titleLabel.setText(title);
 
         buildDynamicControls(module, editMode);
@@ -79,7 +95,7 @@ public class ModuleFormController {
                 errorLabel.setText(UiText.MSG_EDIT_ID_REQUIRED);
                 return;
             }
-            for (String field : ModuleMeta.formFields(module)) {
+            for (String field : formFields) {
                 if (!ModuleMeta.isRequiredFormField(module, field)) {
                     continue;
                 }
@@ -110,7 +126,7 @@ public class ModuleFormController {
         if (editMode) {
             fields.add("id");
         }
-        fields.addAll(ModuleMeta.formFields(module));
+        fields.addAll(formFields);
 
         int row = 0;
         for (String field : fields) {

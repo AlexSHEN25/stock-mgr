@@ -91,6 +91,21 @@ public class ApiClient {
         return read(conn, start, METHOD_DELETE, path);
     }
 
+    public static String delete(String path, String json) throws Exception {
+        HttpURLConnection conn = open(path, METHOD_DELETE);
+        conn.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
+        conn.setDoOutput(true);
+
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_DELETE, path, json, conn);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(json.getBytes(StandardCharsets.UTF_8));
+        }
+
+        return read(conn, start, METHOD_DELETE, path);
+    }
+
     public static byte[] getBytes(String path) throws Exception {
         HttpURLConnection conn = open(path, METHOD_GET);
         long start = System.currentTimeMillis();

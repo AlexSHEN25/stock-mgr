@@ -29,6 +29,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -503,7 +504,12 @@ public class MainController {
             modal.setScene(new Scene(root));
             ModuleFormController formController = loader.getController();
             Map<String, Object> selected = editMode ? currentWorkingRow() : null;
-            formController.configure(currentModule, action + " " + pageTitleLabel.getText(), editMode, selected);
+            formController.configure(
+                    currentModule,
+                    action + " " + pageTitleLabel.getText(),
+                    editMode,
+                    selected,
+                    tableRowService.visibleKeys(dataTable.getItems(), SELECTED_KEY));
             modal.setOnCloseRequest(e -> formController.markCanceled());
             modal.showAndWait();
             if (formController.isSubmitted()) {
@@ -580,6 +586,9 @@ public class MainController {
     private TableColumn<Map<String, Object>, Void> createActionColumn(ModuleMeta.RowAction action) {
         if (action.type == ModuleMeta.RowActionType.DOWNLOAD_REQUEST_FORM) {
             return createDownloadActionColumn();
+        }
+        if (action.type == ModuleMeta.RowActionType.MATCH_REQUEST_ITEMS) {
+            return createMatchRequestItemsActionColumn(UiText.byKey(action.titleKey));
         }
         if (action.type == ModuleMeta.RowActionType.PREVIEW_FIELDS) {
             return createPreviewFieldsActionColumn(UiText.byKey(action.titleKey), action.detailFields);
@@ -726,6 +735,121 @@ public class MainController {
             }
         });
         return col;
+    }
+
+    private TableColumn<Map<String, Object>, Void> createMatchRequestItemsActionColumn(String title) {
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>(title);
+        col.setPrefWidth(100);
+        col.setSortable(false);
+        col.setReorderable(false);
+        col.setCellFactory(param -> new TableCell<>() {
+            private final Button btn = new Button(title);
+            {
+                btn.setOnAction(event -> {
+                    Map<String, Object> row = getTableView().getItems().get(getIndex());
+                    Object id = row.get(Field.ID);
+                    if (id == null) {
+                        messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
+                        return;
+                    }
+                    showRequestItemMatchingDialog(String.valueOf(id));
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btn);
+            }
+        });
+        return col;
+    }
+
+    private void showRequestItemMatchingDialog(String requestId) {
+        try {
+            JSONArray candidates = tableActionService.fetchRequestCandidateItems(requestId);
+            if (candidates.isEmpty()) {
+                messageLabel.setText(UiText.MSG_MATCH_REQUEST_ITEMS_EMPTY);
+                return;
+            }
+
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle(UiText.TITLE_MATCH_REQUEST_ITEMS);
+            dialog.setHeaderText(UiText.MSG_MATCH_REQUEST_ITEMS_GUIDE);
+            Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+            if (owner != null) {
+                dialog.initOwner(owner);
+            }
+
+            GridPane grid = new GridPane();
+            grid.setHgap(10);
+            grid.setVgap(8);
+            grid.add(new Label(UiText.FIELD_SELECT), 0, 0);
+            grid.add(new Label(UiText.FIELD_CATEGORY), 1, 0);
+            grid.add(new Label(UiText.FIELD_GOODS), 2, 0);
+            grid.add(new Label(UiText.FIELD_SKU), 3, 0);
+            grid.add(new Label(UiText.FIELD_AVAILABLE_QTY), 4, 0);
+            grid.add(new Label(UiText.FIELD_MATCH_QTY), 5, 0);
+
+            List<RequestMatchRow> matchRows = new ArrayList<>();
+            for (int i = 0; i < candidates.length(); i++) {
+                JSONObject candidate = candidates.getJSONObject(i);
+                CheckBox selected = new CheckBox();
+                selected.setSelected(candidate.optBoolean("selected", false));
+                TextField quantity = new TextField(String.valueOf(candidate.optInt("requestQty", 0)));
+                quantity.setPrefWidth(70);
+                quantity.setDisable(!selected.isSelected());
+                selected.selectedProperty().addListener((obs, oldValue, newValue) -> quantity.setDisable(!newValue));
+
+                int row = i + 1;
+                grid.add(selected, 0, row);
+                grid.add(new Label(candidate.optString("categoryName")), 1, row);
+                grid.add(new Label(candidate.optString("goodsName")), 2, row);
+                grid.add(new Label(candidate.optString("skuCode")), 3, row);
+                grid.add(new Label(String.valueOf(candidate.optInt("changeQty", 0))), 4, row);
+                grid.add(quantity, 5, row);
+                matchRows.add(new RequestMatchRow(candidate, selected, quantity));
+            }
+
+            ScrollPane scroll = new ScrollPane(grid);
+            scroll.setFitToWidth(true);
+            scroll.setPrefViewportWidth(760);
+            scroll.setPrefViewportHeight(420);
+            dialog.getDialogPane().setContent(scroll);
+            dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+            Optional<ButtonType> result = dialog.showAndWait();
+            if (result.isEmpty() || result.get() != ButtonType.OK) {
+                return;
+            }
+
+            JSONArray items = new JSONArray();
+            for (RequestMatchRow row : matchRows) {
+                if (!row.selected.isSelected()) {
+                    continue;
+                }
+                int quantity = Integer.parseInt(row.quantity.getText().trim());
+                int available = row.candidate.optInt("changeQty", 0);
+                if (quantity <= 0 || quantity > available) {
+                    messageLabel.setText(String.format(UiText.MSG_MATCH_REQUEST_ITEMS_QTY_INVALID, available));
+                    return;
+                }
+                JSONObject item = new JSONObject();
+                item.put("stockRecordId", row.candidate.getLong("stockRecordId"));
+                item.put("requestQty", quantity);
+                items.put(item);
+            }
+
+            JSONObject json = tableActionService.matchRequestItems(requestId, items);
+            messageLabel.setText(uiFeedback.isSuccess(json)
+                    ? UiText.MSG_MATCH_REQUEST_ITEMS_SUCCESS
+                    : uiFeedback.resolveMessage(json, UiText.MSG_MATCH_REQUEST_ITEMS_FAILED));
+            if (uiFeedback.isSuccess(json)) {
+                loadData();
+            }
+        } catch (NumberFormatException ex) {
+            messageLabel.setText(UiText.MSG_MATCH_REQUEST_ITEMS_NUMBER_REQUIRED);
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_MATCH_REQUEST_ITEMS_FAILED + ": " + ex.getMessage());
+        }
     }
 
     private void downloadRequestForm(String id, boolean pdf) {
@@ -907,6 +1031,18 @@ public class MainController {
         @Override
         public String toString() {
             return label;
+        }
+    }
+
+    private static final class RequestMatchRow {
+        private final JSONObject candidate;
+        private final CheckBox selected;
+        private final TextField quantity;
+
+        private RequestMatchRow(JSONObject candidate, CheckBox selected, TextField quantity) {
+            this.candidate = candidate;
+            this.selected = selected;
+            this.quantity = quantity;
         }
     }
 }

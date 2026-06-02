@@ -52,6 +52,11 @@ public class RequestFormController {
         return requestFormService.addItemsFromStockOrder(dto);
     }
 
+    @PostMapping("/items/match")
+    public Boolean matchItems(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
+        return requestFormService.matchItemsFromStockOrder(dto);
+    }
+
     @PostMapping("/items/remove")
     public Boolean removeItems(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
         return requestFormService.removeItemsFromRequest(dto);

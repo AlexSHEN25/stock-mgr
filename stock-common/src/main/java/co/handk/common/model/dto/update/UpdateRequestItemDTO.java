@@ -2,9 +2,11 @@ package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.DecimalMax;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 public class UpdateRequestItemDTO {
@@ -35,8 +37,11 @@ public class UpdateRequestItemDTO {
     private Long warehouseId;
     @PositiveOrZero(message = "0以上で入力してください")
     private BigDecimal price;
+    @PositiveOrZero(message = "discount price must be zero or greater")
+    private BigDecimal discountPrice;
     private String currency;
     @PositiveOrZero(message = "0以上で入力してください")
+    @DecimalMax(value = "1.0000", message = "discount must not exceed 1.0000")
     private BigDecimal discount;
     @PositiveOrZero(message = "0以上で入力してください")
     private Integer requestQty;
@@ -44,6 +49,11 @@ public class UpdateRequestItemDTO {
     private Integer approveQty;
     @PositiveOrZero(message = "0以上で入力してください")
     private Integer outQty;
+    @PositiveOrZero(message = "deposit amount must be zero or greater")
+    private BigDecimal depositAmt;
+    private LocalDateTime depositTime;
+    @PositiveOrZero(message = "deposit fee must be zero or greater")
+    private BigDecimal depositFee;
     private Long stockRecordId;
     private Integer state;
     private String remark;

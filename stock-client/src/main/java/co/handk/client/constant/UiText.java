@@ -25,6 +25,7 @@ public final class UiText {
     public static final String ACTION_DOWNLOAD = t("action.download");
     public static final String ACTION_DOWNLOAD_EXCEL = t("action.downloadExcel");
     public static final String ACTION_DOWNLOAD_PDF = t("action.downloadPdf");
+    public static final String ACTION_MATCH_REQUEST_ITEMS = t("action.matchRequestItems");
 
     public static final String TITLE_CONFIRM_BATCH_DELETE = t("title.confirmBatchDelete");
     public static final String TITLE_CONFIRM_DELETE = t("title.confirmDelete");
@@ -32,6 +33,7 @@ public final class UiText {
     public static final String TITLE_SAVE_FILE = t("title.saveFile");
     public static final String TITLE_LOGIN_FAILED = t("title.loginFailed");
     public static final String TITLE_CHANGE_PASSWORD = t("title.changePassword");
+    public static final String TITLE_MATCH_REQUEST_ITEMS = t("title.matchRequestItems");
 
     public static final String MSG_CONFIRM_BATCH_DELETE = t("msg.confirmBatchDelete");
     public static final String MSG_CONFIRM_DELETE = t("msg.confirmDelete");
@@ -79,6 +81,12 @@ public final class UiText {
     public static final String MSG_PASSWORD_MISMATCH = t("msg.passwordMismatch");
     public static final String MSG_PASSWORD_CHANGE_SUCCESS = t("msg.passwordChangeSuccess");
     public static final String MSG_PASSWORD_CHANGE_FAILED = t("msg.passwordChangeFailed");
+    public static final String MSG_MATCH_REQUEST_ITEMS_EMPTY = t("msg.matchRequestItemsEmpty");
+    public static final String MSG_MATCH_REQUEST_ITEMS_GUIDE = t("msg.matchRequestItemsGuide");
+    public static final String MSG_MATCH_REQUEST_ITEMS_QTY_INVALID = t("msg.matchRequestItemsQtyInvalid");
+    public static final String MSG_MATCH_REQUEST_ITEMS_NUMBER_REQUIRED = t("msg.matchRequestItemsNumberRequired");
+    public static final String MSG_MATCH_REQUEST_ITEMS_SUCCESS = t("msg.matchRequestItemsSuccess");
+    public static final String MSG_MATCH_REQUEST_ITEMS_FAILED = t("msg.matchRequestItemsFailed");
 
     public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
     public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");
@@ -88,6 +96,12 @@ public final class UiText {
     public static final String FIELD_ID = t("field.id");
     public static final String FIELD_NEW_PASSWORD = t("field.newPassword");
     public static final String FIELD_CONFIRM_PASSWORD = t("field.confirmPassword");
+    public static final String FIELD_SELECT = t("field.select");
+    public static final String FIELD_CATEGORY = t("field.category");
+    public static final String FIELD_GOODS = t("field.goods");
+    public static final String FIELD_SKU = t("field.sku");
+    public static final String FIELD_AVAILABLE_QTY = t("field.availableQty");
+    public static final String FIELD_MATCH_QTY = t("field.matchQty");
 
     public static String byKey(String key) {
         return t(key);

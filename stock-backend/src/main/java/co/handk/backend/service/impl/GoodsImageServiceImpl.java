@@ -43,7 +43,8 @@ public class GoodsImageServiceImpl extends BaseServiceImpl<GoodsImageMapper, Goo
 
     @Override
     public String uploadImage(MultipartFile file) {
-        return fileStorageService.upload(UploadBizType.GOODS, file, null);
+        String imagePath = fileStorageService.upload(UploadBizType.GOODS, file, null);
+        return fileStorageService.toApiPath(UploadBizType.GOODS, imagePath);
     }
 
     @Override
@@ -58,7 +59,6 @@ public class GoodsImageServiceImpl extends BaseServiceImpl<GoodsImageMapper, Goo
         String imagePath = fileStorageService.upload(UploadBizType.GOODS, file, existed.getImageUrl());
         existed.setImageUrl(imagePath);
         this.updateById(existed);
-        return imagePath;
+        return fileStorageService.toApiPath(UploadBizType.GOODS, imagePath);
     }
 }
-

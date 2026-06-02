@@ -46,6 +46,8 @@ public class RequestItem extends BaseEntity {
 
     private BigDecimal price;
 
+    private BigDecimal discountPrice;
+
     private BigDecimal exchangeRate;
 
     private String currency;
@@ -63,6 +65,8 @@ public class RequestItem extends BaseEntity {
     private BigDecimal depositAmt;
 
     private LocalDateTime depositTime;
+
+    private BigDecimal depositFee;
 
     private Long stockRecordId;
 

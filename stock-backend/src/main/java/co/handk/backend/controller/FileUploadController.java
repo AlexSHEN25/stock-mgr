@@ -16,14 +16,15 @@ public class FileUploadController {
     @PostMapping("/upload")
     public String upload(@RequestParam("bizType") UploadBizType bizType,
                          @RequestPart("file") MultipartFile file) {
-        return fileStorageService.upload(bizType, file, null);
+        String imagePath = fileStorageService.upload(bizType, file, null);
+        return fileStorageService.toApiPath(bizType, imagePath);
     }
 
     @PutMapping("/upload")
     public String replace(@RequestParam("bizType") UploadBizType bizType,
                           @RequestParam(value = "oldPath", required = false) String oldPath,
                           @RequestPart("file") MultipartFile file) {
-        return fileStorageService.upload(bizType, file, oldPath);
+        String imagePath = fileStorageService.upload(bizType, file, oldPath);
+        return fileStorageService.toApiPath(bizType, imagePath);
     }
 }
-

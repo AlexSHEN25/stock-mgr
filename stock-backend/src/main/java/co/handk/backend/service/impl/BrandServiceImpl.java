@@ -61,7 +61,8 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
 
     @Override
     public String uploadImage(MultipartFile file) {
-        return fileStorageService.upload(UploadBizType.BRAND, file, null);
+        String imagePath = fileStorageService.upload(UploadBizType.BRAND, file, null);
+        return fileStorageService.toApiPath(UploadBizType.BRAND, imagePath);
     }
 
     @Override
@@ -76,7 +77,6 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
         String imagePath = fileStorageService.upload(UploadBizType.BRAND, file, existed.getImage());
         existed.setImage(imagePath);
         this.updateById(existed);
-        return imagePath;
+        return fileStorageService.toApiPath(UploadBizType.BRAND, imagePath);
     }
 }
-

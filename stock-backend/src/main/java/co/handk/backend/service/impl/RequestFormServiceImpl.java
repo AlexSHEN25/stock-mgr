@@ -433,6 +433,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             vo.setPrice(record.getPrice());
             vo.setCurrency(record.getCurrency());
             vo.setSelected(selected != null);
+            vo.setRequestQty(selectedQty);
             vo.setRequestItemState(selected == null ? null : selected.getState());
             vo.setRequestItemId(selected == null ? null : selected.getId());
             result.add(vo);
@@ -498,6 +499,40 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         recalculateRequestFormSummary(form.getId());
         return true;
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean matchItemsFromStockOrder(RequestFormItemBatchDTO dto) {
+        RequestForm form = this.getByIdNotDeleted(dto.getRequestId());
+        if (form == null) {
+            throw fail("request form not found");
+        }
+        requireOwned(form);
+
+        Map<Long, Integer> requestedQuantities = resolveRequestedQuantities(dto);
+        List<RequestItem> activeItems = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", form.getId())
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        List<Long> removedStockRecordIds = new ArrayList<>();
+        for (RequestItem item : activeItems) {
+            if (item.getStockRecordId() != null && !requestedQuantities.containsKey(item.getStockRecordId())) {
+                removedStockRecordIds.add(item.getStockRecordId());
+            }
+        }
+        if (!removedStockRecordIds.isEmpty()) {
+            RequestFormItemBatchDTO removeDto = new RequestFormItemBatchDTO();
+            removeDto.setRequestId(form.getId());
+            removeDto.setStockOrderItemIds(removedStockRecordIds);
+            removeItemsFromRequest(removeDto);
+        }
+        if (!requestedQuantities.isEmpty()) {
+            addItemsFromStockOrder(dto);
+        }
+        validateKnifeHandleQuantity(form.getId());
+        return true;
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean removeItemsFromRequest(RequestFormItemBatchDTO dto) {
@@ -1123,6 +1158,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             existed.setRequestQty(candidate.getRequestQty());
             existed.setOutQty(candidate.getOutQty());
             existed.setPrice(candidate.getPrice());
+            existed.setDiscountPrice(candidate.getDiscountPrice());
             existed.setCurrency(candidate.getCurrency());
             existed.setTotalAmt(candidate.getTotalAmt());
             if (remark != null && !remark.isBlank()) {
@@ -1155,6 +1191,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         requestItem.setMakerName(record.getMakerName());
         requestItem.setWarehouseId(form.getWarehouseId());
         requestItem.setPrice(record.getPrice());
+        requestItem.setDiscountPrice(record.getPrice());
         requestItem.setExchangeRate(BigDecimal.ONE);
         requestItem.setCurrency(record.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : record.getCurrency());
         requestItem.setDiscount(BigDecimal.ONE);
@@ -1204,6 +1241,10 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("request_id", requestId)
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        RequestForm form = this.getByIdNotDeleted(requestId);
+        if (form == null || !sourceHasKnifeAndHandle(form)) {
+            return;
+        }
         int knifeQty = 0;
         int handleQty = 0;
         for (RequestItem item : items) {
@@ -1215,21 +1256,36 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 handleQty += qty;
             }
         }
-        if (knifeQty > 0 && handleQty > 0 && knifeQty != handleQty) {
+        if (knifeQty != handleQty) {
             throw fail("knife and handle quantities must match");
         }
     }
 
     private boolean isKnifeItem(RequestItem item) {
-        return containsTypeKeyword(item.getCategoryName(), "\u5200")
-                || containsTypeKeyword(item.getGoodsName(), "\u5200")
-                || containsTypeKeyword(item.getSeriesName(), "\u5200");
+        return isKnifeCategory(item.getCategoryName());
     }
 
     private boolean isHandleItem(RequestItem item) {
-        return containsTypeKeyword(item.getCategoryName(), "\u67C4")
-                || containsTypeKeyword(item.getGoodsName(), "\u67C4")
-                || containsTypeKeyword(item.getSeriesName(), "\u67C4");
+        return isHandleCategory(item.getCategoryName());
+    }
+
+    private boolean sourceHasKnifeAndHandle(RequestForm form) {
+        boolean hasKnife = false;
+        boolean hasHandle = false;
+        for (StockRecord record : listSourceOutboundRecords(form)) {
+            hasKnife = hasKnife || isKnifeCategory(record.getCategoryName());
+            hasHandle = hasHandle || isHandleCategory(record.getCategoryName());
+        }
+        return hasKnife && hasHandle;
+    }
+
+    private boolean isKnifeCategory(String categoryName) {
+        return containsTypeKeyword(categoryName, "\u53A8\u5200")
+                || containsTypeKeyword(categoryName, "\u5200");
+    }
+
+    private boolean isHandleCategory(String categoryName) {
+        return containsTypeKeyword(categoryName, "\u67C4");
     }
 
     private boolean containsTypeKeyword(String value, String keyword) {

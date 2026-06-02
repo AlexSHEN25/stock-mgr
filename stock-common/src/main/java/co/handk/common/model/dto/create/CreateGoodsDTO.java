@@ -17,11 +17,9 @@ public class CreateGoodsDTO {
     private String englishName;
     @NotNull(message = "必須項目です")
     private Long brandId;
-    @NotNull(message = "必須項目です")
     private Long seriesId;
     @NotNull(message = "必須項目です")
     private Long categoryId;
-    @NotNull(message = "必須項目です")
     private Long makerId;
     private String description;
     private Integer isHot;

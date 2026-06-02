@@ -673,6 +673,7 @@ create TABLE `t_request_item`
 
     `warehouse_id`    BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `price`           DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
+    `discount_price`  DECIMAL(18, 2)            DEFAULT NULL COMMENT '折扣价',
     `exchange_rate`   DECIMAL(18, 6)            DEFAULT NULL COMMENT '汇率',
     `currency`        VARCHAR(8)       NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `discount`        DECIMAL(5, 4)    NOT NULL DEFAULT 1.0000 COMMENT '折扣率',
@@ -682,6 +683,7 @@ create TABLE `t_request_item`
     `total_amt`       DECIMAL(18, 2)            DEFAULT NULL COMMENT '总金额',
     `deposit_amt`     DECIMAL(18, 2)            DEFAULT NULL COMMENT '定金',
     `deposit_time`    DATETIME                  DEFAULT NULL COMMENT '定金时间',
+    `deposit_fee`     DECIMAL(18, 2)            DEFAULT NULL COMMENT '入金手续费',
     `stock_record_id` BIGINT UNSIGNED           DEFAULT NULL COMMENT '库存流水ID',
     `remark`          VARCHAR(255)              DEFAULT NULL COMMENT '备注',
     `deleted`         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -757,36 +759,6 @@ CREATE TABLE `t_customer_level`
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='客户等级表';
-
-
-DROP TABLE IF EXISTS `t_goods_level_price`;
-CREATE TABLE `t_goods_level_price`
-(
-    `id`             BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `goods_id`       BIGINT UNSIGNED  NOT NULL COMMENT '商品ID',
-    `sku_id`         BIGINT UNSIGNED  NOT NULL COMMENT 'SKU ID',
-    `sku_code`       VARCHAR(128)              DEFAULT NULL COMMENT '商品品番',
-    `level_id`       INT UNSIGNED     NOT NULL COMMENT '客户等级ID',
-    `price`          DECIMAL(18, 2)   NOT NULL COMMENT '等级专属价格',
-    `currency`       VARCHAR(8)       NOT NULL DEFAULT 'JPY' COMMENT '币种',
-    `discount`       DECIMAL(5, 4)             DEFAULT NULL COMMENT '等级折扣率(可选)',
-    `effective_time` DATETIME                  DEFAULT NULL COMMENT '生效时间',
-    `expire_time`    DATETIME                  DEFAULT NULL COMMENT '失效时间',
-    `status`         TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '状态',
-    `deleted`        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
-    `created_by`     BIGINT UNSIGNED           DEFAULT NULL COMMENT '创建人ID',
-    `updated_by`     BIGINT UNSIGNED           DEFAULT NULL COMMENT '更新人ID',
-    `create_time`    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time`    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY uk_sku_level (sku_id, level_id, deleted),
-    KEY `idx_level` (`level_id`),
-    KEY idx_created_by (created_by),
-    KEY idx_updated_by (updated_by)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-    COMMENT ='客户等级商品价格表';
-
 
 DROP TABLE IF EXISTS `t_message`;
 create TABLE `t_message`

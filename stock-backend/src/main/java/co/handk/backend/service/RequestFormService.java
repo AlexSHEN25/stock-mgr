@@ -21,6 +21,8 @@ public interface RequestFormService extends BaseService<RequestForm, RequestForm
 
     Boolean addItemsFromStockOrder(RequestFormItemBatchDTO dto);
 
+    Boolean matchItemsFromStockOrder(RequestFormItemBatchDTO dto);
+
     Boolean removeItemsFromRequest(RequestFormItemBatchDTO dto);
 
     void downloadRequestForm(Long requestId, String format, HttpServletResponse response);

@@ -18,8 +18,10 @@ public final class ModuleEndpointStrategy {
             HttpMethod pageMethod,
             String pagePath,
             String createPath,
+            String detailPathTemplate,
             String updatePathTemplate,
-            String deletePathTemplate) {
+            String deletePathTemplate,
+            String batchDeletePath) {
     }
 
     private static final Map<String, EndpointConfig> CONFIGS = new HashMap<>();
@@ -30,15 +32,34 @@ public final class ModuleEndpointStrategy {
                 AppConstants.ApiPath.USER_PAGE,
                 PATH_PREFIX + AppConstants.Module.USER,
                 PATH_PREFIX + AppConstants.Module.USER + "/{id}",
-                PATH_PREFIX + AppConstants.Module.USER + "/{id}"
+                PATH_PREFIX + AppConstants.Module.USER + "/{id}",
+                PATH_PREFIX + AppConstants.Module.USER + "/{id}",
+                null
         ));
         CONFIGS.put(AppConstants.Module.STOCK, new EndpointConfig(
                 HttpMethod.GET,
                 PATH_PREFIX + AppConstants.Module.STOCK + AppConstants.ApiPath.PAGE_SUFFIX,
                 AppConstants.ApiPath.STOCK_INBOUND,
+                PATH_PREFIX + AppConstants.Module.STOCK + "/{id}",
                 PATH_PREFIX + AppConstants.Module.STOCK,
-                PATH_PREFIX + AppConstants.Module.STOCK + "/{id}"
+                PATH_PREFIX + AppConstants.Module.STOCK + "/{id}",
+                PATH_PREFIX + AppConstants.Module.STOCK + "/batch"
         ));
+        CONFIGS.put(AppConstants.Module.SELF_STOCK, stockScopeConfig("self"));
+        CONFIGS.put(AppConstants.Module.HANDLE_STOCK, stockScopeConfig("handle"));
+    }
+
+    private static EndpointConfig stockScopeConfig(String scope) {
+        String basePath = PATH_PREFIX + AppConstants.Module.STOCK + "/" + scope;
+        return new EndpointConfig(
+                HttpMethod.GET,
+                basePath + AppConstants.ApiPath.PAGE_SUFFIX,
+                AppConstants.ApiPath.STOCK_INBOUND,
+                basePath + "/{id}",
+                basePath,
+                basePath + "/{id}",
+                basePath + "/batch"
+        );
     }
 
     private static EndpointConfig defaultConfig(String moduleKey) {
@@ -47,8 +68,10 @@ public final class ModuleEndpointStrategy {
                 HttpMethod.GET,
                 basePath + AppConstants.ApiPath.PAGE_SUFFIX,
                 basePath,
+                basePath + "/{id}",
                 basePath,
-                basePath + "/{id}"
+                basePath + "/{id}",
+                null
         );
     }
 
@@ -72,11 +95,19 @@ public final class ModuleEndpointStrategy {
         return configOf(moduleKey).createPath;
     }
 
+    public static String detailPath(String moduleKey, String id) {
+        return resolveTemplate(configOf(moduleKey).detailPathTemplate, id);
+    }
+
     public static String updatePath(String moduleKey, String id) {
         return resolveTemplate(configOf(moduleKey).updatePathTemplate, id);
     }
 
     public static String deletePath(String moduleKey, String id) {
         return resolveTemplate(configOf(moduleKey).deletePathTemplate, id);
+    }
+
+    public static String batchDeletePath(String moduleKey) {
+        return configOf(moduleKey).batchDeletePath;
     }
 }

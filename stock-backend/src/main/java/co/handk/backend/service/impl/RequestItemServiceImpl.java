@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -54,6 +55,34 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         RequestItem entity = new RequestItem();
         BeanUtils.copyProperties(dto, entity);
         return entity;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public <C> boolean saveByDto(C dto) {
+        RequestItem item = toEntity(dto);
+        applyCalculatedTotal(item, null);
+        boolean saved = save(item);
+        if (saved) {
+            recalculateRequestFormSummary(item.getRequestId());
+        }
+        return saved;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public <U> boolean updateByDto(U dto) {
+        RequestItem item = toEntity(dto);
+        RequestItem existing = getByIdNotDeleted(item.getId());
+        if (existing == null) {
+            return false;
+        }
+        applyCalculatedTotal(item, existing);
+        boolean updated = super.updateByDto(item);
+        if (updated) {
+            recalculateRequestFormSummary(existing.getRequestId());
+        }
+        return updated;
     }
 
     @Override
@@ -189,5 +218,49 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         if (affected <= 0) {
             throw new RuntimeException("failed to recalculate request form summary");
         }
+    }
+
+    private void applyCalculatedTotal(RequestItem item, RequestItem existing) {
+        BigDecimal price = firstNonNull(item.getPrice(), existing == null ? null : existing.getPrice(), BigDecimal.ZERO);
+        Integer requestQty = firstNonNull(item.getRequestQty(), existing == null ? null : existing.getRequestQty(), 0);
+        BigDecimal submittedDiscountPrice = item.getDiscountPrice();
+        BigDecimal existingDiscountPrice = existing == null ? null : existing.getDiscountPrice();
+        BigDecimal submittedDiscount = item.getDiscount();
+        BigDecimal existingDiscount = existing == null ? null : existing.getDiscount();
+        boolean discountPriceChanged = submittedDiscountPrice != null
+                && (existingDiscountPrice == null || submittedDiscountPrice.compareTo(existingDiscountPrice) != 0);
+        boolean discountChanged = submittedDiscount != null
+                && (existingDiscount == null || submittedDiscount.compareTo(existingDiscount) != 0);
+        BigDecimal discount;
+        BigDecimal discountPrice;
+        if (discountPriceChanged && !discountChanged) {
+            discountPrice = submittedDiscountPrice.setScale(2, RoundingMode.HALF_UP);
+            discount = price.signum() == 0
+                    ? BigDecimal.ZERO
+                    : discountPrice.divide(price, 4, RoundingMode.HALF_UP);
+        } else {
+            discount = firstNonNull(submittedDiscount, existingDiscount, BigDecimal.ONE);
+            discountPrice = price.multiply(discount).setScale(2, RoundingMode.HALF_UP);
+        }
+        if (discount.compareTo(BigDecimal.ZERO) < 0 || discount.compareTo(BigDecimal.ONE) > 0) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "discount must be between 0 and 1");
+        }
+        item.setDiscount(discount);
+        item.setDiscountPrice(discountPrice);
+        item.setTotalAmt(discountPrice
+                .multiply(BigDecimal.valueOf(Math.abs(requestQty)))
+                .setScale(2, RoundingMode.HALF_UP));
+    }
+
+    @SafeVarargs
+    private final <T> T firstNonNull(T... values) {
+        for (T value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 }

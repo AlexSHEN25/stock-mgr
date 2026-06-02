@@ -15,6 +15,8 @@ public final class AppConstants {
         public static final String STOCK_ORDER = "stockOrder";
         public static final String STOCK_ORDER_ITEM = "stockOrderItem";
         public static final String STOCK = "stock";
+        public static final String SELF_STOCK = "selfStock";
+        public static final String HANDLE_STOCK = "handleStock";
         public static final String REQUEST_FORM = "requestForm";
         public static final String REQUEST_ITEM = "requestItem";
 
@@ -55,6 +57,8 @@ public final class AppConstants {
         public static final String REQUEST_FORM_DOWNLOAD_V2_PREFIX = "/requestForm/";
         public static final String REQUEST_FORM_DOWNLOAD_V2_SUFFIX = "/download";
         public static final String REQUEST_FORM_PDF_V2_SUFFIX = "/pdf";
+        public static final String REQUEST_FORM_CANDIDATE_ITEMS_SUFFIX = "/candidateItems";
+        public static final String REQUEST_FORM_MATCH_ITEMS = "/requestForm/items/match";
         public static final String MESSAGE_READ_PREFIX = "/message/read/";
         public static final String MESSAGE_READ_ALL = "/message/read-all";
         public static final String STOCK_INBOUND = "/stock/inbound";

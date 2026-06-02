@@ -1,6 +1,7 @@
 package co.handk.client;
 
 import co.handk.client.util.ModuleMeta;
+import co.handk.client.constant.ModuleEndpointStrategy;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -19,13 +20,30 @@ class WebPageAlignmentTest {
         String mainFxml = loadText("fxml/main.fxml");
 
         assertInOrder(mainFxml, List.of(
-                "userData=\"stock\"",
+                "userData=\"selfStock\"",
+                "userData=\"handleStock\"",
                 "userData=\"stockOrder\"",
                 "userData=\"stockOrderItem\"",
                 "userData=\"stockType\"",
                 "userData=\"stockRecord\"",
                 "userData=\"priceRecord\""
         ));
+    }
+
+    @Test
+    void splitStockMenusUseScopedBackendEndpoints() {
+        assertEquals("/stock/self/page", ModuleEndpointStrategy.pagePath("selfStock"));
+        assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("selfStock"));
+        assertEquals("/stock/self/1", ModuleEndpointStrategy.detailPath("selfStock", "1"));
+        assertEquals("/stock/self", ModuleEndpointStrategy.updatePath("selfStock", "1"));
+        assertEquals("/stock/self/1", ModuleEndpointStrategy.deletePath("selfStock", "1"));
+        assertEquals("/stock/self/batch", ModuleEndpointStrategy.batchDeletePath("selfStock"));
+        assertEquals("/stock/handle/page", ModuleEndpointStrategy.pagePath("handleStock"));
+        assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("handleStock"));
+        assertEquals("/stock/handle/1", ModuleEndpointStrategy.detailPath("handleStock", "1"));
+        assertEquals("/stock/handle", ModuleEndpointStrategy.updatePath("handleStock", "1"));
+        assertEquals("/stock/handle/1", ModuleEndpointStrategy.deletePath("handleStock", "1"));
+        assertEquals("/stock/handle/batch", ModuleEndpointStrategy.batchDeletePath("handleStock"));
     }
 
     @Test
@@ -62,6 +80,24 @@ class WebPageAlignmentTest {
                 ModuleMeta.orderedColumns("goods", List.of(
                         "id", "skuId", "goodsName", "brandId", "skuCode", "costPrice",
                         "status", "statusDesc", "createTime", "updateTime")));
+    }
+
+    @Test
+    void modulesWithoutPresetBuildFormFieldsFromTableColumnsLikeWebPage() {
+        assertTrue(ModuleMeta.formFields("permission").isEmpty());
+        assertEquals(
+                List.of("name", "code", "parentId", "status"),
+                ModuleMeta.resolvedFormFields(
+                        "permission",
+                        List.of("__selected", "id", "name", "code", "parentName", "statusDesc", "status", "createTime")));
+    }
+
+    @Test
+    void modulesWithoutRowsFallBackToQueryFieldsForCreateDialog() {
+        assertTrue(ModuleMeta.formFields("customerLevel").isEmpty());
+        assertEquals(
+                List.of("name", "discount", "remark", "status"),
+                ModuleMeta.resolvedFormFields("customerLevel", List.of()));
     }
 
     private static void assertInOrder(String source, List<String> values) {

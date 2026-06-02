@@ -26,6 +26,7 @@ public class RequestCandidateItemVO {
     private BigDecimal price;
     private String currency;
     private Boolean selected;
+    private Integer requestQty;
     private Integer requestItemState;
     private Long requestItemId;
 }

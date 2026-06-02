@@ -31,7 +31,7 @@ public final class ModuleMeta {
     }
 
     public enum RowActionType {
-        DETAIL, DOWNLOAD_REQUEST_FORM, PREVIEW_FIELDS, MARK_READ
+        DETAIL, DOWNLOAD_REQUEST_FORM, MATCH_REQUEST_ITEMS, PREVIEW_FIELDS, MARK_READ
     }
 
     public static final class Option {
@@ -126,11 +126,12 @@ public final class ModuleMeta {
     private static final String MODULE_WAREHOUSE = "warehouse";
     private static final String MODULE_ROLE = "role";
     private static final String MODULE_PERMISSION = "permission";
-    private static final String MODULE_GOODS_LEVEL_PRICE = "goodsLevelPrice";
     private static final String MODULE_MAKER = "maker";
     private static final String MODULE_BRAND = "brand";
     private static final String MODULE_CATEGORY = "category";
     private static final String MODULE_STOCK = "stock";
+    private static final String MODULE_SELF_STOCK = "selfStock";
+    private static final String MODULE_HANDLE_STOCK = "handleStock";
     private static final String MODULE_STOCK_TYPE = "stockType";
     private static final String MODULE_STOCK_RECORD = "stockRecord";
     private static final String MODULE_PRICE_RECORD = "priceRecord";
@@ -174,17 +175,18 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(MODULE_ROLE, List.of(ID, "name", "code", "permissionNames", "remark", "status"));
         QUERY_FIELDS.put(MODULE_PERMISSION, List.of(ID, "name", "code", "module", "type", "parentId", "path", "sort", "icon", "component", "status"));
         QUERY_FIELDS.put(GOODS, List.of("name", "skuCode", "brandId", "seriesId", "categoryId", "makerId", "status"));
-        QUERY_FIELDS.put(MODULE_GOODS_LEVEL_PRICE, List.of(ID, "goodsId", "skuId", "skuCode", "levelId", "price", "currency", "discount", "effectiveTime", "expireTime", "status"));
         QUERY_FIELDS.put(MODULE_MAKER, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(MODULE_BRAND, List.of(ID, "name", "englishName", "image", "content", "status"));
         QUERY_FIELDS.put(MODULE_CATEGORY, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(SERIES, List.of(ID, "name", "englishName", "brandId", "content", "status"));
         QUERY_FIELDS.put(MODULE_STOCK, List.of(ID, "goodsId", "goodsName", "skuCode", "skuId", "stockTypeId", "currentQty", "lockQty", "price", "priceUpdateTime", "currency", "warehouseId", "status"));
+        QUERY_FIELDS.put(MODULE_SELF_STOCK, QUERY_FIELDS.get(MODULE_STOCK));
+        QUERY_FIELDS.put(MODULE_HANDLE_STOCK, QUERY_FIELDS.get(MODULE_STOCK));
         QUERY_FIELDS.put(MODULE_STOCK_TYPE, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(STOCK_ORDER, List.of(ID, "orderNo", "orderType", "bizDate", "stockTypeId", "warehouseId", "sourceType", "sourceId", "totalQty", "state", "requesterId", "requesterName", "operatorId", "operatorName", "approverId", "approverName", "approveTime", "finishTime", "remark"));
         QUERY_FIELDS.put(STOCK_ORDER_ITEM, List.of(ID, "orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         QUERY_FIELDS.put(REQUEST_FORM, List.of(ID, "bizNo", "sourceOrderId", "sourceOrderNo", "userId", "username", "deptId", "deptName", "customerId", "customerName", "warehouseId", "totalQty", "requestQty", "totalAmt", "state", "approverId", "approverName", "approveTime", "approveRemark"));
-        QUERY_FIELDS.put(REQUEST_ITEM, List.of(ID, "requestId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "makerId", "makerName", "stockTypeId", "stockTypeName", "warehouseId", "price", "currency", "discount", "requestQty", "approveQty", "outQty", "stockRecordId", "remark"));
+        QUERY_FIELDS.put(REQUEST_ITEM, List.of(ID, "requestId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "makerId", "makerName", "stockTypeId", "stockTypeName", "warehouseId", "price", "discountPrice", "currency", "discount", "requestQty", "approveQty", "outQty", "totalAmt", "depositAmt", "depositTime", "depositFee", "stockRecordId", "remark"));
         QUERY_FIELDS.put(MODULE_STOCK_RECORD, List.of(ID, "bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
         QUERY_FIELDS.put(MODULE_PRICE_RECORD, List.of(ID, "goodsId", "goodsName", "englishName", "skuId", "skuCode", "oldPrice", "newPrice", "currency", "discount", "priceUpdateTime", "operatorId", "operatorName"));
         QUERY_FIELDS.put(MODULE_CUSTOMER, List.of(ID, "customerCode", "name", "englishName", "contactPerson", "phone", "email", "country", "city", "address", "levelName", "ownerUserName", "ownerDeptName", "remark", "status"));
@@ -203,11 +205,13 @@ public final class ModuleMeta {
         FORM_FIELDS.put(MODULE_DEPT, List.of("parentId", "name", "code", "leaderId", "sort", "status"));
         FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "seriesId", "categoryId", "makerId", "description", "isHot", "skuCode", "skuName", "price", "status"));
         FORM_FIELDS.put(MODULE_STOCK, List.of("goodsId", "skuId", "sourceType", "warehouseId", "stockTypeId", "quantity", "remark"));
+        FORM_FIELDS.put(MODULE_SELF_STOCK, FORM_FIELDS.get(MODULE_STOCK));
+        FORM_FIELDS.put(MODULE_HANDLE_STOCK, FORM_FIELDS.get(MODULE_STOCK));
         FORM_FIELDS.put(STOCK_ORDER, List.of("orderNo", "orderType", "bizDate", "warehouseId", "sourceType", "sourceId", "totalQty", "stockTypeId", "state", "requesterId", "operatorId", "approverId", "approveTime", "finishTime", "remark"));
         FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
         FORM_FIELDS.put(REQUEST_FORM, List.of("bizNo", "sourceOrderId", "sourceOrderNo", "userId", "username", "deptId", "deptName", "customerId", "customerName", "warehouseId", "totalQty", "requestQty", "totalAmt", "state", "approverId", "approverName", "approveTime", "approveRemark"));
-        FORM_FIELDS.put(REQUEST_ITEM, List.of("requestId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "makerId", "makerName", "stockTypeId", "stockTypeName", "warehouseId", "price", "currency", "discount", "requestQty", "approveQty", "outQty", "stockRecordId", "remark"));
+        FORM_FIELDS.put(REQUEST_ITEM, List.of("requestId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "makerId", "makerName", "stockTypeId", "stockTypeName", "warehouseId", "price", "discountPrice", "currency", "discount", "requestQty", "approveQty", "outQty", "depositAmt", "depositTime", "depositFee", "stockRecordId", "remark"));
         FORM_FIELDS.put(MODULE_WAREHOUSE, List.of("name", "code", "address", "managerId", "status"));
         FORM_FIELDS.put(MODULE_STOCK_TYPE, List.of("name", "status"));
         FORM_FIELDS.put(MODULE_ROLE, List.of("name", "code", "permissionIds", "remark", "status"));
@@ -219,8 +223,10 @@ public final class ModuleMeta {
 
         REQUIRED_FORM_FIELDS.put(USER, List.of("username", "password", "deptId", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_DEPT, List.of("name", "code", "status"));
-        REQUIRED_FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "seriesId", "categoryId", "makerId", "skuCode"));
+        REQUIRED_FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "categoryId", "skuCode"));
         REQUIRED_FORM_FIELDS.put(MODULE_STOCK, List.of("goodsId", "skuId", "sourceType", "warehouseId", "stockTypeId", "quantity"));
+        REQUIRED_FORM_FIELDS.put(MODULE_SELF_STOCK, REQUIRED_FORM_FIELDS.get(MODULE_STOCK));
+        REQUIRED_FORM_FIELDS.put(MODULE_HANDLE_STOCK, REQUIRED_FORM_FIELDS.get(MODULE_STOCK));
         REQUIRED_FORM_FIELDS.put(STOCK_ORDER, List.of("orderNo", "orderType", "warehouseId", "sourceType"));
         REQUIRED_FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "goodsName", "changeQty"));
         REQUIRED_FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "goodsName", "changeQty", "orderType", "sourceType"));
@@ -310,6 +316,8 @@ public final class ModuleMeta {
                 new Option("\u81ea\u793e\u5165\u5eab\uff08\u627f\u8a8d\u5fc5\u9808\uff09", "1"),
                 new Option("\u518d\u8ca9\u58f2\u5165\u5eab\uff08\u5373\u6642\u5165\u5eab\uff09", "2")
         ));
+        SELECT_OPTIONS.put(MODULE_SELF_STOCK + ".sourceType", SELECT_OPTIONS.get(MODULE_STOCK + ".sourceType"));
+        SELECT_OPTIONS.put(MODULE_HANDLE_STOCK + ".sourceType", SELECT_OPTIONS.get(MODULE_STOCK + ".sourceType"));
         putOptions(MODULE_STOCK_RECORD + ".orderType", List.of(
                 new Option("\u5165\u5eab", "1"), new Option("\u51fa\u5eab", "2"), new Option("\u8abf\u6574", "3"),
                 new Option("\u68da\u5378", "4"), new Option("\u79fb\u52d5", "5"), new Option("\u8fd4\u54c1", "6")
@@ -334,6 +342,8 @@ public final class ModuleMeta {
                 new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())
         ));
         DEPENDENCY_RULES.put(MODULE_STOCK, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
+        DEPENDENCY_RULES.put(MODULE_SELF_STOCK, DEPENDENCY_RULES.get(MODULE_STOCK));
+        DEPENDENCY_RULES.put(MODULE_HANDLE_STOCK, DEPENDENCY_RULES.get(MODULE_STOCK));
         DEPENDENCY_RULES.put(REQUEST_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
         DEPENDENCY_RULES.put(STOCK_ORDER_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
 
@@ -342,6 +352,7 @@ public final class ModuleMeta {
         ));
         ROW_ACTIONS.put(REQUEST_FORM, List.of(
                 new RowAction(RowActionType.DETAIL, "action.requestDetail", REQUEST_ITEM, "requestId"),
+                new RowAction(RowActionType.MATCH_REQUEST_ITEMS, "action.matchRequestItems", null, null),
                 new RowAction(RowActionType.DOWNLOAD_REQUEST_FORM, "action.download", null, null)
         ));
         ROW_ACTIONS.put(GOODS_SKU, List.of(
@@ -401,6 +412,43 @@ public final class ModuleMeta {
 
     public static List<String> formFields(String moduleKey) {
         return FORM_FIELDS.getOrDefault(moduleKey, List.of());
+    }
+
+    public static List<String> resolvedFormFields(String moduleKey, Iterable<String> availableFields) {
+        List<String> configuredFields = formFields(moduleKey);
+        if (!configuredFields.isEmpty()) {
+            return configuredFields;
+        }
+        List<String> resolvedFields = normalizeFallbackFormFields(availableFields);
+        return resolvedFields.isEmpty() ? normalizeFallbackFormFields(queryFields(moduleKey)) : resolvedFields;
+    }
+
+    private static List<String> normalizeFallbackFormFields(Iterable<String> fields) {
+        if (fields == null) {
+            return List.of();
+        }
+        Set<String> normalizedFields = new LinkedHashSet<>();
+        for (String field : fields) {
+            if (field == null || field.isBlank() || field.startsWith("__")) {
+                continue;
+            }
+            String mappedField = mapNameFieldToIdField(field);
+            String normalizedField = mappedField.isBlank() ? field : mappedField;
+            if (!isReadonlyFormField(normalizedField)) {
+                normalizedFields.add(normalizedField);
+            }
+        }
+        return new ArrayList<>(normalizedFields);
+    }
+
+    private static boolean isReadonlyFormField(String field) {
+        String low = field.trim().toLowerCase(Locale.ROOT);
+        return "id".equals(low)
+                || "createtime".equals(low)
+                || "updatetime".equals(low)
+                || "statusdesc".equals(low)
+                || "beforeqty".equals(low)
+                || "afterqty".equals(low);
     }
 
     public static boolean isRequiredFormField(String moduleKey, String field) {

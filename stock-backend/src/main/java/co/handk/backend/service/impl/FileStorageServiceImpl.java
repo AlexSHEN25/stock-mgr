@@ -79,6 +79,9 @@ public class FileStorageServiceImpl implements FileStorageService {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "画像URL形式が不正です");
             }
         }
+        if (trimmed.startsWith(API_PREFIX + meta.uriPrefix())) {
+            trimmed = trimmed.substring(API_PREFIX.length());
+        }
         ensureLength(trimmed, meta.maxLength());
         return trimmed;
     }
@@ -138,6 +141,9 @@ public class FileStorageServiceImpl implements FileStorageService {
     }
 
     private void deleteOldIfNeeded(String oldPath, BizMeta meta) {
+        if (StringUtils.hasText(oldPath) && oldPath.startsWith(API_PREFIX + meta.uriPrefix())) {
+            oldPath = oldPath.substring(API_PREFIX.length());
+        }
         if (!StringUtils.hasText(oldPath) || !oldPath.startsWith(meta.uriPrefix())) {
             return;
         }
@@ -186,4 +192,3 @@ public class FileStorageServiceImpl implements FileStorageService {
     private record BizMeta(String uriPrefix, Path dir, int maxLength) {
     }
 }
-

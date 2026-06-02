@@ -1,6 +1,7 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.annotation.context.UserContext;
+import co.handk.backend.entity.Category;
 import co.handk.backend.entity.Goods;
 import co.handk.backend.entity.GoodsSku;
 import co.handk.backend.entity.Message;
@@ -12,6 +13,7 @@ import co.handk.backend.entity.StockRecord;
 import co.handk.backend.entity.StockType;
 import co.handk.backend.entity.User;
 import co.handk.backend.mapper.StockMapper;
+import co.handk.backend.service.CategoryService;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
 import co.handk.backend.service.MessageService;
@@ -24,16 +26,20 @@ import co.handk.backend.service.StockService;
 import co.handk.backend.service.StockTypeService;
 import co.handk.backend.service.UserService;
 import co.handk.common.constant.CommonConstant;
+import co.handk.common.constant.FieldNameConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
+import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -44,6 +50,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockVO> implements StockService {
@@ -53,9 +60,17 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private static final int MESSAGE_IS_UNREAD = 0;
     private static final int MESSAGE_STATE_SENT = 1;
     private static final int LOW_STOCK_THRESHOLD = 10;
+    private static final String HANDLE_GOODS_SQL = "SELECT g.id FROM t_goods g "
+            + "INNER JOIN t_category c ON c.id = g.category_id AND c.deleted = 0 "
+            + "WHERE g.deleted = 0 AND c.name LIKE '%柄%'";
+    private static final String SELF_GOODS_SQL = "SELECT g.id FROM t_goods g "
+            + "LEFT JOIN t_category c ON c.id = g.category_id AND c.deleted = 0 "
+            + "WHERE g.deleted = 0 AND (c.name IS NULL OR c.name NOT LIKE '%柄%')";
 
     @Autowired
     private GoodsService goodsService;
+    @Autowired
+    private CategoryService categoryService;
     @Autowired
     private GoodsSkuService goodsSkuService;
     @Autowired
@@ -119,6 +134,106 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "価格履歴の保存に失敗しました");
         }
         return true;
+    }
+
+    @Override
+    public PageResult<StockVO> pageSelfStock(StockQueryDTO query) {
+        return pageByScope(query, false);
+    }
+
+    @Override
+    public PageResult<StockVO> pageHandleStock(StockQueryDTO query) {
+        return pageByScope(query, true);
+    }
+
+    @Override
+    public StockVO getSelfStockById(Long id) {
+        requireScopedStock(id, false);
+        return getVOById(id);
+    }
+
+    @Override
+    public StockVO getHandleStockById(Long id) {
+        requireScopedStock(id, true);
+        return getVOById(id);
+    }
+
+    @Override
+    public boolean updateSelfStock(UpdateStockDTO dto) {
+        requireScopedStock(dto.getId(), false);
+        return updateByDto(dto);
+    }
+
+    @Override
+    public boolean updateHandleStock(UpdateStockDTO dto) {
+        requireScopedStock(dto.getId(), true);
+        return updateByDto(dto);
+    }
+
+    @Override
+    public int deleteSelfStockById(Long id) {
+        requireScopedStock(id, false);
+        return deleteByIdLogic(id);
+    }
+
+    @Override
+    public int deleteHandleStockById(Long id) {
+        requireScopedStock(id, true);
+        return deleteByIdLogic(id);
+    }
+
+    @Override
+    public int deleteSelfStockBatch(List<Long> ids) {
+        requireScopedStocks(ids, false);
+        return deleteBatchLogic(ids);
+    }
+
+    @Override
+    public int deleteHandleStockBatch(List<Long> ids) {
+        requireScopedStocks(ids, true);
+        return deleteBatchLogic(ids);
+    }
+
+    private PageResult<StockVO> pageByScope(StockQueryDTO query, boolean handle) {
+        Page<Stock> page = new Page<>(query.getPageNum(), query.getPageSize());
+        QueryWrapper<Stock> wrapper = buildWrapper(query);
+        wrapper.inSql("goods_id", handle ? HANDLE_GOODS_SQL : SELF_GOODS_SQL);
+        boolean asc = "asc".equalsIgnoreCase(query.getSortOrder());
+        String sortColumn = FieldNameConstant.SORT_BY_CREATE_TIME.equals(query.getSortBy())
+                ? FieldNameConstant.COLUMN_CREATE_TIME : FieldNameConstant.COLUMN_UPDATE_TIME;
+        wrapper.orderBy(true, asc, sortColumn);
+        Page<Stock> result = this.page(page, wrapper);
+        List<StockVO> records = result.getRecords().stream()
+                .map(this::toVO)
+                .peek(this::fillStatusDesc)
+                .collect(Collectors.toList());
+        return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), records);
+    }
+
+    private void requireScopedStocks(List<Long> ids, boolean handle) {
+        if (ids == null) {
+            return;
+        }
+        ids.forEach(id -> requireScopedStock(id, handle));
+    }
+
+    private Stock requireScopedStock(Long id, boolean handle) {
+        Stock stock = requireStock(id);
+        if (isHandleStock(stock) != handle) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "stock does not belong to requested inventory scope");
+        }
+        return stock;
+    }
+
+    private boolean isHandleStock(Stock stock) {
+        Goods goods = requireGoods(stock.getGoodsId());
+        if (goods.getCategoryId() == null) {
+            return false;
+        }
+        Category category = categoryService.getByIdNotDeleted(goods.getCategoryId());
+        return category != null && category.getName() != null && category.getName().contains("柄");
     }
 
     @Override
@@ -769,6 +884,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
         StockVO vo = new StockVO();
         BeanUtils.copyProperties(entity, vo);
+        vo.setStockTypeName(getStockTypeName(entity.getStockTypeId()));
         return vo;
     }
 }

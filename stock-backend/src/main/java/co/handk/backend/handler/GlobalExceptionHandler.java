@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataAccessException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -51,6 +52,13 @@ public class GlobalExceptionHandler {
     public Result<?> handleBusinessException(BusinessException e) {
         log.warn("Business request rejected: type={}, message={}", e.getClass().getName(), safeMessage(e));
         return Result.fail(ResultCode.ERROR, e.getMessageKey(), safeMessage(e));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("Uploaded file exceeds the configured size limit: message={}", safeMessage(e));
+        return Result.fail(ResultCode.VALIDATE_ERROR, MessageKeyConstant.ERROR_VALIDATE,
+                "上传文件不能超过10MB");
     }
 
     @ExceptionHandler(Exception.class)

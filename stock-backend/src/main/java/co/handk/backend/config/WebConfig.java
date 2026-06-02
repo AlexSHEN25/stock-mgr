@@ -46,7 +46,6 @@ public class WebConfig implements WebMvcConfigurer {
                         "/warehouse/**",
                         "/customerLevel/**",
                         "/customer/**",
-                        "/goodsLevelPrice/**",
                         "/dept/**",
                         "/stock/**",
                         "/stockRecord/**",

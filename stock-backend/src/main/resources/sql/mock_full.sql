@@ -7,7 +7,6 @@ TRUNCATE TABLE t_config;
 TRUNCATE TABLE t_message;
 TRUNCATE TABLE t_request_item;
 TRUNCATE TABLE t_request_form;
-TRUNCATE TABLE t_goods_level_price;
 TRUNCATE TABLE t_customer;
 TRUNCATE TABLE t_customer_level;
 TRUNCATE TABLE t_stock_record;
@@ -91,8 +90,6 @@ VALUES (1, 'システム管理', 'MENU_SYSTEM', 'system', 1, 0, '/system', 1, 's
        (25, '顧客-顧客編集', 'DATA_CUSTOMER_WRITE', 'customer', 2, 5, '/api/customer/**', 2, 'api', '', 1, 0, 1, 1),
        (26, '顧客-ランク閲覧', 'DATA_CUSTOMER_LEVEL_READ', 'customer', 2, 5, '/api/customerLevel/**', 3, 'api', '', 1, 0, 1, 1),
        (27, '顧客-ランク編集', 'DATA_CUSTOMER_LEVEL_WRITE', 'customer', 2, 5, '/api/customerLevel/**', 4, 'api', '', 1, 0, 1, 1),
-       (28, '顧客-ランク価格閲覧', 'DATA_GOODS_LEVEL_PRICE_READ', 'customer', 2, 5, '/api/goodsLevelPrice/**', 5, 'api', '', 1, 0, 1, 1),
-       (29, '顧客-ランク価格編集', 'DATA_GOODS_LEVEL_PRICE_WRITE', 'customer', 2, 5, '/api/goodsLevelPrice/**', 6, 'api', '', 1, 0, 1, 1),
        (30, 'ユーザー-閲覧', 'DATA_USER_READ', 'user', 2, 2, '/api/user/**', 1, 'api', '', 1, 0, 1, 1),
        (31, '商品-閲覧', 'DATA_GOODS_READ', 'goods', 2, 3, '/api/goods/**', 1, 'api', '', 1, 0, 1, 1),
        (32, '商品SKU-閲覧', 'DATA_GOODS_SKU_READ', 'goods', 2, 3, '/api/goodsSku/**', 2, 'api', '', 1, 0, 1, 1),
@@ -115,13 +112,13 @@ VALUES (1, 1, 1, 0, 1, 1), (2, 1, 2, 0, 1, 1), (3, 1, 3, 0, 1, 1), (4, 1, 4, 0, 
        (11, 1, 11, 0, 1, 1), (12, 1, 12, 0, 1, 1), (13, 1, 13, 0, 1, 1), (14, 1, 14, 0, 1, 1), (15, 1, 15, 0, 1, 1),
        (16, 1, 16, 0, 1, 1), (17, 1, 17, 0, 1, 1), (18, 1, 18, 0, 1, 1), (19, 1, 19, 0, 1, 1), (20, 1, 20, 0, 1, 1),
        (21, 1, 21, 0, 1, 1), (22, 1, 22, 0, 1, 1), (23, 1, 23, 0, 1, 1), (24, 1, 24, 0, 1, 1), (25, 1, 25, 0, 1, 1),
-       (26, 1, 26, 0, 1, 1), (27, 1, 27, 0, 1, 1), (28, 1, 28, 0, 1, 1), (29, 1, 29, 0, 1, 1),
+       (26, 1, 26, 0, 1, 1), (27, 1, 27, 0, 1, 1),
        (30, 2, 1, 0, 1, 1), (31, 2, 2, 0, 1, 1), (32, 2, 3, 0, 1, 1), (33, 2, 4, 0, 1, 1), (34, 2, 5, 0, 1, 1),
        (35, 2, 6, 0, 1, 1), (36, 2, 7, 0, 1, 1), (37, 2, 8, 0, 1, 1), (38, 2, 9, 0, 1, 1), (39, 2, 10, 0, 1, 1),
        (40, 2, 11, 0, 1, 1), (41, 2, 12, 0, 1, 1), (42, 2, 13, 0, 1, 1), (43, 2, 14, 0, 1, 1), (44, 2, 15, 0, 1, 1),
        (45, 2, 16, 0, 1, 1), (46, 2, 17, 0, 1, 1), (47, 2, 18, 0, 1, 1), (48, 2, 19, 0, 1, 1), (49, 2, 20, 0, 1, 1),
        (50, 2, 21, 0, 1, 1), (51, 2, 22, 0, 1, 1), (52, 2, 23, 0, 1, 1), (53, 2, 24, 0, 1, 1), (54, 2, 25, 0, 1, 1),
-       (55, 2, 26, 0, 1, 1), (56, 2, 27, 0, 1, 1), (57, 2, 28, 0, 1, 1), (58, 2, 29, 0, 1, 1), (59, 2, 30, 0, 1, 1),
+       (55, 2, 26, 0, 1, 1), (56, 2, 27, 0, 1, 1), (59, 2, 30, 0, 1, 1),
        (60, 2, 31, 0, 1, 1), (61, 2, 32, 0, 1, 1), (62, 2, 33, 0, 1, 1), (63, 2, 34, 0, 1, 1), (64, 2, 35, 0, 1, 1), (65, 2, 36, 0, 1, 1);
 
 -- master data
@@ -194,11 +191,6 @@ VALUES (1, 'CUST-001', '山田商事', 'Yamada Trading', '山田太郎', '031111
        (2, 'CUST-002', '大阪物産', 'Osaka Bussan', '佐藤花子', '0666666666', 'osaka@test.com', 'JP', '大阪', '中央区2-2-2',
         2, 2, 2, 'VIP顧客', 1, 0, 1, 1);
 
-INSERT INTO t_goods_level_price(id, goods_id, sku_id, sku_code, level_id, price, currency, discount, effective_time,
-                                expire_time, status, deleted, created_by, updated_by)
-VALUES (1, 1, 1, 'SKU-MC-001', 2, 268.00, 'JPY', 0.9000, NOW(), DATE_ADD(NOW(), INTERVAL 365 DAY), 1, 0, 1, 1),
-       (2, 2, 3, 'SKU-DT-001', 2, 378.00, 'JPY', 0.9000, NOW(), DATE_ADD(NOW(), INTERVAL 365 DAY), 1, 0, 1, 1);
-
 -- request form / item
 INSERT INTO t_request_form(id, biz_no, user_id, username, dept_id, dept_name, customer_id, customer_name, warehouse_id, source_order_id,
                            total_qty, request_qty, total_amt, state, approver_id, approver_name, approve_time,
@@ -208,14 +200,14 @@ VALUES (1, 'REQ-20260507-001', 2, 'sales01', 2, '営業部', 1, '山田商事', 
 
 INSERT INTO t_request_item(id, request_id, goods_id, sku_id, sku_code, goods_name, english_name, brand_id, brand_name,
                            series_id, series_name, category_id, category_name, stock_type_id, stock_type_name, maker_id,
-                           maker_name, warehouse_id, price, exchange_rate, currency, discount, request_qty, approve_qty,
-                           out_qty, total_amt, deposit_amt, deposit_time, stock_record_id, remark, deleted, created_by, updated_by)
+                           maker_name, warehouse_id, price, discount_price, exchange_rate, currency, discount, request_qty, approve_qty,
+                           out_qty, total_amt, deposit_amt, deposit_time, deposit_fee, stock_record_id, remark, deleted, created_by, updated_by)
 VALUES (1, 1, 1, 1, 'SKU-MC-001', '抹茶クッキー', 'Matcha Cookie', 1, 'サクラ', 1, '春シリーズ', 1, '食品', 1, '通常品',
-        1, '東京工場', 1, 298.00, 1.000000, 'JPY', 1.0000, 10, 10, 10, 2980.00, 0.00, NULL, 1, '即納', 0, 2, 1),
+        1, '東京工場', 1, 298.00, 298.00, 1.000000, 'JPY', 1.0000, 10, 10, 10, 2980.00, 0.00, NULL, 0.00, 1, '即納', 0, 2, 1),
        (2, 1, 1, 2, 'SKU-MC-002', '抹茶クッキー', 'Matcha Cookie', 1, 'サクラ', 1, '春シリーズ', 1, '食品', 1, '通常品',
-        1, '東京工場', 1, 598.00, 1.000000, 'JPY', 1.0000, 20, 20, 20, 11960.00, 0.00, NULL, 2, '即納', 0, 2, 1),
+        1, '東京工場', 1, 598.00, 598.00, 1.000000, 'JPY', 1.0000, 20, 20, 20, 11960.00, 0.00, NULL, 0.00, 2, '即納', 0, 2, 1),
        (3, 2, 2, 3, 'SKU-DT-001', '洗剤A', 'Detergent A', 2, '富士', 2, '標準シリーズ', 2, '日用品', 1, '通常品',
-        2, '大阪工場', 2, 420.00, 1.000000, 'JPY', 0.9000, 20, 0, 0, 7560.00, 500.00, NOW(), NULL, '審査待ち', 0, 2, 2);
+        2, '大阪工場', 2, 420.00, 378.00, 1.000000, 'JPY', 0.9000, 20, 0, 0, 7560.00, 500.00, NOW(), 110.00, NULL, '審査待ち', 0, 2, 2);
 
 -- stock order / item / record
 INSERT INTO t_stock_order(id, order_no, order_type, warehouse_id, source_type, source_id, total_qty, stock_type_id,

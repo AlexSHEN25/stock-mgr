@@ -19,11 +19,9 @@ public class UpdateGoodsDTO {
     private String englishName;
     @NotNull(message = "ブランドは必須項目です")
     private Long brandId;
-    @NotNull(message = "シリーズは必須項目です")
     private Long seriesId;
     @NotNull(message = "カテゴリは必須項目です")
     private Long categoryId;
-    @NotNull(message = "メーカーは必須項目です")
     private Long makerId;
     private String description;
     private Integer isHot;

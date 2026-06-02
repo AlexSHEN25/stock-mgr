@@ -39,7 +39,6 @@
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
                                 <Button text="%main.menu.goods" userData="goods" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="%main.menu.goodsLevelPrice" userData="goodsLevelPrice" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.maker" userData="maker" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.brand" userData="brand" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.category" userData="category" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
@@ -50,7 +49,8 @@
                     <TitledPane text="%main.group.stock">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="%main.menu.stock" userData="stock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.selfStock" userData="selfStock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <Button text="%main.menu.handleStock" userData="handleStock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockOrder" userData="stockOrder" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockOrderItem" userData="stockOrderItem" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockType" userData="stockType" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
