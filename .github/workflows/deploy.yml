@@ -1,0 +1,25 @@
+name: Deploy
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Deploy ECS
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: 47.242.239.126
+                  username: root
+                  password: ${{ secrets.SERVER_PASSWORD }}
+                  port: 22
+                  script: |
+                      cd /opt/stock/stock-mgr
+                      git pull origin main
+
+                      cd /opt/stock
+                      docker compose up -d --build stock-mgr
