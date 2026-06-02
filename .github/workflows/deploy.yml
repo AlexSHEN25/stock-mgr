@@ -16,7 +16,7 @@ jobs:
                   host: ${{ secrets.SERVER_HOST }}
                   username: ${{ secrets.SERVER_USER }}
                   password: ${{ secrets.SERVER_PASSWORD }}
-                  port: ${{ vars.SERVER_PORT }}
+                  port: ${{ secrets.SERVER_PORT }}
                   script: |
                       cd "${{ vars.DEPLOY_PROJECT_DIR }}"
                       git pull origin main
