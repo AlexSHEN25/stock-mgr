@@ -67,16 +67,13 @@
             <version>2.0.31</version>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>
-                        co.handk.backend.StockBackendApplication
-                    </mainClass>
+                    <mainClass>co.handk.backend.StockBackendApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>
