@@ -20,7 +20,7 @@ public class LoginController {
     private static final String PREF_NODE = "stock-client";
     private static final String PREF_REMEMBER = "remember";
     private static final String PREF_USERNAME = "username";
-    private static final String PREF_PASSWORD = "password";
+    private static final String LEGACY_PREF_PASSWORD = "password";
 
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
@@ -78,18 +78,18 @@ public class LoginController {
             return;
         }
         usernameField.setText(prefs.get(PREF_USERNAME, ""));
-        passwordField.setText(prefs.get(PREF_PASSWORD, ""));
+        prefs.remove(LEGACY_PREF_PASSWORD);
     }
 
     private void saveRememberedCredentials() {
         if (rememberCheckBox.isSelected()) {
             prefs.putBoolean(PREF_REMEMBER, true);
             prefs.put(PREF_USERNAME, usernameField.getText() == null ? "" : usernameField.getText());
-            prefs.put(PREF_PASSWORD, passwordField.getText() == null ? "" : passwordField.getText());
+            prefs.remove(LEGACY_PREF_PASSWORD);
         } else {
             prefs.putBoolean(PREF_REMEMBER, false);
             prefs.remove(PREF_USERNAME);
-            prefs.remove(PREF_PASSWORD);
+            prefs.remove(LEGACY_PREF_PASSWORD);
         }
     }
 
