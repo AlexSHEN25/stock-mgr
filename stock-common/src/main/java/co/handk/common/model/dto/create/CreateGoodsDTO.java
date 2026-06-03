@@ -3,22 +3,22 @@ package co.handk.common.model.dto.create;
 import co.handk.common.enums.StatusEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateGoodsDTO {
 
-    @NotBlank(message = "必須項目です")
+    @NotBlank(message = "名称は必須項目です")
     private String name;
     private String englishName;
-    @NotNull(message = "必須項目です")
+    @NotNull(message = "ブランドは必須項目です")
     private Long brandId;
     private Long seriesId;
-    @NotNull(message = "必須項目です")
+    @NotNull(message = "カテゴリーは必須項目です")
     private Long categoryId;
     private Long makerId;
     private String description;
