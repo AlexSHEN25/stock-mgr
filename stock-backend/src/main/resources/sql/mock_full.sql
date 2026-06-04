@@ -99,40 +99,47 @@ INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (37,'山下',1,0,1,1,'2026-06-02 12:59:50','2026-06-02 12:59:50');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (38,'大野ナイフ',1,0,1,1,'2026-06-02 12:59:54','2026-06-02 12:59:54');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (39,'日の丸',1,0,1,1,'2026-06-02 13:00:00','2026-06-02 13:00:00');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'システム管理','MENU_SYSTEM','system',1,0,'/system',1,'setting','system/index',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'ユーザー管理','MENU_USER','user',1,1,'/user',2,'user','user/index',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'商品管理','MENU_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (4,'在庫管理','MENU_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'顧客管理','MENU_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (6,'在庫-商品在庫閲覧','DATA_STOCK_READ','stock',2,4,'/api/stock/**',1,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (7,'在庫-商品在庫編集','DATA_STOCK_WRITE','stock',2,4,'/api/stock/**',2,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'在庫-在庫区分閲覧','DATA_STOCK_TYPE_READ','stock',2,4,'/api/stockType/**',3,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (9,'在庫-在庫区分編集','DATA_STOCK_TYPE_WRITE','stock',2,4,'/api/stockType/**',4,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (10,'在庫-倉庫閲覧','DATA_WAREHOUSE_READ','stock',2,4,'/api/warehouse/**',5,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (11,'在庫-倉庫編集','DATA_WAREHOUSE_WRITE','stock',2,4,'/api/warehouse/**',6,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (12,'在庫-伝票閲覧','DATA_STOCK_ORDER_READ','stock',2,4,'/api/stockOrder/**',7,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (13,'在庫-伝票編集','DATA_STOCK_ORDER_WRITE','stock',2,4,'/api/stockOrder/**',8,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (14,'在庫-伝票明細閲覧','DATA_STOCK_ORDER_ITEM_READ','stock',2,4,'/api/stockOrderItem/**',9,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (15,'在庫-伝票明細編集','DATA_STOCK_ORDER_ITEM_WRITE','stock',2,4,'/api/stockOrderItem/**',10,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (16,'在庫-履歴閲覧','DATA_STOCK_RECORD_READ','stock',2,4,'/api/stockRecord/**',11,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (17,'在庫-履歴編集','DATA_STOCK_RECORD_WRITE','stock',2,4,'/api/stockRecord/**',12,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (18,'在庫-価格履歴閲覧','DATA_PRICE_RECORD_READ','stock',2,4,'/api/priceRecord/**',13,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (19,'在庫-価格履歴編集','DATA_PRICE_RECORD_WRITE','stock',2,4,'/api/priceRecord/**',14,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (20,'在庫-申請書閲覧','DATA_REQUEST_FORM_READ','stock',2,4,'/api/requestForm/**',15,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (21,'在庫-申請書編集','DATA_REQUEST_FORM_WRITE','stock',2,4,'/api/requestForm/**',16,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (22,'在庫-申請明細閲覧','DATA_REQUEST_ITEM_READ','stock',2,4,'/api/requestItem/**',17,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (23,'在庫-申請明細編集','DATA_REQUEST_ITEM_WRITE','stock',2,4,'/api/requestItem/**',18,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (24,'顧客-顧客閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (25,'顧客-顧客編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (26,'顧客-ランク閲覧','DATA_CUSTOMER_LEVEL_READ','customer',2,5,'/api/customerLevel/**',3,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (27,'顧客-ランク編集','DATA_CUSTOMER_LEVEL_WRITE','customer',2,5,'/api/customerLevel/**',4,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (30,'ユーザー-閲覧','DATA_USER_READ','user',2,2,'/api/user/**',1,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (31,'商品-閲覧','DATA_GOODS_READ','goods',2,3,'/api/goods/**',1,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (32,'商品SKU-閲覧','DATA_GOODS_SKU_READ','goods',2,3,'/api/goodsSku/**',2,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (33,'商品画像-閲覧','DATA_GOODS_IMAGE_READ','goods',2,3,'/api/goodsImage/**',3,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (34,'商品仕様-閲覧','DATA_GOODS_SKU_SPEC_READ','goods',2,3,'/api/goodsSkuSpec/**',4,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (35,'メッセージ-閲覧','DATA_MESSAGE_READ','system',2,1,'/api/message/**',1,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_permission` (`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (36,'メッセージ-編集','DATA_MESSAGE_WRITE','system',2,1,'/api/message/**',2,'api','',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+
+INSERT INTO `t_permission`
+(`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
+VALUES
+    (1,'システム管理','MENU_SYSTEM','system',1,0,'/system',1,'setting','system/index',1,0,1,1,NOW(),NOW()),
+    (2,'ユーザー管理','MENU_USER','user',1,1,'/user',2,'user','user/index',1,0,1,1,NOW(),NOW()),
+    (3,'商品管理','MENU_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1,NOW(),NOW()),
+    (4,'在庫管理','MENU_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1,NOW(),NOW()),
+    (5,'顧客管理','MENU_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1,NOW(),NOW()),
+
+    (6,'自社在庫管理閲覧','DATA_STOCK_READ','stock',2,4,'/api/stock/**',1,'api','',1,0,1,1,NOW(),NOW()),
+    (7,'自社在庫管理編集','DATA_STOCK_WRITE','stock',2,4,'/api/stock/**',2,'api','',1,0,1,1,NOW(),NOW()),
+    (8,'在庫分類閲覧','DATA_STOCK_TYPE_READ','stock',2,4,'/api/stockType/**',3,'api','',1,0,1,1,NOW(),NOW()),
+    (9,'在庫分類編集','DATA_STOCK_TYPE_WRITE','stock',2,4,'/api/stockType/**',4,'api','',1,0,1,1,NOW(),NOW()),
+    (10,'倉庫管理閲覧','DATA_WAREHOUSE_READ','stock',2,4,'/api/warehouse/**',5,'api','',1,0,1,1,NOW(),NOW()),
+    (11,'倉庫管理編集','DATA_WAREHOUSE_WRITE','stock',2,4,'/api/warehouse/**',6,'api','',1,0,1,1,NOW(),NOW()),
+    (12,'入出庫伝票閲覧','DATA_STOCK_ORDER_READ','stock',2,4,'/api/stockOrder/**',7,'api','',1,0,1,1,NOW(),NOW()),
+    (13,'入出庫伝票編集','DATA_STOCK_ORDER_WRITE','stock',2,4,'/api/stockOrder/**',8,'api','',1,0,1,1,NOW(),NOW()),
+    (14,'入出庫明細閲覧','DATA_STOCK_ORDER_ITEM_READ','stock',2,4,'/api/stockOrderItem/**',9,'api','',1,0,1,1,NOW(),NOW()),
+    (15,'入出庫明細編集','DATA_STOCK_ORDER_ITEM_WRITE','stock',2,4,'/api/stockOrderItem/**',10,'api','',1,0,1,1,NOW(),NOW()),
+    (16,'在庫履歴閲覧','DATA_STOCK_RECORD_READ','stock',2,4,'/api/stockRecord/**',11,'api','',1,0,1,1,NOW(),NOW()),
+    (17,'在庫履歴編集','DATA_STOCK_RECORD_WRITE','stock',2,4,'/api/stockRecord/**',12,'api','',1,0,1,1,NOW(),NOW()),
+    (18,'価格履歴閲覧','DATA_PRICE_RECORD_READ','stock',2,4,'/api/priceRecord/**',13,'api','',1,0,1,1,NOW(),NOW()),
+    (19,'価格履歴編集','DATA_PRICE_RECORD_WRITE','stock',2,4,'/api/priceRecord/**',14,'api','',1,0,1,1,NOW(),NOW()),
+    (20,'請求書管理閲覧','DATA_REQUEST_FORM_READ','stock',2,4,'/api/requestForm/**',15,'api','',1,0,1,1,NOW(),NOW()),
+    (21,'請求書管理編集','DATA_REQUEST_FORM_WRITE','stock',2,4,'/api/requestForm/**',16,'api','',1,0,1,1,NOW(),NOW()),
+    (22,'請求書明細閲覧','DATA_REQUEST_ITEM_READ','stock',2,4,'/api/requestItem/**',17,'api','',1,0,1,1,NOW(),NOW()),
+    (23,'請求書明細編集','DATA_REQUEST_ITEM_WRITE','stock',2,4,'/api/requestItem/**',18,'api','',1,0,1,1,NOW(),NOW()),
+
+    (24,'顧客管理閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1,NOW(),NOW()),
+    (25,'顧客管理編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1,NOW(),NOW()),
+    (26,'顧客ランク管理閲覧','DATA_CUSTOMER_LEVEL_READ','customer',2,5,'/api/customerLevel/**',3,'api','',1,0,1,1,NOW(),NOW()),
+    (27,'顧客ランク管理編集','DATA_CUSTOMER_LEVEL_WRITE','customer',2,5,'/api/customerLevel/**',4,'api','',1,0,1,1,NOW(),NOW()),
+
+    (30,'ユーザー管理閲覧','DATA_USER_READ','user',2,2,'/api/user/**',1,'api','',1,0,1,1,NOW(),NOW()),
+    (31,'商品管理閲覧','DATA_GOODS_READ','goods',2,3,'/api/goods/**',1,'api','',1,0,1,1,NOW(),NOW()),
+    (32,'商品管理閲覧','DATA_GOODS_SKU_READ','goods',2,3,'/api/goodsSku/**',2,'api','',1,0,1,1,NOW(),NOW()),
+    (33,'商品管理閲覧','DATA_GOODS_IMAGE_READ','goods',2,3,'/api/goodsImage/**',3,'api','',1,0,1,1,NOW(),NOW()),
+    (34,'商品管理閲覧','DATA_GOODS_SKU_SPEC_READ','goods',2,3,'/api/goodsSkuSpec/**',4,'api','',1,0,1,1,NOW(),NOW()),
+    (35,'メッセージ管理閲覧','DATA_MESSAGE_READ','system',2,1,'/api/message/**',1,'api','',1,0,1,1,NOW(),NOW()),
+    (36,'メッセージ管理編集','DATA_MESSAGE_WRITE','system',2,1,'/api/message/**',2,'api','',1,0,1,1,NOW(),NOW());
 INSERT INTO `t_role` (`id`, `name`, `code`, `remark`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'スーパー管理者','ROLE_SUPER_ADMIN','全メニュー・全読写権限',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role` (`id`, `name`, `code`, `remark`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'一般ユーザー','ROLE_NORMAL_USER','在庫管理・顧客管理（閲覧のみ）',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,1,1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
@@ -199,7 +206,7 @@ INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `c
 -- Latest ROLE_NORMAL_USER permissions:
 -- all menus visible, all data readable, write only for own stock/request/customer flows and customer levels.
 UPDATE t_role
-SET remark = 'All menus readable; write only own stock orders/items, request forms/items, customers, and customer levels'
+SET remark = '全メニュー閲覧可。自分の入出庫伝票／入出庫明細、請求書／請求書明細、顧客、顧客ランクのみ登録・更新可'
 WHERE code = 'ROLE_NORMAL_USER';
 
 DELETE rp

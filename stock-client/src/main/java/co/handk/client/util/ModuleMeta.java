@@ -211,7 +211,7 @@ public final class ModuleMeta {
         FORM_FIELDS.put(MODULE_STOCK, List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"));
         FORM_FIELDS.put(MODULE_SELF_STOCK, FORM_FIELDS.get(MODULE_STOCK));
         FORM_FIELDS.put(MODULE_HANDLE_STOCK, FORM_FIELDS.get(MODULE_STOCK));
-        FORM_FIELDS.put(STOCK_ORDER, List.of("orderNo", "orderType", "bizDate", "warehouseId", "sourceType", "totalQty", "stockTypeId", "state", "requesterId", "operatorId", "approverId", "approveTime", "finishTime", "remark"));
+        FORM_FIELDS.put(STOCK_ORDER, List.of("orderType", "bizDate", "warehouseId", "sourceType", "stockTypeId", "state", "remark"));
         FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
         FORM_FIELDS.put(REQUEST_FORM, List.of("bizNo", "sourceOrderId", "sourceOrderNo", "userId", "username", "deptId", "deptName", "customerId", "customerName", "warehouseId", "totalQty", "requestQty", "totalAmt", "state", "approverId", "approverName", "approveTime", "approveRemark"));
@@ -231,7 +231,7 @@ public final class ModuleMeta {
         REQUIRED_FORM_FIELDS.put(MODULE_STOCK, List.of("goodsId", "skuId", "sourceType", "warehouseId", "stockTypeId", "quantity"));
         REQUIRED_FORM_FIELDS.put(MODULE_SELF_STOCK, REQUIRED_FORM_FIELDS.get(MODULE_STOCK));
         REQUIRED_FORM_FIELDS.put(MODULE_HANDLE_STOCK, REQUIRED_FORM_FIELDS.get(MODULE_STOCK));
-        REQUIRED_FORM_FIELDS.put(STOCK_ORDER, List.of("orderNo", "orderType", "warehouseId", "sourceType"));
+        REQUIRED_FORM_FIELDS.put(STOCK_ORDER, List.of("orderType", "warehouseId"));
         REQUIRED_FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "goodsName", "changeQty"));
         REQUIRED_FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "goodsName", "changeQty", "orderType", "sourceType"));
         REQUIRED_FORM_FIELDS.put(REQUEST_FORM, List.of("bizNo", "sourceOrderId", "userId", "username", "customerId", "customerName"));
@@ -403,11 +403,18 @@ public final class ModuleMeta {
                 FormValueRule.defaultIfBlank("currency", "JPY"),
                 FormValueRule.clearWhenBlank("priceUpdateTime", "updatePrice")
         ));
+        FORM_VALUE_RULES.put(STOCK_ORDER, List.of(
+                FormValueRule.defaultIfBlank("sourceType", "4"),
+                FormValueRule.defaultIfBlank("state", "0")
+        ));
         INITIAL_RELATION_FILTERS.put(MODULE_SELF_STOCK, Map.of(
                 "warehouseId", Map.of("name", "\u81ea\u793e\u5728\u5eab")
         ));
         INITIAL_RELATION_FILTERS.put(MODULE_HANDLE_STOCK, Map.of(
                 "warehouseId", Map.of("name", "\u30cf\u30f3\u30c9\u30eb\u5728\u5eab")
+        ));
+        INITIAL_RELATION_FILTERS.put(STOCK_ORDER, Map.of(
+                "stockTypeId", Map.of("name", "\u901a\u5e38\u54c1")
         ));
     }
 
@@ -555,6 +562,14 @@ public final class ModuleMeta {
     public static List<Option> selectOptions(String moduleKey, String field) {
         List<Option> moduleOptions = SELECT_OPTIONS.get(moduleKey + "." + field);
         if (moduleOptions != null) {
+            if (STOCK_ORDER.equals(moduleKey) && Session.isNormalUser()
+                    && ("sourceType".equals(field) || "state".equals(field))) {
+                return moduleOptions.stream()
+                        .filter(option -> "sourceType".equals(field)
+                                ? "3".equals(option.value) || "4".equals(option.value)
+                                : "0".equals(option.value) || "1".equals(option.value))
+                        .toList();
+            }
             return moduleOptions;
         }
         return SELECT_OPTIONS.getOrDefault(field, List.of());

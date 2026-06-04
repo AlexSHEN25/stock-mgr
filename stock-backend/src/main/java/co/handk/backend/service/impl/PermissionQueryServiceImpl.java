@@ -43,6 +43,31 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             "customer"
     );
     private static final Set<String> NORMAL_USER_ALL_WRITE_MODULES = Set.of("customerLevel");
+    private static final Map<String, String> MENU_LABEL_BY_MODULE = Map.ofEntries(
+            Map.entry("user", "\u30e6\u30fc\u30b6\u30fc\u7ba1\u7406"),
+            Map.entry("dept", "\u90e8\u7f72\u7ba1\u7406"),
+            Map.entry("warehouse", "\u5009\u5eab\u7ba1\u7406"),
+            Map.entry("role", "\u30ed\u30fc\u30eb\u7ba1\u7406"),
+            Map.entry("permission", "\u6a29\u9650\u7ba1\u7406"),
+            Map.entry("goods", "\u5546\u54c1\u7ba1\u7406"),
+            Map.entry("maker", "\u30e1\u30fc\u30ab\u30fc\u7ba1\u7406"),
+            Map.entry("brand", "\u30d6\u30e9\u30f3\u30c9\u7ba1\u7406"),
+            Map.entry("category", "\u30ab\u30c6\u30b4\u30ea\u7ba1\u7406"),
+            Map.entry("series", "\u30b7\u30ea\u30fc\u30ba\u7ba1\u7406"),
+            Map.entry("stock", "\u81ea\u793e\u5728\u5eab\u7ba1\u7406"),
+            Map.entry("stockType", "\u5728\u5eab\u5206\u985e"),
+            Map.entry("stockOrder", "\u5165\u51fa\u5eab\u4f1d\u7968"),
+            Map.entry("stockOrderItem", "\u5165\u51fa\u5eab\u660e\u7d30"),
+            Map.entry("stockRecord", "\u5728\u5eab\u5c65\u6b74"),
+            Map.entry("priceRecord", "\u4fa1\u683c\u5c65\u6b74"),
+            Map.entry("requestForm", "\u8acb\u6c42\u66f8\u7ba1\u7406"),
+            Map.entry("requestItem", "\u8acb\u6c42\u66f8\u660e\u7d30"),
+            Map.entry("customer", "\u9867\u5ba2\u7ba1\u7406"),
+            Map.entry("customerLevel", "\u9867\u5ba2\u30e9\u30f3\u30af\u7ba1\u7406"),
+            Map.entry("config", "\u30b7\u30b9\u30c6\u30e0\u8a2d\u5b9a"),
+            Map.entry("message", "\u30e1\u30c3\u30bb\u30fc\u30b8\u7ba1\u7406"),
+            Map.entry("operateLog", "\u64cd\u4f5c\u30ed\u30b0")
+    );
 
     private final UserRoleMapper userRoleMapper;
     private final RoleMapper roleMapper;
@@ -262,13 +287,23 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     }
 
     private String resolveMenuLabel(Permission permission) {
+        String moduleKey = resolveModuleKey(permission.getPath());
+        String fixedLabel = MENU_LABEL_BY_MODULE.get(moduleKey);
+        if (fixedLabel != null && !fixedLabel.isBlank()) {
+            return fixedLabel;
+        }
         String name = permission.getName();
         if (name == null || name.isBlank()) {
-            return resolveModuleKey(permission.getPath());
+            return moduleKey;
         }
         return name
-                .replace("閲覧", "")
-                .replace("編集", "")
+                .replace("\u95b2\u89a7", "")
+                .replace("\u7de8\u96c6", "")
+                .replace("\u53c2\u7167", "")
+                .replace("\u66f4\u65b0", "")
+                .replace("\u8aad\u53d6", "")
+                .replace("\u66f8\u8fbc", "")
+                .replaceAll("[-\u30fb\\s]+$", "")
                 .trim();
     }
 
@@ -310,3 +345,4 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 && SecurityConstant.isNormalUserWriteApiPath(permission.getPath());
     }
 }
+

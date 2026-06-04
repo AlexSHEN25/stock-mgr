@@ -76,6 +76,18 @@ class WebPageAlignmentTest {
     void stockOrderSourceIdIsBackendMaintained() {
         assertTrue(ModuleMeta.queryFields("stockOrder").contains("sourceId"));
         assertFalse(ModuleMeta.formFields("stockOrder").contains("sourceId"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("orderNo"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("totalQty"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("requesterId"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("operatorId"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("approverId"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("approveTime"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("finishTime"));
+        assertEquals(
+                List.of("orderType", "bizDate", "warehouseId", "sourceType", "stockTypeId", "state", "remark"),
+                ModuleMeta.formFields("stockOrder"));
+        assertEquals(Map.of("name", "\u901a\u5e38\u54c1"),
+                ModuleMeta.initialRelationFilters("stockOrder", "stockTypeId"));
     }
 
     @Test

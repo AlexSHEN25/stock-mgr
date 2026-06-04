@@ -1,6 +1,5 @@
 package co.handk.common.model.dto.create;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -11,7 +10,6 @@ import jakarta.validation.constraints.PositiveOrZero;
 @Data
 public class CreateStockOrderDTO {
 
-    @NotBlank(message = "注文番号は必須です")
     private String orderNo;
 
     @NotNull(message = "入出庫種別は必須です")
@@ -20,7 +18,6 @@ public class CreateStockOrderDTO {
     @NotNull(message = "倉庫IDは必須です")
     private Long warehouseId;
 
-    @NotNull(message = "ソース種別は必須です")
     private Integer sourceType;
 
     private Long sourceId;

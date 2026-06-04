@@ -11,6 +11,7 @@ import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
 import co.handk.common.model.dto.query.RequestFormQueryDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
+import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -30,6 +31,11 @@ public class RequestFormController {
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateRequestFormDTO dto) {
         return requestFormService.saveByDto(dto);
+    }
+
+    @PostMapping("/withItems")
+    public Long createWithItems(@RequestBody @NotNull @Valid RequestFormWithItemsDTO dto) {
+        return requestFormService.saveWithItems(dto);
     }
 
     @PostMapping("/fromOutbound")
@@ -70,6 +76,11 @@ public class RequestFormController {
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateRequestFormDTO dto) {
         return requestFormService.updateByDto(dto);
+    }
+
+    @PutMapping("/withItems")
+    public Boolean updateWithItems(@RequestBody @NotNull @Valid RequestFormWithItemsDTO dto) {
+        return requestFormService.updateWithItems(dto);
     }
 
     @DeleteMapping("/{id}")

@@ -4,11 +4,15 @@ import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.Message;
 import co.handk.backend.entity.StockOrder;
+import co.handk.backend.entity.StockType;
+import co.handk.backend.entity.User;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.StockOrderMapper;
 import co.handk.backend.service.MessageService;
 import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockOrderService;
+import co.handk.backend.service.StockTypeService;
+import co.handk.backend.service.UserService;
 import co.handk.common.constant.MessageBizConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.model.dto.create.CreateStockOrderDTO;
@@ -22,9 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +40,10 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
 
     private final PermissionQueryService permissionQueryService;
     private final MessageService messageService;
+    private final UserService userService;
+    private final StockTypeService stockTypeService;
+    private static final DateTimeFormatter ORDER_NO_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final String DEFAULT_STOCK_TYPE_NAME = "\u901a\u5e38\u54c1";
 
     @Override
     protected StockOrderVO toVO(StockOrder entity) {
@@ -72,36 +83,22 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     @Override
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
-        validateRequiredDateByOrderType(dto);
         if (dto instanceof CreateStockOrderDTO createDto) {
-            sanitizeSourceFields(createDto);
-            if (isInboundOrOutbound(createDto.getOrderType())) {
-                createDto.setState(StockBizConstant.ORDER_STATE_APPROVING);
-                createDto.setApproverId(null);
-                createDto.setApproverName(null);
-                createDto.setApproveTime(null);
-                createDto.setFinishTime(null);
-            }
+            prepareCreate(createDto);
         }
+        validateRequiredDateByOrderType(dto);
         return super.saveByDto(dto);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public <U> boolean updateByDto(U dto) {
-        validateRequiredDateByOrderType(dto);
         if (!(dto instanceof UpdateStockOrderDTO updateDto)) {
             return super.updateByDto(dto);
         }
         StockOrder before = getByIdNotDeleted(updateDto.getId());
-        sanitizeSourceFields(updateDto, before);
-        Long userId = UserContext.getUserIdOrDefault();
-        if (!permissionQueryService.isSuperAdmin(userId) && before != null) {
-            updateDto.setRequesterId(before.getRequesterId());
-            updateDto.setRequesterName(before.getRequesterName());
-            updateDto.setOperatorId(before.getOperatorId());
-            updateDto.setOperatorName(before.getOperatorName());
-        }
+        prepareUpdate(updateDto, before);
+        validateRequiredDateByOrderType(dto);
         if (isInboundOrOutbound(updateDto.getOrderType())
                 && Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(updateDto.getState())
                 && (before == null || !Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(before.getState()))) {
@@ -109,12 +106,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                     "stock orders can only be completed through administrator approval");
         }
         Integer beforeState = before == null ? null : before.getState();
-        if (Integer.valueOf(StockBizConstant.ORDER_STATE_APPROVING).equals(beforeState)
-                && !Integer.valueOf(StockBizConstant.ORDER_STATE_APPROVING).equals(updateDto.getState())) {
-            throw new BusinessException(
-                    MessageKeyConstant.ERROR_RUNTIME, "pending stock orders must be completed through the approval endpoint");
-        }
-        boolean updated = super.updateByDto(dto);
+        boolean updated = super.updateByDto(updateDto);
         if (!updated) {
             return false;
         }
@@ -195,18 +187,167 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                 || Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(orderType);
     }
 
-    private void sanitizeSourceFields(CreateStockOrderDTO dto) {
-        if (!Integer.valueOf(StockBizConstant.SOURCE_TYPE_MANUAL).equals(dto.getSourceType())) {
+    private void prepareCreate(CreateStockOrderDTO dto) {
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
+        dto.setOrderNo(generateOrderNo());
+        if (dto.getBizDate() == null) {
+            dto.setBizDate(LocalDate.now());
+        }
+        if (dto.getSourceType() == null) {
             dto.setSourceType(StockBizConstant.SOURCE_TYPE_MANUAL);
         }
-        dto.setSourceId(null);
+        validateSourceType(dto.getSourceType(), admin);
+        if (dto.getState() == null) {
+            dto.setState(StockBizConstant.ORDER_STATE_DRAFT);
+        }
+        validateState(dto.getState(), admin);
+        applyCurrentUser(dto, userId);
+        dto.setTotalQty(0);
+        dto.setStockTypeId(resolveStockTypeId(dto.getStockTypeId()));
+        dto.setApproverId(null);
+        dto.setApproverName(null);
+        dto.setApproveTime(null);
+        dto.setFinishTime(null);
+        if (Integer.valueOf(StockBizConstant.SOURCE_TYPE_MANUAL).equals(dto.getSourceType())) {
+            dto.setSourceId(null);
+        }
     }
 
-    private void sanitizeSourceFields(UpdateStockOrderDTO dto, StockOrder before) {
+    private void prepareUpdate(UpdateStockOrderDTO dto, StockOrder before) {
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
+        Integer requestedState = dto.getState();
         if (before != null) {
-            dto.setSourceType(before.getSourceType());
+            dto.setOrderNo(before.getOrderNo());
+            if (dto.getBizDate() == null) {
+                dto.setBizDate(before.getBizDate());
+            }
+            dto.setRequesterId(before.getRequesterId());
+            dto.setRequesterName(before.getRequesterName());
+            dto.setOperatorId(before.getOperatorId());
+            dto.setOperatorName(before.getOperatorName());
+            dto.setApproverId(before.getApproverId());
+            dto.setApproverName(before.getApproverName());
+            dto.setApproveTime(before.getApproveTime());
+            dto.setFinishTime(before.getFinishTime());
+            dto.setTotalQty(calculateOrderTotalQty(before.getId()));
+            if (dto.getStockTypeId() == null) {
+                dto.setStockTypeId(before.getStockTypeId());
+            }
+            if (!admin) {
+                dto.setState(before.getState());
+            }
+        } else {
+            dto.setTotalQty(0);
         }
-        dto.setSourceId(null);
+        if (dto.getBizDate() == null) {
+            dto.setBizDate(LocalDate.now());
+        }
+        if (dto.getSourceType() == null) {
+            dto.setSourceType(before == null || before.getSourceType() == null
+                    ? StockBizConstant.SOURCE_TYPE_MANUAL : before.getSourceType());
+        }
+        validateSourceType(dto.getSourceType(), admin);
+        if (dto.getState() == null) {
+            dto.setState(before == null || before.getState() == null
+                    ? StockBizConstant.ORDER_STATE_DRAFT : before.getState());
+        }
+        validateState(dto.getState(), admin);
+        if (admin && before != null && hasStateChanged(before.getState(), dto.getState())) {
+            applyApprovalAuditFields(dto, userId);
+            if (Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(dto.getState())) {
+                dto.setFinishTime(dto.getApproveTime());
+            }
+        } else if (admin && before != null && requestedState == null) {
+            dto.setState(before.getState());
+        }
+        dto.setStockTypeId(resolveStockTypeId(dto.getStockTypeId()));
+        if (Integer.valueOf(StockBizConstant.SOURCE_TYPE_MANUAL).equals(dto.getSourceType())) {
+            dto.setSourceId(null);
+        }
+    }
+
+    private void applyCurrentUser(CreateStockOrderDTO dto, Long userId) {
+        dto.setRequesterId(userId);
+        dto.setOperatorId(userId);
+        User user = userService.getByIdNotDeleted(userId);
+        String username = user == null ? null : user.getUsername();
+        dto.setRequesterName(username);
+        dto.setOperatorName(username);
+    }
+
+    private void applyApprovalAuditFields(UpdateStockOrderDTO dto, Long userId) {
+        dto.setApproverId(userId);
+        User user = userService.getByIdNotDeleted(userId);
+        dto.setApproverName(user == null ? null : user.getUsername());
+        dto.setApproveTime(LocalDateTime.now());
+    }
+
+    private Long resolveStockTypeId(Long stockTypeId) {
+        if (stockTypeId != null) {
+            return stockTypeId;
+        }
+        StockType stockType = stockTypeService.getOne(new QueryWrapper<StockType>()
+                .eq("name", DEFAULT_STOCK_TYPE_NAME)
+                .eq("deleted", co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        return stockType == null ? null : stockType.getId();
+    }
+
+    private void validateSourceType(Integer sourceType, boolean admin) {
+        if (sourceType == null) {
+            return;
+        }
+        boolean allowed = admin
+                ? sourceType >= StockBizConstant.SOURCE_TYPE_ORDER && sourceType <= StockBizConstant.SOURCE_TYPE_MANUAL
+                : sourceType.equals(StockBizConstant.SOURCE_TYPE_REQUEST)
+                || sourceType.equals(StockBizConstant.SOURCE_TYPE_MANUAL);
+        if (!allowed) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "source type is not allowed for current user");
+        }
+    }
+
+    private void validateState(Integer state, boolean admin) {
+        if (state == null) {
+            return;
+        }
+        boolean allowed = admin
+                ? state >= StockBizConstant.ORDER_STATE_DRAFT && state <= StockBizConstant.ORDER_STATE_CANCELED
+                : state.equals(StockBizConstant.ORDER_STATE_DRAFT)
+                || state.equals(StockBizConstant.ORDER_STATE_APPROVING);
+        if (!allowed) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "stock order state is not allowed for current user");
+        }
+    }
+
+    private int calculateOrderTotalQty(Long orderId) {
+        if (orderId == null) {
+            return 0;
+        }
+        List<Object> qtyList = getBaseMapper().selectObjs(new QueryWrapper<StockOrder>()
+                .select("(SELECT COALESCE(SUM(change_qty), 0) FROM t_stock_order_item soi "
+                        + "WHERE soi.order_id = t_stock_order.id AND soi.deleted = 0) AS total_qty")
+                .eq("id", orderId)
+                .eq("deleted", co.handk.common.enums.DeleteEnum.UNDELETED.getCode()));
+        if (qtyList == null || qtyList.isEmpty() || qtyList.get(0) == null) {
+            return 0;
+        }
+        return ((Number) qtyList.get(0)).intValue();
+    }
+
+    private String generateOrderNo() {
+        for (int i = 0; i < 5; i++) {
+            String candidate = "SO" + LocalDateTime.now().format(ORDER_NO_TIME_FORMAT)
+                    + ThreadLocalRandom.current().nextInt(1000, 10000);
+            long count = count(new QueryWrapper<StockOrder>()
+                    .eq("order_no", candidate)
+                    .eq("deleted", co.handk.common.enums.DeleteEnum.UNDELETED.getCode()));
+            if (count == 0) {
+                return candidate;
+            }
+        }
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to generate stock order number");
     }
 
     private void requireOwned(StockOrder order) {

@@ -13,6 +13,7 @@ import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
+import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import co.handk.common.model.vo.RequestCandidateItemVO;
 import co.handk.common.model.vo.RequestFormVO;
@@ -53,6 +54,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -119,16 +122,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     public <C> boolean saveByDto(C dto) {
         if (dto instanceof CreateRequestFormDTO createDto) {
             Long userId = UserContext.getUserIdOrDefault();
-            if (!permissionQueryService.isSuperAdmin(userId)) {
-                createDto.setUserId(userId);
-                User user = userService.getByIdNotDeleted(userId);
-                if (user != null) {
-                    createDto.setUsername(user.getUsername());
-                    createDto.setDeptId(user.getDeptId());
-                    Dept dept = user.getDeptId() == null ? null : deptService.getByIdNotDeleted(user.getDeptId());
-                    createDto.setDeptName(dept == null ? null : dept.getName());
-                }
-            }
+            applyCurrentUser(createDto, userId);
+            applyRequestFormCreateDefaults(createDto);
             validateCustomerOwnership(createDto.getCustomerId(), userId);
         }
         return super.saveByDto(dto);
@@ -141,15 +136,46 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             RequestForm existed = super.getByIdNotDeleted(updateDto.getId());
             requireOwned(existed);
             Long userId = UserContext.getUserIdOrDefault();
-            if (!permissionQueryService.isSuperAdmin(userId)) {
-                updateDto.setUserId(existed.getUserId());
-                updateDto.setUsername(existed.getUsername());
-                updateDto.setDeptId(existed.getDeptId());
-                updateDto.setDeptName(existed.getDeptName());
-            }
+            preserveRequestFormBackendFields(updateDto, existed);
+            applyCustomerName(updateDto);
             validateCustomerOwnership(updateDto.getCustomerId(), userId);
         }
         return super.updateByDto(dto);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveWithItems(RequestFormWithItemsDTO dto) {
+        RequestForm existing = findExistingForm(dto);
+        Long requestId;
+        if (existing == null) {
+            requestId = createFormForBundle(dto);
+        } else {
+            dto.setId(existing.getId());
+            updateFormForBundle(dto, existing);
+            requestId = existing.getId();
+        }
+        syncRequestItems(requestId, dto.getItems());
+        validateKnifeHandleQuantity(requestId);
+        recalculateRequestFormSummary(requestId);
+        return requestId;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean updateWithItems(RequestFormWithItemsDTO dto) {
+        if (dto.getId() == null) {
+            throw fail("request form not found");
+        }
+        RequestForm existing = super.getByIdNotDeleted(dto.getId());
+        if (existing == null) {
+            throw fail("request form not found");
+        }
+        updateFormForBundle(dto, existing);
+        syncRequestItems(existing.getId(), dto.getItems());
+        validateKnifeHandleQuantity(existing.getId());
+        recalculateRequestFormSummary(existing.getId());
+        return true;
     }
 
     @Override
@@ -173,7 +199,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     @Transactional(rollbackFor = Exception.class)
     public int deleteByIdLogic(Long id) {
         RequestForm form = super.getByIdNotDeleted(id);
+        if (form == null) {
+            return DeleteEnum.UNDELETED.getCode();
+        }
         requireOwned(form);
+        deleteItemsByRequestId(id);
         return super.deleteByIdLogic(id);
     }
 
@@ -185,15 +215,136 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (permissionQueryService.isSuperAdmin(userId)) {
-            return super.deleteBatchLogic(ids);
+            int rows = 0;
+            for (Long id : ids) {
+                rows += deleteByIdLogic(id);
+            }
+            return rows;
         }
         int rows = 0;
         for (Long id : ids) {
             RequestForm form = super.getByIdNotDeleted(id);
             requireOwned(form);
-            rows += super.deleteByIdLogic(id);
+            rows += deleteByIdLogic(id);
         }
         return rows;
+    }
+
+    private RequestForm findExistingForm(RequestFormWithItemsDTO dto) {
+        if (dto.getId() != null) {
+            RequestForm existing = super.getByIdNotDeleted(dto.getId());
+            if (existing != null) {
+                requireOwned(existing);
+            }
+            return existing;
+        }
+        if (dto.getBizNo() == null || dto.getBizNo().isBlank()) {
+            return null;
+        }
+        RequestForm existing = getOne(new QueryWrapper<RequestForm>()
+                .eq("biz_no", dto.getBizNo().trim())
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (existing != null) {
+            requireOwned(existing);
+        }
+        return existing;
+    }
+
+    private Long createFormForBundle(RequestFormWithItemsDTO dto) {
+        CreateRequestFormDTO createDto = new CreateRequestFormDTO();
+        BeanUtils.copyProperties(dto, createDto);
+        Long userId = UserContext.getUserIdOrDefault();
+        applyCurrentUser(createDto, userId);
+        applyRequestFormCreateDefaults(createDto);
+        validateCustomerOwnership(createDto.getCustomerId(), userId);
+
+        RequestForm form = toEntity(createDto);
+        if (dto.getBizNo() != null && !dto.getBizNo().isBlank()) {
+            form.setBizNo(dto.getBizNo().trim());
+        }
+        if (!save(form)) {
+            throw fail("failed to save request form");
+        }
+        return form.getId();
+    }
+
+    private void updateFormForBundle(RequestFormWithItemsDTO dto, RequestForm existing) {
+        requireOwned(existing);
+        UpdateRequestFormDTO updateDto = new UpdateRequestFormDTO();
+        BeanUtils.copyProperties(dto, updateDto);
+        updateDto.setId(existing.getId());
+        if (updateDto.getCustomerId() == null) {
+            updateDto.setCustomerId(existing.getCustomerId());
+            updateDto.setCustomerName(existing.getCustomerName());
+        }
+        if (!updateByDto(updateDto)) {
+            throw fail("failed to update request form");
+        }
+    }
+
+    private void syncRequestItems(Long requestId, List<RequestFormWithItemsDTO.Item> submittedItems) {
+        List<RequestFormWithItemsDTO.Item> items = submittedItems == null ? new ArrayList<>() : submittedItems;
+        List<RequestItem> existingItems = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", requestId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        Map<Long, RequestItem> existingById = new HashMap<>();
+        Map<Long, RequestItem> existingByStockRecordId = new HashMap<>();
+        for (RequestItem item : existingItems) {
+            existingById.put(item.getId(), item);
+            if (item.getStockRecordId() != null) {
+                existingByStockRecordId.put(item.getStockRecordId(), item);
+            }
+        }
+
+        Set<Long> retainedIds = new HashSet<>();
+        for (RequestFormWithItemsDTO.Item item : items) {
+            item.setRequestId(requestId);
+            if (item.getState() == null) {
+                item.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
+            }
+            if (item.getId() == null && item.getStockRecordId() != null) {
+                RequestItem matched = existingByStockRecordId.get(item.getStockRecordId());
+                if (matched != null) {
+                    item.setId(matched.getId());
+                }
+            }
+            if (item.getId() != null) {
+                if (!existingById.containsKey(item.getId())) {
+                    throw fail("request item is not owned by current request form");
+                }
+                if (!retainedIds.add(item.getId())) {
+                    throw fail("duplicated request item");
+                }
+            }
+        }
+
+        for (RequestItem existing : existingItems) {
+            if (!retainedIds.contains(existing.getId())) {
+                requestItemService.deleteByIdLogic(existing.getId());
+            }
+        }
+
+        for (RequestFormWithItemsDTO.Item item : items) {
+            boolean success;
+            if (item.getId() == null) {
+                success = requestItemService.saveByDto(item);
+            } else {
+                success = requestItemService.updateByDto(item);
+            }
+            if (!success) {
+                throw fail(item.getId() == null ? "failed to save request item" : "failed to update request item");
+            }
+        }
+    }
+
+    private void deleteItemsByRequestId(Long requestId) {
+        List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", requestId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        for (RequestItem item : items) {
+            requestItemService.deleteByIdLogic(item.getId());
+        }
     }
 
     @Override
@@ -1456,6 +1607,73 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (customer == null || !userId.equals(customer.getOwnerUserId())) {
             throw fail("customer is not owned by current user");
         }
+    }
+
+    private void applyCurrentUser(CreateRequestFormDTO dto, Long userId) {
+        dto.setUserId(userId);
+        User user = userService.getByIdNotDeleted(userId);
+        dto.setUsername(user == null ? null : user.getUsername());
+        dto.setDeptId(user == null ? null : user.getDeptId());
+        Dept dept = user != null && user.getDeptId() != null ? deptService.getByIdNotDeleted(user.getDeptId()) : null;
+        dto.setDeptName(dept == null ? null : dept.getName());
+    }
+
+    private void applyRequestFormCreateDefaults(CreateRequestFormDTO dto) {
+        StockOrder sourceOrder = requireCreateSourceOutbound(dto.getSourceOrderId());
+        dto.setWarehouseId(sourceOrder.getWarehouseId());
+        dto.setTotalQty(0);
+        dto.setRequestQty(0);
+        dto.setTotalAmt(BigDecimal.ZERO);
+        dto.setState(StockBizConstant.REQUEST_STATE_CREATED);
+        dto.setApproverId(null);
+        dto.setApproverName(null);
+        dto.setApproveTime(null);
+        applyCustomerName(dto);
+    }
+
+    private StockOrder requireCreateSourceOutbound(Long sourceOrderId) {
+        if (sourceOrderId == null) {
+            throw fail("request form source outbound order is required");
+        }
+        StockOrder order = stockOrderService.getByIdNotDeleted(sourceOrderId);
+        if (order == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
+            throw fail("source outbound order not found");
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)
+                && !userId.equals(order.getRequesterId())
+                && !userId.equals(order.getOperatorId())) {
+            throw fail("source outbound order is not owned by current user");
+        }
+        return order;
+    }
+
+    private void applyCustomerName(CreateRequestFormDTO dto) {
+        Customer customer = customerService.getByIdNotDeleted(dto.getCustomerId());
+        if (customer == null) {
+            throw fail("customer is not owned by current user");
+        }
+        dto.setCustomerName(customer.getName());
+    }
+
+    private void applyCustomerName(UpdateRequestFormDTO dto) {
+        Customer customer = customerService.getByIdNotDeleted(dto.getCustomerId());
+        if (customer == null) {
+            throw fail("customer is not owned by current user");
+        }
+        dto.setCustomerName(customer.getName());
+    }
+
+    private void preserveRequestFormBackendFields(UpdateRequestFormDTO dto, RequestForm existed) {
+        dto.setUserId(existed.getUserId());
+        dto.setUsername(existed.getUsername());
+        dto.setDeptId(existed.getDeptId());
+        dto.setDeptName(existed.getDeptName());
+        dto.setWarehouseId(existed.getWarehouseId());
+        dto.setSourceOrderId(existed.getSourceOrderId());
+        dto.setTotalQty(existed.getTotalQty());
+        dto.setRequestQty(existed.getRequestQty());
+        dto.setTotalAmt(existed.getTotalAmt());
     }
 
     private void requireOwned(RequestForm form) {

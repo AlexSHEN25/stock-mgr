@@ -47,7 +47,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
-            if (isWriteMethod(request.getMethod()) && isProtectedApi(uri) && !isAllowedAccountWrite(uri)) {
+            if (!isReadRequest(uri, request.getMethod()) && isProtectedApi(uri) && !isAllowedAccountWrite(uri)) {
                 log.warn("Permission denied: userId={}, method={}, uri={}, reason=unconfigured-write",
                         userId, request.getMethod(), uri);
                 throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, SecurityConstant.NO_PERMISSION_MESSAGE);
@@ -65,7 +65,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
     }
 
     private String resolveRequiredPermission(String uri, String method) {
-        boolean read = HttpMethod.GET.matches(method) || HttpMethod.HEAD.matches(method);
+        boolean read = isReadRequest(uri, method);
         List<Permission> dataPermissions = permissionQueryService.getEnabledDataPermissions();
         String altUri = uri;
         if (uri != null && uri.startsWith(SecurityConstant.API_PREFIX)) {
@@ -89,6 +89,19 @@ public class PermissionInterceptor implements HandlerInterceptor {
             }
         }
         return null;
+    }
+
+    private boolean isReadRequest(String uri, String method) {
+        String normalizedMethod = method == null ? EMPTY : method.toUpperCase(Locale.ROOT);
+        if (HttpMethod.GET.matches(normalizedMethod) || HttpMethod.HEAD.matches(normalizedMethod)) {
+            return true;
+        }
+        String path = uri == null ? EMPTY : uri;
+        if (path.startsWith(SecurityConstant.API_PREFIX)) {
+            path = path.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX);
+        }
+        return HttpMethod.POST.matches(normalizedMethod)
+                && (path.endsWith("/page") || path.endsWith("/list"));
     }
 
     private boolean isNonAdminWriteAllowedByWhitelist(String uri, String method) {

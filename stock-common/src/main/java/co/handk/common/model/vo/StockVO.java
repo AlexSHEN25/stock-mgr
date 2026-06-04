@@ -10,10 +10,13 @@ import java.time.LocalDateTime;
 @Data
 public class StockVO extends BaseVO {
     private Integer goodsId;
+    @JoinValue(sourceField = "goodsId", serviceBean = "goodsServiceImpl", targetField = "name")
     private String goodsName;
     private Long skuId;
     private String skuCode;
     private Integer warehouseId;
+    @JoinValue(sourceField = "warehouseId", serviceBean = "warehouseServiceImpl", targetField = "name")
+    private String warehouseName;
     private Integer currentQty;
     private Integer lockQty;
     private BigDecimal price;

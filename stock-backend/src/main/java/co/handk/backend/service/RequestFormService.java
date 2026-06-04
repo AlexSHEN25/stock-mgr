@@ -3,6 +3,7 @@ package co.handk.backend.service;
 import co.handk.backend.entity.RequestForm;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
+import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.vo.RequestCandidateItemVO;
 import co.handk.common.model.vo.RequestFormVO;
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,6 +15,10 @@ import org.springframework.validation.annotation.Validated;
 public interface RequestFormService extends BaseService<RequestForm, RequestFormVO> {
 
     Long createFromOutbound(CreateRequestFromOutboundDTO dto);
+
+    Long saveWithItems(RequestFormWithItemsDTO dto);
+
+    Boolean updateWithItems(RequestFormWithItemsDTO dto);
 
     Long reapplyInbound(Long requestId);
 

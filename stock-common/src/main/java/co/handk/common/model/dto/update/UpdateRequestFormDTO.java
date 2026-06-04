@@ -2,11 +2,11 @@ package co.handk.common.model.dto.update;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class UpdateRequestFormDTO {
@@ -14,10 +14,8 @@ public class UpdateRequestFormDTO {
     @NotNull(message = "IDは必須です")
     private Long id;
 
-    @NotNull(message = "ユーザーIDは必須です")
     private Long userId;
 
-    @NotBlank(message = "ユーザー名は必須です")
     private String username;
 
     private Long deptId;

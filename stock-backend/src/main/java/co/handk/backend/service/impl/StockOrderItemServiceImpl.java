@@ -83,7 +83,11 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
     public <C> boolean saveByDto(C dto) {
         StockOrderItem item = toEntity(dto);
         requireOwnedOrder(item == null ? null : item.getOrderId());
-        return super.saveByDto(dto);
+        boolean saved = super.saveByDto(dto);
+        if (saved && item != null) {
+            recalculateOrderTotalQty(item.getOrderId());
+        }
+        return saved;
     }
 
     @Override
@@ -96,7 +100,14 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         StockOrderItem existed = super.getByIdNotDeleted(item.getId());
         requireOwned(existed);
         requireOwnedOrder(item.getOrderId());
-        return super.updateByDto(dto);
+        boolean updated = super.updateByDto(dto);
+        if (updated) {
+            recalculateOrderTotalQty(existed == null ? null : existed.getOrderId());
+            if (existed != null && item.getOrderId() != null && !item.getOrderId().equals(existed.getOrderId())) {
+                recalculateOrderTotalQty(item.getOrderId());
+            }
+        }
+        return updated;
     }
 
     @Override

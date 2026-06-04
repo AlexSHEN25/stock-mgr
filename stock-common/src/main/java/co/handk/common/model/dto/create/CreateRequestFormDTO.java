@@ -1,43 +1,40 @@
 package co.handk.common.model.dto.create;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import jakarta.validation.constraints.PositiveOrZero;
 
 @Data
 public class CreateRequestFormDTO {
 
-    @NotNull(message = "ユーザーIDは必須です")
     private Long userId;
 
-    @NotBlank(message = "ユーザー名は必須です")
     private String username;
 
     private Long deptId;
 
     private String deptName;
 
-    @NotNull(message = "顧客IDは必須です")
+    @NotNull(message = "customerId is required")
     private Long customerId;
 
-    @NotBlank(message = "顧客名は必須です")
     private String customerName;
 
     private Long warehouseId;
 
+    @NotNull(message = "sourceOrderId is required")
     private Long sourceOrderId;
 
-    @PositiveOrZero(message = "0以上で入力してください")
+    @PositiveOrZero(message = "value must be greater than or equal to 0")
     private Integer totalQty;
 
-    @PositiveOrZero(message = "0以上で入力してください")
+    @PositiveOrZero(message = "value must be greater than or equal to 0")
     private Integer requestQty;
 
-    @PositiveOrZero(message = "0以上で入力してください")
+    @PositiveOrZero(message = "value must be greater than or equal to 0")
     private BigDecimal totalAmt;
 
     private Integer state;

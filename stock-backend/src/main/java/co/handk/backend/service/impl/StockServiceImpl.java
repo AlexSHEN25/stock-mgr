@@ -30,6 +30,7 @@ import co.handk.common.constant.FieldNameConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
+import co.handk.common.model.dto.create.CreateStockDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
@@ -91,6 +92,15 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public <C> boolean saveByDto(C dto) {
+        if (dto instanceof CreateStockDTO createDto) {
+            createDto.setLockQty(0);
+        }
+        return super.saveByDto(dto);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public <U> boolean updateByDto(U dto) {
         if (!(dto instanceof UpdateStockDTO updateDto)) {
             return super.updateByDto(dto);
@@ -103,6 +113,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
         java.math.BigDecimal oldPrice = existed.getPrice();
         java.math.BigDecimal newPrice = updateDto.getPrice();
+        updateDto.setLockQty(existed.getLockQty());
         boolean priceChanged = newPrice != null && (oldPrice == null || oldPrice.compareTo(newPrice) != 0);
         if (priceChanged && updateDto.getPriceUpdateTime() == null) {
             updateDto.setPriceUpdateTime(LocalDateTime.now());
@@ -282,7 +293,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long outbound(StockOperateDTO dto) {
-        Stock stock = requireStock(dto.getStockId());
+        Stock stock = requireStock(dto.getStockId(), dto.getWarehouseId());
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
         String stockTypeName = getStockTypeName(stock.getStockTypeId());
@@ -610,9 +621,24 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return stock;
     }
 
+    private Stock requireStock(Long stockId, Integer warehouseId) {
+        if (warehouseId == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "warehouseId is required for stock operation");
+        }
+        Stock stock = requireStock(stockId);
+        if (stock.getWarehouseId() == null || !warehouseId.equals(stock.getWarehouseId())) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "stock does not belong to requested warehouse");
+        }
+        return stock;
+    }
+
     private Stock resolveInboundStock(StockOperateDTO dto) {
         if (dto.getStockId() != null) {
-            return requireStock(dto.getStockId());
+            return requireStock(dto.getStockId(), dto.getWarehouseId());
         }
         if (dto.getGoodsId() == null || dto.getSkuId() == null || dto.getWarehouseId() == null
                 || dto.getStockTypeId() == null) {
@@ -831,6 +857,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         long oldVersion = stock.getVersion() == null ? 0L : stock.getVersion();
         boolean updated = this.update(new LambdaUpdateWrapper<Stock>()
                 .eq(Stock::getId, stock.getId())
+                .eq(Stock::getWarehouseId, stock.getWarehouseId())
                 .eq(Stock::getDeleted, DeleteEnum.UNDELETED.getCode())
                 .eq(Stock::getVersion, oldVersion)
                 .set(Stock::getCurrentQty, afterQty)
