@@ -13,14 +13,18 @@ import co.handk.backend.service.PermissionQueryService;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.PermissionTypeEnum;
 import co.handk.common.enums.StatusEnum;
+import co.handk.common.model.vo.PermissionScopeVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,6 +32,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class PermissionQueryServiceImpl implements PermissionQueryService {
+    private static final String DATA_SCOPE_ALL = "ALL";
+    private static final String DATA_SCOPE_OWN = "OWN";
+    private static final String DATA_SCOPE_READONLY = "READONLY";
+    private static final Set<String> NORMAL_USER_OWN_WRITE_MODULES = Set.of(
+            "stockOrder",
+            "stockOrderItem",
+            "requestForm",
+            "requestItem",
+            "customer"
+    );
+    private static final Set<String> NORMAL_USER_ALL_WRITE_MODULES = Set.of("customerLevel");
 
     private final UserRoleMapper userRoleMapper;
     private final RoleMapper roleMapper;
@@ -65,9 +80,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                             .forEach(adminCodes::add);
                     return adminCodes;
                 }
-                Set<String> normalCodes = new HashSet<>();
-                normalCodes.add(SecurityConstant.ROLE_NORMAL_USER);
-                return normalCodes;
+                return getNormalUserPermissionCodes();
             }
             List<Object> permissionIdObjs = rolePermissionMapper.selectObjs(
                     new QueryWrapper<RolePermission>()
@@ -84,7 +97,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                     .eq("status", StatusEnum.NOMAL.getCode());
             if (!superAdmin) {
                 if (permissionIds.isEmpty()) {
-                    return Collections.emptySet();
+                    return getNormalUserPermissionCodes();
                 }
                 permissionQuery.in("id", permissionIds);
             }
@@ -96,13 +109,81 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 codes.add(SecurityConstant.ROLE_SUPER_ADMIN);
                 codes.add(SecurityConstant.DATA_ALL_WRITE);
             } else {
-                codes.add(SecurityConstant.ROLE_NORMAL_USER);
+                codes = getNormalUserPermissionCodes();
             }
             return codes;
         } catch (Exception ex) {
             log.error("getPermissionCodes query failed, userId={}", userId, ex);
             return Collections.emptySet();
         }
+    }
+
+    @Override
+    public PermissionScopeVO getPermissionScope(Long userId) {
+        Set<String> codes = getPermissionCodes(userId);
+        boolean superAdmin = codes.contains(SecurityConstant.ROLE_SUPER_ADMIN);
+        boolean allDataWrite = superAdmin || codes.contains(SecurityConstant.DATA_ALL_WRITE);
+        PermissionScopeVO scope = new PermissionScopeVO();
+        scope.setSuperAdmin(superAdmin);
+        scope.setAllDataWrite(allDataWrite);
+        scope.setMenuCodes(codes.stream()
+                .filter(code -> code != null && code.startsWith("MENU_"))
+                .collect(Collectors.toCollection(HashSet::new)));
+        scope.setRoleCodes(codes.stream()
+                .filter(code -> code != null && code.startsWith("ROLE_"))
+                .collect(Collectors.toCollection(HashSet::new)));
+        scope.setPermissionCodes(codes.stream()
+                .filter(code -> code != null && !code.startsWith("MENU_") && !code.startsWith("ROLE_"))
+                .collect(Collectors.toCollection(HashSet::new)));
+
+        Map<String, PermissionScopeVO.MenuPermissionVO> menus = new LinkedHashMap<>();
+        List<Permission> dataPermissions = getEnabledDataPermissions().stream()
+                .filter(permission -> permission.getPath() != null && !permission.getPath().isBlank())
+                .sorted(Comparator
+                        .comparing((Permission permission) -> permission.getSort() == null ? 0 : permission.getSort())
+                        .thenComparing(permission -> permission.getCode() == null ? "" : permission.getCode()))
+                .toList();
+
+        for (Permission permission : dataPermissions) {
+            String key = resolveModuleKey(permission.getPath());
+            String code = permission.getCode();
+            if (key.isBlank() || code == null || code.isBlank()) {
+                continue;
+            }
+            PermissionScopeVO.MenuPermissionVO menu = menus.computeIfAbsent(key, ignored -> {
+                PermissionScopeVO.MenuPermissionVO item = new PermissionScopeVO.MenuPermissionVO();
+                item.setKey(key);
+                item.setLabel(resolveMenuLabel(permission));
+                item.setModule(permission.getModule());
+                item.setPath(permission.getPath());
+                item.setDataScope(resolveDataScope(key, allDataWrite, codes));
+                item.setSort(permission.getSort());
+                return item;
+            });
+            if (menu.getSort() == null || (permission.getSort() != null && permission.getSort() < menu.getSort())) {
+                menu.setSort(permission.getSort());
+            }
+            PermissionScopeVO.ActionPermissionVO actions = menu.getActions();
+            if (code.endsWith(SecurityConstant.PERMISSION_SUFFIX_READ) && (allDataWrite || codes.contains(code))) {
+                actions.setRead(true);
+            }
+            if (code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE) && (allDataWrite || codes.contains(code))) {
+                actions.setRead(true);
+                actions.setCreate(true);
+                actions.setEdit(true);
+                actions.setDelete(true);
+                actions.setBatchDelete(true);
+                actions.setInlineEdit(true);
+                menu.setDataScope(resolveDataScope(key, allDataWrite, codes));
+            }
+        }
+        scope.setMenus(menus.values().stream()
+                .filter(menu -> menu.getActions().isRead())
+                .sorted(Comparator
+                        .comparing((PermissionScopeVO.MenuPermissionVO menu) -> menu.getSort() == null ? 0 : menu.getSort())
+                        .thenComparing(PermissionScopeVO.MenuPermissionVO::getKey))
+                .toList());
+        return scope;
     }
 
     @Override
@@ -147,5 +228,85 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .map(obj -> ((Number) obj).longValue())
                 .distinct()
                 .toList();
+    }
+
+    private Set<String> getNormalUserPermissionCodes() {
+        Set<String> codes = permissionMapper.selectList(
+                        new QueryWrapper<Permission>()
+                                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                                .eq("status", StatusEnum.NOMAL.getCode())
+                ).stream()
+                .filter(this::isNormalUserPermission)
+                .map(Permission::getCode)
+                .filter(code -> code != null && !code.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
+        codes.add(SecurityConstant.ROLE_NORMAL_USER);
+        return codes;
+    }
+
+    private String resolveModuleKey(String path) {
+        if (path == null || path.isBlank()) {
+            return "";
+        }
+        String value = path.trim();
+        if (value.startsWith(SecurityConstant.API_PREFIX)) {
+            value = value.substring(SecurityConstant.API_PREFIX.length());
+        } else if (value.startsWith("/")) {
+            value = value.substring(1);
+        }
+        int slash = value.indexOf('/');
+        if (slash >= 0) {
+            value = value.substring(0, slash);
+        }
+        return value.replace("*", "").trim();
+    }
+
+    private String resolveMenuLabel(Permission permission) {
+        String name = permission.getName();
+        if (name == null || name.isBlank()) {
+            return resolveModuleKey(permission.getPath());
+        }
+        return name
+                .replace("閲覧", "")
+                .replace("編集", "")
+                .trim();
+    }
+
+    private String resolveDataScope(String moduleKey, boolean allDataWrite, Set<String> codes) {
+        if (allDataWrite) {
+            return DATA_SCOPE_ALL;
+        }
+        if (NORMAL_USER_OWN_WRITE_MODULES.contains(moduleKey) && hasWriteCode(moduleKey, codes)) {
+            return DATA_SCOPE_OWN;
+        }
+        if (NORMAL_USER_ALL_WRITE_MODULES.contains(moduleKey) && hasWriteCode(moduleKey, codes)) {
+            return DATA_SCOPE_ALL;
+        }
+        return DATA_SCOPE_READONLY;
+    }
+
+    private boolean hasWriteCode(String moduleKey, Set<String> codes) {
+        String expected = "DATA_" + moduleKey.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase()
+                + SecurityConstant.PERMISSION_SUFFIX_WRITE;
+        return codes != null && codes.contains(expected);
+    }
+
+    private boolean isNormalUserPermission(Permission permission) {
+        if (permission == null) {
+            return false;
+        }
+        Integer type = permission.getType();
+        if (!PermissionTypeEnum.DATA.getCode().equals(type)) {
+            return true;
+        }
+        String code = permission.getCode();
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        if (code.endsWith(SecurityConstant.PERMISSION_SUFFIX_READ)) {
+            return true;
+        }
+        return code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)
+                && SecurityConstant.isNormalUserWriteApiPath(permission.getPath());
     }
 }

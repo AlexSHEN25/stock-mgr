@@ -1,5 +1,6 @@
 package co.handk.client.util;
 
+import co.handk.client.constant.AppConstants.ApiPath;
 import co.handk.client.model.Session;
 import org.json.JSONObject;
 
@@ -37,6 +38,7 @@ public class ApiClient {
     private static final String QUERY_ASSIGN = "=";
     private static final String EMPTY = "";
     private static final String DEBUG_FLAG = "stock.client.http.debug";
+    private static final long REFRESH_THRESHOLD_MILLIS = 10L * 60L * 1000L;
     private static final AtomicBoolean LOGIN_TIMEOUT_HANDLED = new AtomicBoolean(false);
     private static Runnable loginTimeoutHandler;
 
@@ -131,6 +133,13 @@ public class ApiClient {
     }
 
     private static HttpURLConnection open(String path, String method) throws Exception {
+        return open(path, method, true);
+    }
+
+    private static HttpURLConnection open(String path, String method, boolean allowRefresh) throws Exception {
+        if (allowRefresh) {
+            refreshTokenIfNecessary(path);
+        }
         URL url = new URL(BASE_URL + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod(method);
@@ -142,6 +151,35 @@ public class ApiClient {
             conn.setRequestProperty(HEADER_AUTHORIZATION, AUTH_BEARER_PREFIX + token);
         }
         return conn;
+    }
+
+    private static synchronized void refreshTokenIfNecessary(String path) throws Exception {
+        if (isAuthPath(path) || !Session.shouldRefresh(REFRESH_THRESHOLD_MILLIS)) {
+            return;
+        }
+        HttpURLConnection conn = open(ApiPath.USER_REFRESH_TOKEN, METHOD_POST, false);
+        conn.setRequestProperty(HEADER_CONTENT_TYPE, CONTENT_TYPE_JSON);
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_POST, ApiPath.USER_REFRESH_TOKEN, EMPTY, conn);
+        String body = read(conn, start, METHOD_POST, ApiPath.USER_REFRESH_TOKEN);
+        JSONObject json = new JSONObject(body);
+        JSONObject data = json.optJSONObject("data");
+        if (data == null) {
+            data = json;
+        }
+        String expireTime = data.optString("expireTime", "");
+        if (!expireTime.isBlank()) {
+            Session.updateExpireTime(expireTime);
+        }
+    }
+
+    private static boolean isAuthPath(String path) {
+        if (path == null) {
+            return false;
+        }
+        return path.startsWith(ApiPath.USER_LOGIN)
+                || path.startsWith(ApiPath.USER_LOGOUT)
+                || path.startsWith(ApiPath.USER_REFRESH_TOKEN);
     }
 
     private static String toQueryString(Map<String, String> queryParams) {

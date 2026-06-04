@@ -13,5 +13,7 @@ public interface LoginService {
 
     LoginVO login(@NotNull LoginDTO dto);
 
+    LoginVO refreshToken();
+
     LogoutVO logout();
 }

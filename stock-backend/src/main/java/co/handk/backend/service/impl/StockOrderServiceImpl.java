@@ -20,7 +20,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -49,6 +51,11 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
         }
         StockOrder entity = new StockOrder();
         BeanUtils.copyProperties(dto, entity);
+        Long userId = UserContext.getUserIdOrDefault();
+        if (entity.getId() == null && !permissionQueryService.isSuperAdmin(userId)) {
+            entity.setRequesterId(userId);
+            entity.setOperatorId(userId);
+        }
         return entity;
     }
 
@@ -66,12 +73,15 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
         validateRequiredDateByOrderType(dto);
-        if (dto instanceof CreateStockOrderDTO createDto && isInboundOrOutbound(createDto.getOrderType())) {
-            createDto.setState(StockBizConstant.ORDER_STATE_APPROVING);
-            createDto.setApproverId(null);
-            createDto.setApproverName(null);
-            createDto.setApproveTime(null);
-            createDto.setFinishTime(null);
+        if (dto instanceof CreateStockOrderDTO createDto) {
+            sanitizeSourceFields(createDto);
+            if (isInboundOrOutbound(createDto.getOrderType())) {
+                createDto.setState(StockBizConstant.ORDER_STATE_APPROVING);
+                createDto.setApproverId(null);
+                createDto.setApproverName(null);
+                createDto.setApproveTime(null);
+                createDto.setFinishTime(null);
+            }
         }
         return super.saveByDto(dto);
     }
@@ -84,6 +94,14 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             return super.updateByDto(dto);
         }
         StockOrder before = getByIdNotDeleted(updateDto.getId());
+        sanitizeSourceFields(updateDto, before);
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId) && before != null) {
+            updateDto.setRequesterId(before.getRequesterId());
+            updateDto.setRequesterName(before.getRequesterName());
+            updateDto.setOperatorId(before.getOperatorId());
+            updateDto.setOperatorName(before.getOperatorName());
+        }
         if (isInboundOrOutbound(updateDto.getOrderType())
                 && Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(updateDto.getState())
                 && (before == null || !Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(before.getState()))) {
@@ -106,6 +124,40 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             notifyStockOrderStateChanged(after, beforeState, afterState);
         }
         return true;
+    }
+
+    @Override
+    public StockOrder getByIdNotDeleted(Serializable id) {
+        StockOrder order = super.getByIdNotDeleted(id);
+        requireOwned(order);
+        return order;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int deleteByIdLogic(Long id) {
+        StockOrder order = super.getByIdNotDeleted(id);
+        requireOwned(order);
+        return super.deleteByIdLogic(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int deleteBatchLogic(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return super.deleteBatchLogic(ids);
+        }
+        int rows = 0;
+        for (Long id : ids) {
+            StockOrder order = super.getByIdNotDeleted(id);
+            requireOwned(order);
+            rows += super.deleteByIdLogic(id);
+        }
+        return rows;
     }
 
     private void validateRequiredDateByOrderType(Object dto) {
@@ -141,6 +193,33 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     private boolean isInboundOrOutbound(Integer orderType) {
         return Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(orderType)
                 || Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(orderType);
+    }
+
+    private void sanitizeSourceFields(CreateStockOrderDTO dto) {
+        if (!Integer.valueOf(StockBizConstant.SOURCE_TYPE_MANUAL).equals(dto.getSourceType())) {
+            dto.setSourceType(StockBizConstant.SOURCE_TYPE_MANUAL);
+        }
+        dto.setSourceId(null);
+    }
+
+    private void sanitizeSourceFields(UpdateStockOrderDTO dto, StockOrder before) {
+        if (before != null) {
+            dto.setSourceType(before.getSourceType());
+        }
+        dto.setSourceId(null);
+    }
+
+    private void requireOwned(StockOrder order) {
+        if (order == null) {
+            return;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return;
+        }
+        if (!userId.equals(order.getRequesterId()) && !userId.equals(order.getOperatorId())) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "stock order is not owned by current user");
+        }
     }
 
     private void notifyStockOrderStateChanged(StockOrder order, Integer beforeState, Integer afterState) {

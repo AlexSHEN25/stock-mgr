@@ -19,6 +19,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.Serializable;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +52,57 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
         }
         Message entity = new Message();
         BeanUtils.copyProperties(dto, entity);
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            entity.setUserId(userId);
+        }
         return entity;
+    }
+
+    @Override
+    public Message getByIdNotDeleted(Serializable id) {
+        Message message = super.getByIdNotDeleted(id);
+        requireOwned(message);
+        return message;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public <U> boolean updateByDto(U dto) {
+        Message entity = toEntity(dto);
+        if (entity == null || entity.getId() == null) {
+            return super.updateByDto(dto);
+        }
+        Message existed = super.getByIdNotDeleted(entity.getId());
+        requireOwned(existed);
+        return super.updateByDto(dto);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int deleteByIdLogic(Long id) {
+        Message message = super.getByIdNotDeleted(id);
+        requireOwned(message);
+        return super.deleteByIdLogic(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int deleteBatchLogic(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return DeleteEnum.UNDELETED.getCode();
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return super.deleteBatchLogic(ids);
+        }
+        int rows = 0;
+        for (Long id : ids) {
+            Message message = super.getByIdNotDeleted(id);
+            requireOwned(message);
+            rows += super.deleteByIdLogic(id);
+        }
+        return rows;
     }
 
     @Override
@@ -147,5 +201,21 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
             wrapper.eq(Message::getIsRead, isRead);
         }
         return baseMapper.selectCount(wrapper);
+    }
+
+    private void requireOwned(Message message) {
+        if (message == null) {
+            return;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return;
+        }
+        if (!userId.equals(message.getUserId())) {
+            throw new BusinessException(
+                    MessageKeyConstant.ERROR_RUNTIME,
+                    "No permission to operate this message"
+            );
+        }
     }
 }

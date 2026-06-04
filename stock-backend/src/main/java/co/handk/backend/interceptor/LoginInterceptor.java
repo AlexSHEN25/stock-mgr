@@ -19,6 +19,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -59,6 +60,13 @@ public class LoginInterceptor implements HandlerInterceptor {
         if (Objects.nonNull(ttl) && ttl < CommonConstant.UPDATE_EXPIRE_TIME) {
             redisUtil.expire(tokenKey, CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
             redisUtil.expire(userKey, CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
+            userTokenMapper.update(
+                    null,
+                    new UpdateWrapper<UserToken>()
+                            .eq("token", token)
+                            .set("expire_time", LocalDateTime.now().plusMinutes(CommonConstant.EXPIRE_TIME))
+                            .set("status", StatusEnum.NOMAL.getCode())
+            );
         }
 
         try {

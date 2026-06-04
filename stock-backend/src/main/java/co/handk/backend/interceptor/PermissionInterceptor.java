@@ -24,11 +24,6 @@ import java.util.Set;
 @Slf4j
 public class PermissionInterceptor implements HandlerInterceptor {
     private static final String EMPTY = "";
-    private static final String API_STOCK_ORDER_PREFIX = "/api/stockOrder";
-    private static final String API_STOCK_ORDER_ITEM_PREFIX = "/api/stockOrderItem";
-    private static final String API_REQUEST_FORM_PREFIX = "/api/requestForm";
-    private static final String API_REQUEST_ITEM_PREFIX = "/api/requestItem";
-    private static final String API_CUSTOMER_PREFIX = "/api/customer";
 
     private final PermissionQueryService permissionQueryService;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
@@ -52,8 +47,11 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
-            // No configured DATA permission path matched:
-            // treat as non-protected by this interceptor and allow through.
+            if (isWriteMethod(request.getMethod()) && isProtectedApi(uri) && !isAllowedAccountWrite(uri)) {
+                log.warn("Permission denied: userId={}, method={}, uri={}, reason=unconfigured-write",
+                        userId, request.getMethod(), uri);
+                throw new AccessDeniedException(MessageKeyConstant.ERROR_NO_PERMISSION, SecurityConstant.NO_PERMISSION_MESSAGE);
+            }
             return true;
         }
 
@@ -98,21 +96,33 @@ public class PermissionInterceptor implements HandlerInterceptor {
             return false;
         }
         String normalizedMethod = method == null ? EMPTY : method.toUpperCase(Locale.ROOT);
-        boolean isWrite = !HttpMethod.GET.matches(normalizedMethod)
-                && !HttpMethod.HEAD.matches(normalizedMethod)
-                && !HttpMethod.OPTIONS.matches(normalizedMethod);
-        if (!isWrite) {
+        if (!isWriteMethod(normalizedMethod)) {
             return false;
         }
-        return startsWithPath(uri, API_STOCK_ORDER_PREFIX)
-                || startsWithPath(uri, API_STOCK_ORDER_ITEM_PREFIX)
-                || startsWithPath(uri, API_REQUEST_FORM_PREFIX)
-                || startsWithPath(uri, API_REQUEST_ITEM_PREFIX)
-                || startsWithPath(uri, API_CUSTOMER_PREFIX);
+        return SecurityConstant.isNormalUserWriteApiPath(uri);
     }
 
-    private boolean startsWithPath(String uri, String prefix) {
-        return uri.equals(prefix) || uri.startsWith(prefix + "/");
+    private boolean isWriteMethod(String method) {
+        String normalizedMethod = method == null ? EMPTY : method.toUpperCase(Locale.ROOT);
+        return !HttpMethod.GET.matches(normalizedMethod)
+                && !HttpMethod.HEAD.matches(normalizedMethod)
+                && !HttpMethod.OPTIONS.matches(normalizedMethod);
+    }
+
+    private boolean isProtectedApi(String uri) {
+        return uri != null && (uri.startsWith(SecurityConstant.API_PREFIX) || uri.startsWith("/"));
+    }
+
+    private boolean isAllowedAccountWrite(String uri) {
+        if (uri == null) {
+            return false;
+        }
+        String path = uri.startsWith(SecurityConstant.API_PREFIX)
+                ? uri.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX)
+                : uri;
+        return "/user/logout".equals(path)
+                || "/user/refresh-token".equals(path)
+                || path.matches("/user/\\d+/password");
     }
 
     private String normalizePath(String path) {

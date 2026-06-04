@@ -1,5 +1,7 @@
 package co.handk.backend.constant;
 
+import java.util.List;
+
 public final class SecurityConstant {
 
     private SecurityConstant() {
@@ -15,4 +17,20 @@ public final class SecurityConstant {
     public static final String API_PREFIX = "/api/";
     public static final int API_PREFIX_KEEP_LEADING_SLASH_INDEX = API_PREFIX.length() - 1;
     public static final String NO_PERMISSION_MESSAGE = "権限がありません";
+    public static final List<String> NORMAL_USER_WRITE_API_PREFIXES = List.of(
+            "/api/stockOrder",
+            "/api/stockOrderItem",
+            "/api/requestForm",
+            "/api/requestItem",
+            "/api/customer",
+            "/api/customerLevel"
+    );
+
+    public static boolean isNormalUserWriteApiPath(String path) {
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        return NORMAL_USER_WRITE_API_PREFIXES.stream()
+                .anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
+    }
 }

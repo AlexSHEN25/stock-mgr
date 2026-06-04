@@ -4,6 +4,7 @@ import co.handk.client.MainApp;
 import co.handk.client.constant.AppConstants.ApiPath;
 import co.handk.client.constant.UiText;
 import co.handk.client.model.Session;
+import co.handk.client.service.UserAccountService;
 import co.handk.client.util.ApiClient;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -28,6 +29,7 @@ public class LoginController {
     @FXML private Label messageLabel;
 
     private final Preferences prefs = Preferences.userRoot().node(PREF_NODE);
+    private final UserAccountService userAccountService = new UserAccountService();
     private MainApp app;
 
     public void setApp(MainApp app) {
@@ -54,7 +56,10 @@ public class LoginController {
                     return;
                 }
                 saveRememberedCredentials();
-                Session.set(token, data.optLong("userId", 0L), data.optString("username", usernameField.getText()));
+                Session.set(token, data.optLong("userId", 0L),
+                        data.optString("username", usernameField.getText()),
+                        data.optString("expireTime", ""));
+                Session.setPermissionCodes(userAccountService.permissions());
                 ApiClient.resetLoginTimeoutHandled();
                 app.showMain();
             } else {

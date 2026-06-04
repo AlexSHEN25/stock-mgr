@@ -54,7 +54,11 @@ public class TableRowService {
         JSONObject dto = new JSONObject();
         for (Map.Entry<String, Object> entry : row.entrySet()) {
             String key = entry.getKey();
-            if (selectedKey.equals(key) || ModuleMeta.isReadonlyPayloadField(key)) {
+            if (selectedKey.equals(key)) {
+                continue;
+            }
+            String payloadKey = ModuleMeta.updatePayloadField(module, key);
+            if (payloadKey.isBlank()) {
                 continue;
             }
             Object value = entry.getValue();
@@ -66,24 +70,24 @@ public class TableRowService {
                 if (text.isEmpty()) {
                     continue;
                 }
-                if (ModuleMeta.fieldType(module, key) == ModuleMeta.FieldType.NUMBER) {
+                if (ModuleMeta.fieldType(module, payloadKey) == ModuleMeta.FieldType.NUMBER) {
                     try {
                         if (text.contains(".")) {
-                            dto.put(key, Double.parseDouble(text));
+                            dto.put(payloadKey, Double.parseDouble(text));
                         } else {
-                            dto.put(key, Long.parseLong(text));
+                            dto.put(payloadKey, Long.parseLong(text));
                         }
                         continue;
                     } catch (NumberFormatException ex) {
                         LOGGER.log(Level.WARNING,
-                                "Numeric parse fallback. module=" + module + ", field=" + key + ", value=" + text,
+                                "Numeric parse fallback. module=" + module + ", field=" + payloadKey + ", value=" + text,
                                 ex);
                     }
                 }
-                dto.put(key, text);
+                dto.put(payloadKey, text);
                 continue;
             }
-            dto.put(key, value);
+            dto.put(payloadKey, value);
         }
         return ModuleMeta.applyFormValueRules(module, dto);
     }

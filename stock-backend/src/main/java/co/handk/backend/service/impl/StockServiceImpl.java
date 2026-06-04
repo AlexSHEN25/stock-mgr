@@ -1,7 +1,6 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.annotation.context.UserContext;
-import co.handk.backend.entity.Category;
 import co.handk.backend.entity.Goods;
 import co.handk.backend.entity.GoodsSku;
 import co.handk.backend.entity.Message;
@@ -12,8 +11,8 @@ import co.handk.backend.entity.StockOrderItem;
 import co.handk.backend.entity.StockRecord;
 import co.handk.backend.entity.StockType;
 import co.handk.backend.entity.User;
+import co.handk.backend.entity.Warehouse;
 import co.handk.backend.mapper.StockMapper;
-import co.handk.backend.service.CategoryService;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
 import co.handk.backend.service.MessageService;
@@ -25,6 +24,7 @@ import co.handk.backend.service.StockRecordService;
 import co.handk.backend.service.StockService;
 import co.handk.backend.service.StockTypeService;
 import co.handk.backend.service.UserService;
+import co.handk.backend.service.WarehouseService;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.FieldNameConstant;
 import co.handk.common.constant.StockBizConstant;
@@ -49,6 +49,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -60,17 +61,13 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private static final int MESSAGE_IS_UNREAD = 0;
     private static final int MESSAGE_STATE_SENT = 1;
     private static final int LOW_STOCK_THRESHOLD = 10;
-    private static final String HANDLE_GOODS_SQL = "SELECT g.id FROM t_goods g "
-            + "INNER JOIN t_category c ON c.id = g.category_id AND c.deleted = 0 "
-            + "WHERE g.deleted = 0 AND c.name LIKE '%柄%'";
-    private static final String SELF_GOODS_SQL = "SELECT g.id FROM t_goods g "
-            + "LEFT JOIN t_category c ON c.id = g.category_id AND c.deleted = 0 "
-            + "WHERE g.deleted = 0 AND (c.name IS NULL OR c.name NOT LIKE '%柄%')";
+    private static final String HANDLE_WAREHOUSE_SQL = "SELECT id FROM t_warehouse "
+            + "WHERE deleted = 0 AND (name LIKE '%ハンドル%' OR UPPER(code) LIKE '%HANDLE%')";
+    private static final String SELF_WAREHOUSE_SQL = "SELECT id FROM t_warehouse "
+            + "WHERE deleted = 0 AND (name LIKE '%自社%' OR UPPER(code) LIKE '%SELF%')";
 
     @Autowired
     private GoodsService goodsService;
-    @Autowired
-    private CategoryService categoryService;
     @Autowired
     private GoodsSkuService goodsSkuService;
     @Autowired
@@ -89,6 +86,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private PriceRecordService priceRecordService;
     @Autowired
     private PermissionQueryService permissionQueryService;
+    @Autowired
+    private WarehouseService warehouseService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -197,7 +196,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private PageResult<StockVO> pageByScope(StockQueryDTO query, boolean handle) {
         Page<Stock> page = new Page<>(query.getPageNum(), query.getPageSize());
         QueryWrapper<Stock> wrapper = buildWrapper(query);
-        wrapper.inSql("goods_id", handle ? HANDLE_GOODS_SQL : SELF_GOODS_SQL);
+        wrapper.inSql("warehouse_id", handle ? HANDLE_WAREHOUSE_SQL : SELF_WAREHOUSE_SQL);
         boolean asc = "asc".equalsIgnoreCase(query.getSortOrder());
         String sortColumn = FieldNameConstant.SORT_BY_CREATE_TIME.equals(query.getSortBy())
                 ? FieldNameConstant.COLUMN_CREATE_TIME : FieldNameConstant.COLUMN_UPDATE_TIME;
@@ -219,7 +218,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private Stock requireScopedStock(Long id, boolean handle) {
         Stock stock = requireStock(id);
-        if (isHandleStock(stock) != handle) {
+        if (!isStockInScope(stock, handle)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                     "stock does not belong to requested inventory scope");
@@ -227,13 +226,30 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return stock;
     }
 
-    private boolean isHandleStock(Stock stock) {
-        Goods goods = requireGoods(stock.getGoodsId());
-        if (goods.getCategoryId() == null) {
+    private boolean isStockInScope(Stock stock, boolean handle) {
+        if (stock == null || stock.getWarehouseId() == null) {
             return false;
         }
-        Category category = categoryService.getByIdNotDeleted(goods.getCategoryId());
-        return category != null && category.getName() != null && category.getName().contains("柄");
+        Warehouse warehouse = warehouseService.getByIdNotDeleted(Long.valueOf(stock.getWarehouseId()));
+        return handle ? isHandleWarehouse(warehouse) : isSelfWarehouse(warehouse);
+    }
+
+    private boolean isHandleWarehouse(Warehouse warehouse) {
+        if (warehouse == null) {
+            return false;
+        }
+        String name = warehouse.getName() == null ? "" : warehouse.getName();
+        String code = warehouse.getCode() == null ? "" : warehouse.getCode().toUpperCase(Locale.ROOT);
+        return name.contains("ハンドル") || code.contains("HANDLE");
+    }
+
+    private boolean isSelfWarehouse(Warehouse warehouse) {
+        if (warehouse == null) {
+            return false;
+        }
+        String name = warehouse.getName() == null ? "" : warehouse.getName();
+        String code = warehouse.getCode() == null ? "" : warehouse.getCode().toUpperCase(Locale.ROOT);
+        return name.contains("自社") || code.contains("SELF");
     }
 
     @Override

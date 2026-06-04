@@ -2,6 +2,8 @@ package co.handk.common.model.vo;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class LoginVO extends BaseVO {
 
@@ -10,4 +12,6 @@ public class LoginVO extends BaseVO {
     private Long userId;
 
     private String username;
+
+    private LocalDateTime expireTime;
 }

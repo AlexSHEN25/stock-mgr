@@ -48,6 +48,8 @@ public final class AppConstants {
         public static final String USER_PAGE = "/user/page";
         public static final String USER_LOGIN = "/user/login";
         public static final String USER_LOGOUT = "/user/logout";
+        public static final String USER_REFRESH_TOKEN = "/user/refresh-token";
+        public static final String USER_PERMISSIONS = "/user/permissions";
         public static final String USER_PASSWORD_PREFIX = "/user/";
         public static final String USER_PASSWORD_SUFFIX = "/password";
         public static final String GOODS_SKU_PAGE = "/goodsSku/page";

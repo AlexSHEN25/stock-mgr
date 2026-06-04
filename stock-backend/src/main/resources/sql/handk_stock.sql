@@ -362,6 +362,10 @@ create TABLE t_warehouse
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '仓库表';
 
+INSERT INTO `t_warehouse` (`id`, `name`, `code`, `address`, `manager_id`, `status`, `deleted`, `created_by`, `updated_by`)
+VALUES (1, '自社在庫', 'SELF', '自社倉庫', NULL, 1, 0, 1, 1),
+       (2, 'ハンドル在庫', 'HANDLE', 'ハンドル倉庫', NULL, 1, 0, 1, 1);
+
 
 DROP TABLE IF EXISTS `t_goods`;
 CREATE TABLE `t_goods`
@@ -804,6 +808,12 @@ create TABLE `t_config`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '系统配置表';
+
+INSERT INTO `t_config` (`name`, `group`, `title`, `tip`, `type`, `value`, `content`, `created_by`, `updated_by`)
+VALUES ('request.form.template.default', 'request', 'Default request template', 'Fallback template for request form download', 'file', 'template/request_form_template_A.xlsx', NULL, 1, 1),
+       ('request.form.template.A', 'request', 'Request template A', 'Template used by department code A', 'file', 'template/request_form_template_A.xlsx', NULL, 1, 1),
+       ('request.form.template.B', 'request', 'Request template B', 'Template used by department code B', 'file', 'template/request_form_template_B.xlsx', NULL, 1, 1),
+       ('request.form.template.C', 'request', 'Request template C', 'Template used by department code C', 'file', 'template/request_form_template_C.xlsx', NULL, 1, 1);
 
 DROP TABLE IF EXISTS `t_operate_log`;
 create TABLE `t_operate_log`

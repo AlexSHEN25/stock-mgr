@@ -389,18 +389,19 @@ public class MainController {
 
     private void applyActionPolicy() {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
+        boolean canWrite = ModuleMeta.canWriteByPermission(currentModule);
         boolean messageModule = Module.MESSAGE.equals(currentModule);
-        addButton.setDisable(!policy.canCreate);
+        addButton.setDisable(!policy.canCreate || !canWrite);
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
-        readAllButton.setDisable(!messageModule);
-        inlineEditButton.setDisable(!policy.canInlineEdit);
-        inlineSaveButton.setDisable(!policy.canInlineEdit);
-        inlineCancelButton.setDisable(!policy.canInlineEdit);
-        editButton.setDisable(!policy.canEdit);
-        batchDeleteButton.setDisable(!policy.canBatchDelete);
-        deleteIdField.setDisable(!policy.canDelete);
-        deleteButton.setDisable(!policy.canDelete);
+        readAllButton.setDisable(!messageModule || !canWrite);
+        inlineEditButton.setDisable(!policy.canInlineEdit || !canWrite);
+        inlineSaveButton.setDisable(!policy.canInlineEdit || !canWrite);
+        inlineCancelButton.setDisable(!policy.canInlineEdit || !canWrite);
+        editButton.setDisable(!policy.canEdit || !canWrite);
+        batchDeleteButton.setDisable(!policy.canBatchDelete || !canWrite);
+        deleteIdField.setDisable(!policy.canDelete || !canWrite);
+        deleteButton.setDisable(!policy.canDelete || !canWrite);
     }
 
     private Control createControl(String field) {

@@ -75,6 +75,40 @@ public class LoginServiceImpl implements LoginService {
         vo.setToken(token);
         vo.setUserId(userId);
         vo.setUsername(username);
+        vo.setExpireTime(expireAt());
+        return vo;
+    }
+
+    @Override
+    public LoginVO refreshToken() {
+        Long userId = UserContext.getUserId();
+        if (Objects.isNull(userId)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "login session is required"
+            );
+        }
+        String userKey = RedisKey.LOGIN_USER + userId;
+        String token = stringRedisUtil.get(userKey);
+        if (StringUtils.isBlank(token)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "login session is invalid"
+            );
+        }
+
+        String tokenKey = RedisKey.LOGIN_TOKEN + token;
+        stringRedisUtil.expire(tokenKey, CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
+        stringRedisUtil.expire(userKey, CommonConstant.EXPIRE_TIME, TimeUnit.MINUTES);
+        LocalDateTime expireAt = expireAt();
+        updateTokenExpireTime(token, expireAt);
+
+        User user = userMapper.selectById(userId);
+        LoginVO vo = new LoginVO();
+        vo.setToken(token);
+        vo.setUserId(userId);
+        vo.setUsername(user == null ? null : user.getUsername());
+        vo.setExpireTime(expireAt);
         return vo;
     }
 
@@ -98,7 +132,7 @@ public class LoginServiceImpl implements LoginService {
 
     private void persistUserToken(Long userId, String token) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expireAt = now.plusMinutes(CommonConstant.EXPIRE_TIME);
+        LocalDateTime expireAt = expireAt(now);
         String loginIp = resolveClientIp();
 
         UserToken existed = userTokenMapper.selectOne(
@@ -142,6 +176,27 @@ public class LoginServiceImpl implements LoginService {
                         .eq("token", token)
                         .set("status", StatusEnum.FOBBIDEN.getCode())
         );
+    }
+
+    private void updateTokenExpireTime(String token, LocalDateTime expireAt) {
+        if (StringUtils.isBlank(token)) {
+            return;
+        }
+        userTokenMapper.update(
+                null,
+                new UpdateWrapper<UserToken>()
+                        .eq("token", token)
+                        .set("expire_time", expireAt)
+                        .set("status", StatusEnum.NOMAL.getCode())
+        );
+    }
+
+    private LocalDateTime expireAt() {
+        return expireAt(LocalDateTime.now());
+    }
+
+    private LocalDateTime expireAt(LocalDateTime baseTime) {
+        return baseTime.plusMinutes(CommonConstant.EXPIRE_TIME);
     }
 
     private void markTokenInvalidByUserId(Long userId) {

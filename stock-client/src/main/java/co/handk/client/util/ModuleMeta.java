@@ -1,5 +1,7 @@
 package co.handk.client.util;
 
+import co.handk.client.model.Session;
+
 import static co.handk.client.constant.AppConstants.Field.ID;
 import static co.handk.client.constant.AppConstants.Module.GOODS;
 import static co.handk.client.constant.AppConstants.Module.GOODS_SKU;
@@ -162,7 +164,9 @@ public final class ModuleMeta {
     private static final Map<String, List<String>> HIDDEN_LIST_FIELDS = new HashMap<>();
     private static final Map<String, List<String>> PREFERRED_COLUMNS = new HashMap<>();
     private static final Map<String, ModuleActionPolicy> ACTION_POLICIES = new HashMap<>();
+    private static final Map<String, String> WRITE_PERMISSION_CODES = new HashMap<>();
     private static final Map<String, List<FormValueRule>> FORM_VALUE_RULES = new HashMap<>();
+    private static final Map<String, Map<String, Map<String, String>>> INITIAL_RELATION_FILTERS = new HashMap<>();
     private static final List<String> INLINE_READONLY_FIELDS = List.of(
             "id", "createTime", "updateTime", "statusDesc", "beforeQty", "afterQty"
     );
@@ -204,10 +208,10 @@ public final class ModuleMeta {
         FORM_FIELDS.put(USER, List.of("username", "password", "deptId", "roleId", "email", "phone", "avatar", "status"));
         FORM_FIELDS.put(MODULE_DEPT, List.of("parentId", "name", "code", "leaderId", "sort", "status"));
         FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "seriesId", "categoryId", "makerId", "description", "isHot", "skuCode", "skuName", "price", "status"));
-        FORM_FIELDS.put(MODULE_STOCK, List.of("goodsId", "skuId", "sourceType", "warehouseId", "stockTypeId", "quantity", "remark"));
+        FORM_FIELDS.put(MODULE_STOCK, List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"));
         FORM_FIELDS.put(MODULE_SELF_STOCK, FORM_FIELDS.get(MODULE_STOCK));
         FORM_FIELDS.put(MODULE_HANDLE_STOCK, FORM_FIELDS.get(MODULE_STOCK));
-        FORM_FIELDS.put(STOCK_ORDER, List.of("orderNo", "orderType", "bizDate", "warehouseId", "sourceType", "sourceId", "totalQty", "stockTypeId", "state", "requesterId", "operatorId", "approverId", "approveTime", "finishTime", "remark"));
+        FORM_FIELDS.put(STOCK_ORDER, List.of("orderNo", "orderType", "bizDate", "warehouseId", "sourceType", "totalQty", "stockTypeId", "state", "requesterId", "operatorId", "approverId", "approveTime", "finishTime", "remark"));
         FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
         FORM_FIELDS.put(REQUEST_FORM, List.of("bizNo", "sourceOrderId", "sourceOrderNo", "userId", "username", "deptId", "deptName", "customerId", "customerName", "warehouseId", "totalQty", "requestQty", "totalAmt", "state", "approverId", "approverName", "approveTime", "approveRemark"));
@@ -341,7 +345,10 @@ public final class ModuleMeta {
                 new DependencyRule("categoryId", "goodsId", GOODS, "categoryId", List.of("skuId")),
                 new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())
         ));
-        DEPENDENCY_RULES.put(MODULE_STOCK, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
+        DEPENDENCY_RULES.put(MODULE_STOCK, List.of(
+                new DependencyRule("warehouseId", "goodsId", GOODS, "warehouseId", List.of("skuId")),
+                new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())
+        ));
         DEPENDENCY_RULES.put(MODULE_SELF_STOCK, DEPENDENCY_RULES.get(MODULE_STOCK));
         DEPENDENCY_RULES.put(MODULE_HANDLE_STOCK, DEPENDENCY_RULES.get(MODULE_STOCK));
         DEPENDENCY_RULES.put(REQUEST_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
@@ -380,13 +387,27 @@ public final class ModuleMeta {
         ACTION_POLICIES.put(MODULE_STOCK_RECORD, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_PRICE_RECORD, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_OPERATE_LOG, new ModuleActionPolicy(false, false, false, false, false));
-        ACTION_POLICIES.put(MODULE_MESSAGE, new ModuleActionPolicy(false, false, false, false, false));
+        ACTION_POLICIES.put(MODULE_MESSAGE, new ModuleActionPolicy(true, true, true, true, true));
         ACTION_POLICIES.put(GOODS, new ModuleActionPolicy(true, false, true, true, true));
+
+        WRITE_PERMISSION_CODES.put(STOCK_ORDER, "DATA_STOCK_ORDER_WRITE");
+        WRITE_PERMISSION_CODES.put(STOCK_ORDER_ITEM, "DATA_STOCK_ORDER_ITEM_WRITE");
+        WRITE_PERMISSION_CODES.put(REQUEST_FORM, "DATA_REQUEST_FORM_WRITE");
+        WRITE_PERMISSION_CODES.put(REQUEST_ITEM, "DATA_REQUEST_ITEM_WRITE");
+        WRITE_PERMISSION_CODES.put(MODULE_CUSTOMER, "DATA_CUSTOMER_WRITE");
+        WRITE_PERMISSION_CODES.put(MODULE_CUSTOMER_LEVEL, "DATA_CUSTOMER_LEVEL_WRITE");
+        WRITE_PERMISSION_CODES.put(MODULE_MESSAGE, "DATA_MESSAGE_WRITE");
 
         FORM_VALUE_RULES.put(GOODS, List.of(
                 FormValueRule.copyIfBlank("skuName", "name"),
                 FormValueRule.defaultIfBlank("currency", "JPY"),
                 FormValueRule.clearWhenBlank("priceUpdateTime", "updatePrice")
+        ));
+        INITIAL_RELATION_FILTERS.put(MODULE_SELF_STOCK, Map.of(
+                "warehouseId", Map.of("name", "\u81ea\u793e\u5728\u5eab")
+        ));
+        INITIAL_RELATION_FILTERS.put(MODULE_HANDLE_STOCK, Map.of(
+                "warehouseId", Map.of("name", "\u30cf\u30f3\u30c9\u30eb\u5728\u5eab")
         ));
     }
 
@@ -519,6 +540,14 @@ public final class ModuleMeta {
         return RELATION_FIELD_MODULE.get(field);
     }
 
+    public static Map<String, String> initialRelationFilters(String moduleKey, String field) {
+        return INITIAL_RELATION_FILTERS.getOrDefault(moduleKey, Map.of()).getOrDefault(field, Map.of());
+    }
+
+    public static boolean shouldAutoSelectFirstRelation(String moduleKey, String field) {
+        return !initialRelationFilters(moduleKey, field).isEmpty();
+    }
+
     public static String mapNameFieldToIdField(String field) {
         return NAME_TO_ID_FIELD.getOrDefault(field, "");
     }
@@ -572,6 +601,17 @@ public final class ModuleMeta {
         return ACTION_POLICIES.getOrDefault(moduleKey, new ModuleActionPolicy(true, true, true, true, true));
     }
 
+    public static boolean canWriteByPermission(String moduleKey) {
+        if (Session.hasPermission("DATA_ALL_WRITE")) {
+            return true;
+        }
+        String code = WRITE_PERMISSION_CODES.get(moduleKey);
+        if (code == null || code.isBlank()) {
+            code = "DATA_" + camelToUpperUnderscore(moduleKey) + "_WRITE";
+        }
+        return Session.hasPermission(code);
+    }
+
     public static boolean isInlineReadonlyField(String field) {
         if (field == null || field.isBlank()) {
             return true;
@@ -596,6 +636,16 @@ public final class ModuleMeta {
                 || "statusdesc".equals(low)
                 || "beforeqty".equals(low)
                 || "afterqty".equals(low);
+    }
+
+    public static String updatePayloadField(String moduleKey, String field) {
+        if (field == null || field.isBlank()) {
+            return "";
+        }
+        if (GOODS.equals(moduleKey) && "goodsName".equals(field)) {
+            return "name";
+        }
+        return isReadonlyPayloadField(field) ? "" : field;
     }
 
     public static JSONObject applyFormValueRules(String moduleKey, JSONObject dto) {
@@ -705,6 +755,16 @@ public final class ModuleMeta {
             }
         }
         return target;
+    }
+
+    private static String camelToUpperUnderscore(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return value.trim()
+                .replaceAll("([a-z])([A-Z])", "$1_$2")
+                .replace('-', '_')
+                .toUpperCase(Locale.ROOT);
     }
 
     private static String autoLabelFromField(String key) {

@@ -51,6 +51,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -623,17 +624,19 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private XSSFWorkbook buildRequestWorkbook(RequestForm form) throws IOException {
         List<RequestItem> items = listRequestItems(form.getId());
         Customer customer = form.getCustomerId() == null ? null : customerService.getByIdNotDeleted(form.getCustomerId());
+        String templateCode = resolveTemplateCode(form);
         XSSFWorkbook workbook;
         try (InputStream templateInput = openTemplateInputStream(form)) {
             workbook = new XSSFWorkbook(templateInput);
         }
+        workbook.setForceFormulaRecalculation(true);
         Sheet sheet = workbook.getSheetAt(0);
         workbook.setSheetName(0, safeSheetName(form.getBizNo()));
         while (workbook.getNumberOfSheets() > 1) {
             workbook.removeSheetAt(workbook.getNumberOfSheets() - 1);
         }
-        fillHeader(sheet, customer);
-        fillItems(sheet, items);
+        fillHeader(sheet, form, customer, templateCode);
+        fillItems(sheet, items, templateCode);
         return workbook;
     }
 
@@ -797,6 +800,14 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     }
 
     private String resolveTemplateCode(RequestForm form) {
+        Long deptId = form == null ? null : form.getDeptId();
+        if (deptId != null) {
+            Dept dept = deptService.getByIdNotDeleted(deptId);
+            String code = normalizeTemplateCode(dept == null ? null : dept.getCode());
+            if (code != null) {
+                return code;
+            }
+        }
         String deptName = form == null || form.getDeptName() == null ? "" : form.getDeptName().toUpperCase();
         if (deptName.contains("A")) {
             return TEMPLATE_CODE_A;
@@ -807,23 +818,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (deptName.contains("C")) {
             return TEMPLATE_CODE_C;
         }
-        Long deptId = form == null ? null : form.getDeptId();
-        if (deptId != null) {
-            if (deptId == 1L) {
-                return TEMPLATE_CODE_A;
-            }
-            if (deptId == 2L) {
-                return TEMPLATE_CODE_B;
-            }
-            if (deptId == 3L) {
-                return TEMPLATE_CODE_C;
-            }
-        }
         return TEMPLATE_CODE_A;
     }
 
     private String resolveTemplateConfigKeyByCode(String code) {
-        return "request.form.template." + code;
+        return "request.form.template." + normalizeTemplateCode(code);
     }
 
     private String getTemplatePathByCode(String code) {
@@ -834,6 +833,14 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             return TEMPLATE_C;
         }
         return TEMPLATE_A;
+    }
+
+    private String normalizeTemplateCode(String code) {
+        if (code == null) {
+            return null;
+        }
+        String normalized = code.trim().toUpperCase(Locale.ROOT);
+        return normalized.isBlank() ? null : normalized;
     }
 
     private String getConfigValueByName(String name) {
@@ -857,42 +864,65 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         if (normalized.startsWith("classpath:")) {
             normalized = normalized.substring("classpath:".length());
-        }
-        if (normalized.startsWith("/")) {
-            normalized = normalized.substring(1);
+            if (normalized.startsWith("/")) {
+                normalized = normalized.substring(1);
+            }
         }
         return normalized;
     }
 
-    private void fillHeader(Sheet sheet, Customer customer) {
-        setCellText(sheet, 5, 7, LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-M-d")));
+    private void fillHeader(Sheet sheet, RequestForm form, Customer customer, String templateCode) {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-M-d"));
+        if (TEMPLATE_CODE_B.equals(templateCode)) {
+            setCellText(sheet, 5, 1, "MESSRS: " + customerName(form, customer));
+            setCellText(sheet, 5, 7, today);
+            setCellText(sheet, 6, 1, "Address: " + safe(customer == null ? null : customer.getAddress()));
+            setCellText(sheet, 7, 1, "Tel: " + safe(customer == null ? null : customer.getPhone()));
+            setCellText(sheet, 8, 1, "EMAIL: " + safe(customer == null ? null : customer.getEmail()));
+            return;
+        }
+        if (TEMPLATE_CODE_C.equals(templateCode)) {
+            setCellText(sheet, 3, 1, customerName(form, customer));
+            setCellText(sheet, 3, 6, today);
+            setCellText(sheet, 4, 1, safe(customer == null ? null : customer.getContactPerson()));
+            setCellText(sheet, 5, 1, safe(customer == null ? null : customer.getAddress()));
+            setCellText(sheet, 6, 1, contactLine(customer));
+            return;
+        }
+        setCellText(sheet, 3, 1, customerName(form, customer));
+        setCellText(sheet, 3, 11, today);
         if (customer != null) {
-            setCellText(sheet, 5, 1, "MESSRS: " + safe(customer.getName()));
-            setCellText(sheet, 6, 1, "Address: " + safe(customer.getAddress()));
-            setCellText(sheet, 7, 1, "Tel: " + safe(customer.getPhone()));
-            setCellText(sheet, 8, 1, "EMAIL: " + safe(customer.getEmail()));
+            setCellText(sheet, 4, 2, safe(customer.getContactPerson()));
+            setCellText(sheet, 6, 1, safe(customer.getAddress()));
+            setCellText(sheet, 7, 1, contactLine(customer));
         }
     }
 
-    private void fillItems(Sheet sheet, List<RequestItem> items) {
-        int startRow = 22;
-        int clearToRow = 499;
-        for (int r = startRow; r <= clearToRow; r++) {
-            for (int c = 1; c <= 9; c++) {
+    private void fillItems(Sheet sheet, List<RequestItem> items, String templateCode) {
+        ItemLayout layout = itemLayout(templateCode);
+        for (int r = layout.startRow(); r <= layout.endRow(); r++) {
+            for (int c = layout.firstCol(); c <= layout.lastCol(); c++) {
                 setCellText(sheet, r, c, "");
             }
         }
-        for (int i = 0; i < items.size(); i++) {
+        int limit = Math.min(items.size(), layout.capacity());
+        for (int i = 0; i < limit; i++) {
             RequestItem item = items.get(i);
-            int row = startRow + i;
-            setCellText(sheet, row, 1, String.valueOf(i + 1));
-            setCellText(sheet, row, 2, safe(item.getBrandName()));
-            setCellText(sheet, row, 3, safe(item.getGoodsName()));
-            setCellText(sheet, row, 4, String.valueOf(item.getRequestQty() == null ? 0 : item.getRequestQty()));
-            setCellText(sheet, row, 5, formatCurrency(item.getCurrency(), item.getPrice()));
-            setCellText(sheet, row, 6, formatCurrency(item.getCurrency(), item.getTotalAmt()));
-            setCellText(sheet, row, 7, safe(item.getRemark()));
-            setCellText(sheet, row, 9, safe(item.getSkuCode()));
+            int row = layout.startRow() + i;
+            if (TEMPLATE_CODE_A.equals(templateCode) || TEMPLATE_CODE_C.equals(templateCode)) {
+                setCellText(sheet, row, layout.itemCol(), (i + 1) + ". " + buildItemDescription(item));
+            } else {
+                setCellText(sheet, row, layout.noCol(), String.valueOf(i + 1));
+                setCellText(sheet, row, layout.brandCol(), safe(item.getBrandName()));
+                setCellText(sheet, row, layout.itemCol(), buildItemDescription(item));
+            }
+            setCellNumber(sheet, row, layout.qtyCol(), item.getRequestQty() == null ? 0 : item.getRequestQty());
+            setCellNumber(sheet, row, layout.unitPriceCol(), itemUnitPrice(item));
+            setCellNumber(sheet, row, layout.amountCol(), itemAmount(item));
+            setCellText(sheet, row, layout.remarkCol(), safe(item.getRemark()));
+            if (layout.extraCol() >= 0) {
+                setCellText(sheet, row, layout.extraCol(), safe(item.getSkuCode()));
+            }
         }
     }
 
@@ -910,6 +940,24 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         cell.setCellValue(value == null ? "" : value);
     }
 
+    private void setCellNumber(Sheet sheet, int rowIndex, int colIndex, BigDecimal value) {
+        Row row = sheet.getRow(rowIndex);
+        if (row == null) {
+            row = sheet.createRow(rowIndex);
+        }
+        Cell cell = row.getCell(colIndex);
+        if (cell == null) {
+            cell = row.createCell(colIndex, CellType.NUMERIC);
+        } else {
+            cell.setCellType(CellType.NUMERIC);
+        }
+        cell.setCellValue(value == null ? 0D : value.doubleValue());
+    }
+
+    private void setCellNumber(Sheet sheet, int rowIndex, int colIndex, int value) {
+        setCellNumber(sheet, rowIndex, colIndex, BigDecimal.valueOf(value));
+    }
+
     private String formatCurrency(String currency, BigDecimal amount) {
         if (amount == null) {
             return "";
@@ -920,6 +968,93 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String customerName(RequestForm form, Customer customer) {
+        if (customer != null && customer.getName() != null && !customer.getName().isBlank()) {
+            return customer.getName();
+        }
+        return form == null ? "" : safe(form.getCustomerName());
+    }
+
+    private String contactLine(Customer customer) {
+        if (customer == null) {
+            return "";
+        }
+        List<String> parts = new ArrayList<>();
+        if (customer.getPhone() != null && !customer.getPhone().isBlank()) {
+            parts.add("Tel: " + customer.getPhone());
+        }
+        if (customer.getEmail() != null && !customer.getEmail().isBlank()) {
+            parts.add("Email: " + customer.getEmail());
+        }
+        return String.join("  ", parts);
+    }
+
+    private String buildItemDescription(RequestItem item) {
+        List<String> parts = new ArrayList<>();
+        addPart(parts, item.getGoodsName());
+        addPart(parts, item.getEnglishName());
+        addPart(parts, item.getSkuCode());
+        addPart(parts, item.getSeriesName());
+        addPart(parts, item.getCategoryName());
+        addPart(parts, item.getMakerName());
+        addPart(parts, item.getStockTypeName());
+        return String.join(" / ", parts);
+    }
+
+    private void addPart(List<String> parts, String value) {
+        if (value != null && !value.isBlank()) {
+            parts.add(value);
+        }
+    }
+
+    private BigDecimal itemUnitPrice(RequestItem item) {
+        if (item.getDiscountPrice() != null) {
+            return item.getDiscountPrice();
+        }
+        if (item.getPrice() == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal discount = item.getDiscount() == null ? BigDecimal.ONE : item.getDiscount();
+        return item.getPrice().multiply(discount).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal itemAmount(RequestItem item) {
+        if (item.getTotalAmt() != null) {
+            return item.getTotalAmt();
+        }
+        int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
+        return itemUnitPrice(item).multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private ItemLayout itemLayout(String templateCode) {
+        if (TEMPLATE_CODE_B.equals(templateCode)) {
+            return new ItemLayout(22, 499, 1, 8, 1, 2, 3, 4, 5, 6, 7, 8);
+        }
+        if (TEMPLATE_CODE_C.equals(templateCode)) {
+            return new ItemLayout(17, 62, 1, 6, -1, -1, 1, 3, 4, 5, 6, -1);
+        }
+        return new ItemLayout(18, 29, 1, 12, -1, -1, 1, 9, 10, 11, 12, -1);
+    }
+
+    private record ItemLayout(
+            int startRow,
+            int endRow,
+            int firstCol,
+            int lastCol,
+            int noCol,
+            int brandCol,
+            int itemCol,
+            int qtyCol,
+            int unitPriceCol,
+            int amountCol,
+            int remarkCol,
+            int extraCol
+    ) {
+        private int capacity() {
+            return endRow - startRow + 1;
+        }
     }
 
     private String safeSheetName(String value) {

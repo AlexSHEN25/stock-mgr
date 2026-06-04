@@ -39,6 +39,7 @@ public class ModuleFormController {
     private final Map<String, Control> controls = new LinkedHashMap<>();
     private Map<String, Object> sourceValues = Map.of();
     private List<String> formFields = List.of();
+    private String generatedRawJson = "";
     private final ModuleDataService dataService = new ModuleDataService();
     private final DependencyResolver dependencyResolver = new DependencyResolver();
 
@@ -65,8 +66,10 @@ public class ModuleFormController {
 
         buildDynamicControls(module, editMode);
         bindDependencyRules();
+        applyDefaultRelationValues();
         fillValues(source);
-        rawJsonArea.setText(toJsonFromControls().toString(2));
+        generatedRawJson = toJsonFromControls().toString(2);
+        rawJsonArea.setText(generatedRawJson);
     }
 
     public boolean isSubmitted() {
@@ -79,7 +82,7 @@ public class ModuleFormController {
 
     public JSONObject toJson() {
         String raw = rawJsonArea.getText();
-        if (raw != null && !raw.isBlank()) {
+        if (raw != null && !raw.isBlank() && !raw.equals(generatedRawJson)) {
             return new JSONObject(raw);
         }
         return toJsonFromControls();
@@ -145,7 +148,9 @@ public class ModuleFormController {
         if (ModuleMeta.fieldType(module, field) == ModuleMeta.FieldType.RELATION) {
             ComboBox<Option> combo = new ComboBox<>();
             combo.setEditable(false);
-            combo.getItems().addAll(fetchRelationOptions(ModuleMeta.relationModuleByField(field), Map.of()));
+            combo.getItems().addAll(fetchRelationOptions(
+                    ModuleMeta.relationModuleByField(field),
+                    ModuleMeta.initialRelationFilters(module, field)));
             return combo;
         }
 
@@ -169,6 +174,24 @@ public class ModuleFormController {
 
     private void bindDependencyRules() {
         dependencyResolver.bind(module, controls, this::fetchRelationOptions);
+    }
+
+    private void applyDefaultRelationValues() {
+        if (editMode) {
+            return;
+        }
+        for (Map.Entry<String, Control> entry : controls.entrySet()) {
+            String field = entry.getKey();
+            if (!ModuleMeta.shouldAutoSelectFirstRelation(module, field) || !(entry.getValue() instanceof ComboBox<?> combo)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            ComboBox<Option> typedCombo = (ComboBox<Option>) combo;
+            if (typedCombo.getValue() != null || typedCombo.getItems().isEmpty()) {
+                continue;
+            }
+            typedCombo.setValue(typedCombo.getItems().get(0));
+        }
     }
 
     private List<Option> fetchRelationOptions(String relationModule, Map<String, String> extraFilters) {

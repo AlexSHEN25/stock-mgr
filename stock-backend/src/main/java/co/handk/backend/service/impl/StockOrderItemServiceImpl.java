@@ -4,8 +4,12 @@ import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
 import co.handk.backend.entity.StockRecord;
+import co.handk.backend.annotation.context.UserContext;
+import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.mapper.StockOrderItemMapper;
+import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockOrderService;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.backend.service.StockRecordService;
@@ -20,6 +24,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +37,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
     private final StockMapper stockMapper;
     private final StockOrderService stockOrderService;
     private final StockRecordService stockRecordService;
+    private final PermissionQueryService permissionQueryService;
 
     @Override
     protected StockOrderItemVO toVO(StockOrderItem entity) {
@@ -51,6 +57,46 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         StockOrderItem entity = new StockOrderItem();
         BeanUtils.copyProperties(dto, entity);
         return entity;
+    }
+
+    @Override
+    protected <Q> QueryWrapper<StockOrderItem> buildWrapper(Q dto) {
+        QueryWrapper<StockOrderItem> wrapper = super.buildWrapper(dto);
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            wrapper.inSql("order_id",
+                    "SELECT id FROM t_stock_order WHERE deleted = 0 AND (requester_id = "
+                            + userId + " OR operator_id = " + userId + ")");
+        }
+        return wrapper;
+    }
+
+    @Override
+    public StockOrderItem getByIdNotDeleted(Serializable id) {
+        StockOrderItem item = super.getByIdNotDeleted(id);
+        requireOwned(item);
+        return item;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public <C> boolean saveByDto(C dto) {
+        StockOrderItem item = toEntity(dto);
+        requireOwnedOrder(item == null ? null : item.getOrderId());
+        return super.saveByDto(dto);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public <U> boolean updateByDto(U dto) {
+        StockOrderItem item = toEntity(dto);
+        if (item == null || item.getId() == null) {
+            return super.updateByDto(dto);
+        }
+        StockOrderItem existed = super.getByIdNotDeleted(item.getId());
+        requireOwned(existed);
+        requireOwnedOrder(item.getOrderId());
+        return super.updateByDto(dto);
     }
 
     @Override
@@ -82,6 +128,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         }
         Set<Long> orderIds = new HashSet<>();
         for (StockOrderItem item : items) {
+            requireOwned(item);
             rollbackStockQty(item);
             orderIds.add(item.getOrderId());
         }
@@ -148,6 +195,23 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         );
         if (affected <= 0) {
             throw new RuntimeException("stock changed concurrently, please retry");
+        }
+    }
+
+    private void requireOwned(StockOrderItem item) {
+        if (item == null) {
+            return;
+        }
+        requireOwnedOrder(item.getOrderId());
+    }
+
+    private void requireOwnedOrder(Long orderId) {
+        if (orderId == null) {
+            return;
+        }
+        StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
+        if (order == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "stock order not found");
         }
     }
 

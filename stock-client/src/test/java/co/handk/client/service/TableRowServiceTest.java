@@ -38,6 +38,7 @@ class TableRowServiceTest {
         assertEquals(12L, dto.getLong("id"));
         assertEquals(19.5, dto.getDouble("price"));
         assertEquals("keep", dto.getString("remark"));
+        assertEquals("display only", dto.getString("name"));
         assertEquals("English name", dto.getString("englishName"));
         assertFalse(dto.has("__selected"));
         assertFalse(dto.has("goodsName"));
@@ -45,6 +46,21 @@ class TableRowServiceTest {
         assertFalse(dto.has("beforeQty"));
         assertFalse(dto.has("afterQty"));
         assertFalse(dto.has("createTime"));
+    }
+
+    @Test
+    void normalizeForUpdateKeepsGoodsNameReadonlyOutsideGoodsModule() {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("id", "12");
+        row.put("goodsName", "display only");
+        row.put("changeQty", "3");
+
+        JSONObject dto = service.normalizeForUpdate("stockOrderItem", row, "__selected");
+
+        assertEquals(12L, dto.getLong("id"));
+        assertEquals(3L, dto.getLong("changeQty"));
+        assertFalse(dto.has("goodsName"));
+        assertFalse(dto.has("name"));
     }
 
     @Test

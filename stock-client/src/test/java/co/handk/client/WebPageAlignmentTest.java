@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -69,6 +70,26 @@ class WebPageAlignmentTest {
         assertFalse(ModuleMeta.isRequiredFormField("customer", "customerCode"));
         assertFalse(ModuleMeta.isRequiredFormField("customer", "name"));
         assertFalse(ModuleMeta.isRequiredFormField("customer", "status"));
+    }
+
+    @Test
+    void stockOrderSourceIdIsBackendMaintained() {
+        assertTrue(ModuleMeta.queryFields("stockOrder").contains("sourceId"));
+        assertFalse(ModuleMeta.formFields("stockOrder").contains("sourceId"));
+    }
+
+    @Test
+    void splitStockFormsDefaultWarehouseAndFilterGoodsByWarehouse() {
+        assertEquals(
+                List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"),
+                ModuleMeta.formFields("selfStock"));
+        assertEquals(ModuleMeta.formFields("selfStock"), ModuleMeta.formFields("handleStock"));
+        assertEquals(Map.of("name", "\u81ea\u793e\u5728\u5eab"),
+                ModuleMeta.initialRelationFilters("selfStock", "warehouseId"));
+        assertEquals(Map.of("name", "\u30cf\u30f3\u30c9\u30eb\u5728\u5eab"),
+                ModuleMeta.initialRelationFilters("handleStock", "warehouseId"));
+        assertTrue(ModuleMeta.shouldAutoSelectFirstRelation("selfStock", "warehouseId"));
+        assertTrue(ModuleMeta.shouldAutoSelectFirstRelation("handleStock", "warehouseId"));
     }
 
     @Test

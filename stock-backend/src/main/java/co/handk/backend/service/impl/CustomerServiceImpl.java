@@ -66,6 +66,18 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public <U> boolean updateByDto(U dto) {
+        Customer entity = toEntity(dto);
+        if (entity == null || entity.getId() == null) {
+            return super.updateByDto(dto);
+        }
+        Customer existed = super.getByIdNotDeleted(entity.getId());
+        requireOwned(existed);
+        return super.updateByDto(dto);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public int deleteByIdLogic(Long id) {
         Customer customer = super.getByIdNotDeleted(id);
         requireOwned(customer);

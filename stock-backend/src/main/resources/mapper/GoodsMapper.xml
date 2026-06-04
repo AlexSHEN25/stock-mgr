@@ -32,6 +32,15 @@
             <if test="q.makerId != null">
                 AND g.maker_id = #{q.makerId}
             </if>
+            <if test="q.warehouseId != null">
+                AND EXISTS (
+                    SELECT 1
+                    FROM t_stock st
+                    WHERE st.goods_id = g.id
+                      AND st.deleted = 0
+                      AND st.warehouse_id = #{q.warehouseId}
+                )
+            </if>
             <if test="q.isHot != null">
                 AND g.is_hot = #{q.isHot}
             </if>

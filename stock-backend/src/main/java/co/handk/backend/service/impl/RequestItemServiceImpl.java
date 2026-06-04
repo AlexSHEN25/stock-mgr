@@ -5,8 +5,12 @@ import co.handk.backend.entity.RequestItem;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
 import co.handk.backend.entity.StockRecord;
+import co.handk.backend.annotation.context.UserContext;
+import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.RequestFormMapper;
 import co.handk.backend.mapper.RequestItemMapper;
+import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.RequestItemService;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.backend.service.StockOrderService;
@@ -21,6 +25,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashSet;
@@ -36,6 +41,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
     private final StockOrderItemService stockOrderItemService;
     private final StockOrderService stockOrderService;
     private final RequestFormMapper requestFormMapper;
+    private final PermissionQueryService permissionQueryService;
 
     @Override
     protected RequestItemVO toVO(RequestItem entity) {
@@ -58,9 +64,28 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
     }
 
     @Override
+    protected <Q> QueryWrapper<RequestItem> buildWrapper(Q dto) {
+        QueryWrapper<RequestItem> wrapper = super.buildWrapper(dto);
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            wrapper.inSql("request_id",
+                    "SELECT id FROM t_request_form WHERE deleted = 0 AND user_id = " + userId);
+        }
+        return wrapper;
+    }
+
+    @Override
+    public RequestItem getByIdNotDeleted(Serializable id) {
+        RequestItem item = super.getByIdNotDeleted(id);
+        requireOwned(item);
+        return item;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
         RequestItem item = toEntity(dto);
+        requireOwnedRequest(item == null ? null : item.getRequestId());
         applyCalculatedTotal(item, null);
         boolean saved = save(item);
         if (saved) {
@@ -77,6 +102,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         if (existing == null) {
             return false;
         }
+        requireOwnedRequest(item.getRequestId());
         applyCalculatedTotal(item, existing);
         boolean updated = super.updateByDto(item);
         if (updated) {
@@ -114,6 +140,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         }
         Set<Long> requestIds = new HashSet<>();
         for (RequestItem item : items) {
+            requireOwned(item);
             rollbackOutboundQty(item);
             requestIds.add(item.getRequestId());
         }
@@ -177,6 +204,33 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
             if (orderAffected <= 0) {
                 throw new RuntimeException("source stock order changed concurrently, please retry");
             }
+        }
+    }
+
+    private void requireOwned(RequestItem item) {
+        if (item == null) {
+            return;
+        }
+        requireOwnedRequest(item.getRequestId());
+    }
+
+    private void requireOwnedRequest(Long requestId) {
+        if (requestId == null) {
+            return;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return;
+        }
+        RequestForm form = requestFormMapper.selectOne(new QueryWrapper<RequestForm>()
+                .eq("id", requestId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (form == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request form not found");
+        }
+        if (!userId.equals(form.getUserId())) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request item is not owned by current user");
         }
     }
 

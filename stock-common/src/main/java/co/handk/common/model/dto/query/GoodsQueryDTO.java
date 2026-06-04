@@ -27,6 +27,7 @@ public class GoodsQueryDTO extends PageQuery {
     private String categoryName;
     private Long makerId;
     private String makerName;
+    private Long warehouseId;
     private Integer isHot;
     private Integer sort;
     private Integer status;

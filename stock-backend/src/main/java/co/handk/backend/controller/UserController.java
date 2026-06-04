@@ -12,6 +12,7 @@ import co.handk.common.model.dto.update.ChangePasswordDTO;
 import co.handk.common.model.dto.update.UpdateUserDTO;
 import co.handk.common.model.vo.LoginVO;
 import co.handk.common.model.vo.LogoutVO;
+import co.handk.common.model.vo.PermissionScopeVO;
 import co.handk.common.model.vo.UserVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -39,6 +40,11 @@ public class UserController {
     @PostMapping("/logout")
     public LogoutVO logout() {
         return loginService.logout();
+    }
+
+    @PostMapping("/refresh-token")
+    public LoginVO refreshToken() {
+        return loginService.refreshToken();
     }
 
     /**
@@ -113,6 +119,15 @@ public class UserController {
     public Set<String> permissions() {
         Long userId = UserContext.getUserIdOrDefault();
         return permissionQueryService.getPermissionCodes(userId);
+    }
+
+    /**
+     * Current login user's structured menu and action permission scope.
+     */
+    @GetMapping("/permission-scope")
+    public PermissionScopeVO permissionScope() {
+        Long userId = UserContext.getUserIdOrDefault();
+        return permissionQueryService.getPermissionScope(userId);
     }
 
     /**
