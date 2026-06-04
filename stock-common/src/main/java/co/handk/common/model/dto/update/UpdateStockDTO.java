@@ -35,7 +35,4 @@ public class UpdateStockDTO {
     private LocalDateTime priceUpdateTime;
     private Long stockTypeId;
     private StatusEnum status;
-
-    @NotNull(message = "versionは必須です")
-    private Long version;
 }

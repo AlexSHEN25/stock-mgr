@@ -38,7 +38,4 @@ public class UpdateStockOrderDTO {
     private LocalDateTime approveTime;
     private LocalDate bizDate;
     private LocalDateTime finishTime;
-
-    @NotNull(message = "versionは必須です")
-    private Long version;
 }
