@@ -85,7 +85,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
         RequestItem item = toEntity(dto);
-        requireOwnedRequest(item == null ? null : item.getRequestId());
+        requireEditableOwnedRequest(item == null ? null : item.getRequestId());
         applyCalculatedTotal(item, null);
         boolean saved = save(item);
         if (saved) {
@@ -102,7 +102,8 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         if (existing == null) {
             return false;
         }
-        requireOwnedRequest(item.getRequestId());
+        Long requestId = item.getRequestId() == null ? existing.getRequestId() : item.getRequestId();
+        requireEditableOwnedRequest(requestId);
         applyCalculatedTotal(item, existing);
         boolean updated = super.updateByDto(item);
         if (updated) {
@@ -118,6 +119,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         if (item == null) {
             return 0;
         }
+        requireEditableOwnedRequest(item.getRequestId());
         rollbackOutboundQty(item);
         int rows = super.deleteByIdLogic(id);
         if (rows > 0) {
@@ -141,6 +143,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         Set<Long> requestIds = new HashSet<>();
         for (RequestItem item : items) {
             requireOwned(item);
+            requireEditableOwnedRequest(item.getRequestId());
             rollbackOutboundQty(item);
             requestIds.add(item.getRequestId());
         }
@@ -214,14 +217,11 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         requireOwnedRequest(item.getRequestId());
     }
 
-    private void requireOwnedRequest(Long requestId) {
+    private RequestForm requireOwnedRequest(Long requestId) {
         if (requestId == null) {
-            return;
+            return null;
         }
         Long userId = UserContext.getUserIdOrDefault();
-        if (permissionQueryService.isSuperAdmin(userId)) {
-            return;
-        }
         RequestForm form = requestFormMapper.selectOne(new QueryWrapper<RequestForm>()
                 .eq("id", requestId)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
@@ -229,9 +229,26 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         if (form == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request form not found");
         }
-        if (!userId.equals(form.getUserId())) {
+        if (!permissionQueryService.isSuperAdmin(userId) && !userId.equals(form.getUserId())) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request item is not owned by current user");
         }
+        return form;
+    }
+
+    private RequestForm requireEditableOwnedRequest(Long requestId) {
+        RequestForm form = requireOwnedRequest(requestId);
+        if (form != null && Integer.valueOf(StockBizConstant.REQUEST_STATE_FINISHED).equals(form.getState())) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    "request form is completed and cannot be modified");
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (form != null && !permissionQueryService.isSuperAdmin(userId)
+                && !Integer.valueOf(StockBizConstant.REQUEST_STATE_DRAFT).equals(form.getState())
+                && !Integer.valueOf(StockBizConstant.REQUEST_STATE_SUBMITTED).equals(form.getState())) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    "request form state is not editable for current user");
+        }
+        return form;
     }
 
     private void recalculateRequestFormSummary(Long requestId) {

@@ -68,6 +68,8 @@ public class RequestItem extends BaseEntity {
 
     private BigDecimal depositFee;
 
+    private BigDecimal unpaidAmt;
+
     private Long stockRecordId;
 
     private Integer state;

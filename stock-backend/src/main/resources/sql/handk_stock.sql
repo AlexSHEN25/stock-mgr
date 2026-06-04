@@ -685,9 +685,10 @@ create TABLE `t_request_item`
     `approve_qty`     INT(10)          NOT NULL DEFAULT 0 COMMENT '审核通过数量',
     `out_qty`         INT(10)          NOT NULL DEFAULT 0 COMMENT '实际出库数量',
     `total_amt`       DECIMAL(18, 2)            DEFAULT NULL COMMENT '总金额',
-    `deposit_amt`     DECIMAL(18, 2)            DEFAULT NULL COMMENT '定金',
-    `deposit_time`    DATETIME                  DEFAULT NULL COMMENT '定金时间',
+    `deposit_amt`     DECIMAL(18, 2)            DEFAULT NULL COMMENT '入金',
+    `deposit_time`    DATETIME                  DEFAULT NULL COMMENT '入金时间',
     `deposit_fee`     DECIMAL(18, 2)            DEFAULT NULL COMMENT '入金手续费',
+    `unpaid_amt`      DECIMAL(18, 2)            DEFAULT NULL COMMENT '未入金额',
     `stock_record_id` BIGINT UNSIGNED           DEFAULT NULL COMMENT '库存流水ID',
     `remark`          VARCHAR(255)              DEFAULT NULL COMMENT '备注',
     `deleted`         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
@@ -813,7 +814,13 @@ INSERT INTO `t_config` (`name`, `group`, `title`, `tip`, `type`, `value`, `conte
 VALUES ('request.form.template.default', 'request', 'Default request template', 'Fallback template for request form download', 'file', 'template/request_form_template_A.xlsx', NULL, 1, 1),
        ('request.form.template.A', 'request', 'Request template A', 'Template used by department code A', 'file', 'template/request_form_template_A.xlsx', NULL, 1, 1),
        ('request.form.template.B', 'request', 'Request template B', 'Template used by department code B', 'file', 'template/request_form_template_B.xlsx', NULL, 1, 1),
-       ('request.form.template.C', 'request', 'Request template C', 'Template used by department code C', 'file', 'template/request_form_template_C.xlsx', NULL, 1, 1);
+       ('request.form.template.C', 'request', 'Request template C', 'Template used by department code C', 'file', 'template/request_form_template_C.xlsx', NULL, 1, 1),
+       ('knife_keywords', 'request', 'Knife category keywords',
+        'Comma separated keywords used to identify knife categories for request item matching',
+        'string', '厨刀,刀', NULL, 1, 1),
+       ('handle_keywords', 'request', 'Handle category keywords',
+        'Comma separated keywords used to identify handle categories for request item matching',
+        'string', 'ハンドル,柄', NULL, 1, 1);
 
 DROP TABLE IF EXISTS `t_operate_log`;
 create TABLE `t_operate_log`

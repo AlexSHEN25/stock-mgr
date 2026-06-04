@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class RequestCandidateItemVO {
@@ -17,8 +18,11 @@ public class RequestCandidateItemVO {
     private Long skuId;
     private String skuCode;
     private String goodsName;
+    private Long brandId;
     private String brandName;
+    private Long seriesId;
     private String seriesName;
+    private Long makerId;
     private String categoryName;
     private String stockTypeName;
     private String makerName;
@@ -29,4 +33,7 @@ public class RequestCandidateItemVO {
     private Integer requestQty;
     private Integer requestItemState;
     private Long requestItemId;
+    private Boolean knife;
+    private Boolean handle;
+    private List<RequestCandidateItemVO> handleCandidates;
 }

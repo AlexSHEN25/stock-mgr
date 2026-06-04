@@ -112,6 +112,9 @@ public class RequestFormWithItemsDTO {
         @PositiveOrZero(message = "入金手数料は0以上で入力してください")
         private BigDecimal depositFee;
 
+        @PositiveOrZero(message = "unpaid amount must be zero or greater")
+        private BigDecimal unpaidAmt;
+
         private Long stockRecordId;
 
         private Integer state;

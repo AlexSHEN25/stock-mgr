@@ -35,6 +35,8 @@ public class CreateRequestItemDTO {
     private BigDecimal price;
     @PositiveOrZero(message = "discount price must be zero or greater")
     private BigDecimal discountPrice;
+    @PositiveOrZero(message = "exchange rate must be zero or greater")
+    private BigDecimal exchangeRate;
     private String currency;
     @PositiveOrZero(message = "0以上で入力してください")
     @DecimalMax(value = "1.0000", message = "discount must not exceed 1.0000")
@@ -50,6 +52,8 @@ public class CreateRequestItemDTO {
     private LocalDateTime depositTime;
     @PositiveOrZero(message = "deposit fee must be zero or greater")
     private BigDecimal depositFee;
+    @PositiveOrZero(message = "unpaid amount must be zero or greater")
+    private BigDecimal unpaidAmt;
     private Long stockRecordId;
     private Integer state;
     private String remark;

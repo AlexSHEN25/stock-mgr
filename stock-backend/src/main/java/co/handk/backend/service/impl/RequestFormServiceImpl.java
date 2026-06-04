@@ -69,6 +69,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private static final String TEMPLATE_B = "template/request_form_template_B.xlsx";
     private static final String TEMPLATE_C = "template/request_form_template_C.xlsx";
     private static final String CONFIG_TEMPLATE_DEFAULT = "request.form.template.default";
+    private static final String CONFIG_KNIFE_CATEGORY_KEYWORDS = "request.item.category.knife.keywords";
+    private static final String CONFIG_HANDLE_CATEGORY_KEYWORDS = "request.item.category.handle.keywords";
     private static final String FORMAT_PDF = "pdf";
     private static final String REMARK_REAPPLY_INBOUND = "Reapply inbound for request form: ";
     private static final String REMARK_REAPPLY_INBOUND_ITEM = "Reapply inbound from request form";
@@ -103,7 +105,12 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             Map.entry("failed to create inbound order", "RF026"),
             Map.entry("stock not found for request item", "RF027"),
             Map.entry("failed to save inbound order item", "RF028"),
-            Map.entry("request form is not owned by current user", "RF029")
+            Map.entry("request form is not owned by current user", "RF029"),
+            Map.entry("source outbound order is not finished", "RF030"),
+            Map.entry("request form already reapplied inbound", "RF031"),
+            Map.entry("request form is completed and cannot be modified", "RF032"),
+            Map.entry("request form state is not allowed for current user", "RF033"),
+            Map.entry("request form state is not editable for current user", "RF034")
     );
 
     @Autowired private StockOrderService stockOrderService;
@@ -135,7 +142,9 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (dto instanceof UpdateRequestFormDTO updateDto) {
             RequestForm existed = super.getByIdNotDeleted(updateDto.getId());
             requireOwned(existed);
+            requireRequestFormEditable(existed);
             Long userId = UserContext.getUserIdOrDefault();
+            validateRequestFormState(updateDto.getState(), userId);
             preserveRequestFormBackendFields(updateDto, existed);
             applyCustomerName(updateDto);
             validateCustomerOwnership(updateDto.getCustomerId(), userId);
@@ -171,6 +180,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (existing == null) {
             throw fail("request form not found");
         }
+        requireRequestFormEditable(existing);
         updateFormForBundle(dto, existing);
         syncRequestItems(existing.getId(), dto.getItems());
         validateKnifeHandleQuantity(existing.getId());
@@ -203,6 +213,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             return DeleteEnum.UNDELETED.getCode();
         }
         requireOwned(form);
+        requireRequestFormEditable(form);
         deleteItemsByRequestId(id);
         return super.deleteByIdLogic(id);
     }
@@ -225,6 +236,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         for (Long id : ids) {
             RequestForm form = super.getByIdNotDeleted(id);
             requireOwned(form);
+            requireRequestFormEditable(form);
             rows += deleteByIdLogic(id);
         }
         return rows;
@@ -271,6 +283,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     private void updateFormForBundle(RequestFormWithItemsDTO dto, RequestForm existing) {
         requireOwned(existing);
+        requireRequestFormEditable(existing);
         UpdateRequestFormDTO updateDto = new UpdateRequestFormDTO();
         BeanUtils.copyProperties(dto, updateDto);
         updateDto.setId(existing.getId());
@@ -357,6 +370,9 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(outboundOrder.getOrderType())) {
             throw fail("source outbound order not found");
         }
+        if (!Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(outboundOrder.getState())) {
+            throw fail("source outbound order is not finished");
+        }
 
         Long loginUserId = UserContext.getUserIdOrDefault();
         if (!loginUserId.equals(outboundOrder.getRequesterId()) && !loginUserId.equals(outboundOrder.getOperatorId())) {
@@ -435,6 +451,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
             throw fail("request form not found");
+        }
+        requireOwned(form);
+        requireRequestFormEditable(form);
+        if (Integer.valueOf(StockBizConstant.REQUEST_STATE_REINBOUND_APPLIED).equals(form.getState())) {
+            throw fail("request form already reapplied inbound");
         }
 
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
@@ -564,8 +585,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             vo.setSkuId(record.getSkuId());
             vo.setSkuCode(record.getSkuCode());
             vo.setGoodsName(record.getGoodsName());
+            vo.setBrandId(record.getBrandId());
             vo.setBrandName(record.getBrandName());
+            vo.setSeriesId(record.getSeriesId());
             vo.setSeriesName(record.getSeriesName());
+            vo.setMakerId(record.getMakerId());
             vo.setCategoryName(record.getCategoryName());
             vo.setStockTypeName(record.getStockTypeName());
             vo.setMakerName(record.getMakerName());
@@ -588,9 +612,47 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             vo.setRequestQty(selectedQty);
             vo.setRequestItemState(selected == null ? null : selected.getState());
             vo.setRequestItemId(selected == null ? null : selected.getId());
+            vo.setKnife(isKnifeCategory(record.getCategoryName()));
+            vo.setHandle(isHandleCategory(record.getCategoryName()));
             result.add(vo);
         }
+        fillHandleCandidates(result);
         return result;
+    }
+
+    private void fillHandleCandidates(List<RequestCandidateItemVO> candidates) {
+        List<RequestCandidateItemVO> handles = candidates.stream()
+                .filter(item -> Boolean.TRUE.equals(item.getHandle()))
+                .toList();
+        if (handles.isEmpty()) {
+            return;
+        }
+        for (RequestCandidateItemVO item : candidates) {
+            if (!Boolean.TRUE.equals(item.getKnife())) {
+                continue;
+            }
+            List<RequestCandidateItemVO> matchedHandles = handles.stream()
+                    .filter(handle -> isPreferredHandleForKnife(item, handle))
+                    .toList();
+            item.setHandleCandidates(matchedHandles.isEmpty() ? handles : matchedHandles);
+        }
+    }
+
+    private boolean isPreferredHandleForKnife(RequestCandidateItemVO knife, RequestCandidateItemVO handle) {
+        return sameLong(knife.getBrandId(), handle.getBrandId())
+                || sameLong(knife.getSeriesId(), handle.getSeriesId())
+                || sameLong(knife.getMakerId(), handle.getMakerId())
+                || sameText(knife.getBrandName(), handle.getBrandName())
+                || sameText(knife.getSeriesName(), handle.getSeriesName())
+                || sameText(knife.getMakerName(), handle.getMakerName());
+    }
+
+    private boolean sameLong(Long left, Long right) {
+        return left != null && left.equals(right);
+    }
+
+    private boolean sameText(String left, String right) {
+        return left != null && !left.isBlank() && left.equals(right);
     }
 
     @Override
@@ -601,6 +663,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             throw fail("request form not found");
         }
         requireOwned(form);
+        requireRequestFormEditable(form);
         Map<Long, Integer> requestedQuantities = resolveRequestedQuantities(dto);
         if (requestedQuantities.isEmpty()) {
             return true;
@@ -660,6 +723,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             throw fail("request form not found");
         }
         requireOwned(form);
+        requireRequestFormEditable(form);
 
         Map<Long, Integer> requestedQuantities = resolveRequestedQuantities(dto);
         List<RequestItem> activeItems = requestItemService.list(new QueryWrapper<RequestItem>()
@@ -693,6 +757,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             throw fail("request form not found");
         }
         requireOwned(form);
+        requireRequestFormEditable(form);
         requireOwnedSourceOutbound(form);
         List<Long> stockRecordIds = !normalizeStockRecordIds(dto.getStockOrderItemIds()).isEmpty()
                 ? normalizeStockRecordIds(dto.getStockOrderItemIds())
@@ -1250,6 +1315,12 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private Map<Long, Integer> resolveRequestedQuantities(RequestFormItemBatchDTO dto) {
         Map<Long, Integer> quantities = new java.util.LinkedHashMap<>();
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            Set<Long> explicitStockRecordIds = new HashSet<>();
+            for (RequestFormItemBatchDTO.Item item : dto.getItems()) {
+                if (item != null && item.getStockRecordId() != null && item.getStockRecordId() > 0) {
+                    explicitStockRecordIds.add(item.getStockRecordId());
+                }
+            }
             for (RequestFormItemBatchDTO.Item item : dto.getItems()) {
                 if (item == null || item.getStockRecordId() == null || item.getStockRecordId() <= 0) {
                     continue;
@@ -1260,6 +1331,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 }
                 if (qty > 0) {
                     quantities.merge(item.getStockRecordId(), qty, Integer::sum);
+                    for (Long handleStockRecordId : resolveMatchedHandleStockRecordIds(item)) {
+                        if (!explicitStockRecordIds.contains(handleStockRecordId)) {
+                            quantities.merge(handleStockRecordId, qty, Integer::sum);
+                        }
+                    }
                 }
             }
             return quantities;
@@ -1276,6 +1352,21 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return quantities;
     }
 
+    private List<Long> resolveMatchedHandleStockRecordIds(RequestFormItemBatchDTO.Item item) {
+        java.util.LinkedHashSet<Long> ids = new java.util.LinkedHashSet<>();
+        if (item.getHandleStockRecordId() != null && item.getHandleStockRecordId() > 0) {
+            ids.add(item.getHandleStockRecordId());
+        }
+        if (item.getHandleStockRecordIds() != null) {
+            for (Long id : item.getHandleStockRecordIds()) {
+                if (id != null && id > 0) {
+                    ids.add(id);
+                }
+            }
+        }
+        return new ArrayList<>(ids);
+    }
+
     private StockOrder requireOwnedSourceOutbound(RequestForm form) {
         if (form.getSourceOrderId() == null) {
             throw fail("request form source outbound order is required");
@@ -1283,6 +1374,9 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         StockOrder order = stockOrderService.getByIdNotDeleted(form.getSourceOrderId());
         if (order == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
             throw fail("source outbound order not found");
+        }
+        if (!Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(order.getState())) {
+            throw fail("source outbound order is not finished");
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (permissionQueryService.isSuperAdmin(userId)) {
@@ -1566,16 +1660,38 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     }
 
     private boolean isKnifeCategory(String categoryName) {
-        return containsTypeKeyword(categoryName, "\u53A8\u5200")
-                || containsTypeKeyword(categoryName, "\u5200");
+        return containsAnyConfiguredKeyword(categoryName, CONFIG_KNIFE_CATEGORY_KEYWORDS, List.of("厨刀", "刀"));
     }
 
     private boolean isHandleCategory(String categoryName) {
-        return containsTypeKeyword(categoryName, "\u67C4");
+        return containsAnyConfiguredKeyword(categoryName, CONFIG_HANDLE_CATEGORY_KEYWORDS, List.of("ハンドル", "柄"));
     }
 
-    private boolean containsTypeKeyword(String value, String keyword) {
-        return value != null && value.contains(keyword);
+    private boolean containsAnyConfiguredKeyword(String value, String configName, List<String> defaults) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        for (String keyword : getConfiguredKeywords(configName, defaults)) {
+            if (keyword != null && !keyword.isBlank() && value.contains(keyword.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<String> getConfiguredKeywords(String configName, List<String> defaults) {
+        String value = getConfigValueByName(configName);
+        if (value == null || value.isBlank()) {
+            return defaults;
+        }
+        List<String> keywords = new ArrayList<>();
+        for (String keyword : value.split("[,，\\n\\r]+")) {
+            String normalized = keyword.trim();
+            if (!normalized.isBlank()) {
+                keywords.add(normalized);
+            }
+        }
+        return keywords.isEmpty() ? defaults : keywords;
     }
     private Stock findStock(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
         QueryWrapper<Stock> wrapper = new QueryWrapper<Stock>()
@@ -1624,7 +1740,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         dto.setTotalQty(0);
         dto.setRequestQty(0);
         dto.setTotalAmt(BigDecimal.ZERO);
-        dto.setState(StockBizConstant.REQUEST_STATE_CREATED);
+        dto.setState(StockBizConstant.REQUEST_STATE_DRAFT);
         dto.setApproverId(null);
         dto.setApproverName(null);
         dto.setApproveTime(null);
@@ -1638,6 +1754,9 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         StockOrder order = stockOrderService.getByIdNotDeleted(sourceOrderId);
         if (order == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
             throw fail("source outbound order not found");
+        }
+        if (!Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(order.getState())) {
+            throw fail("source outbound order is not finished");
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)
@@ -1684,6 +1803,39 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (!permissionQueryService.isSuperAdmin(userId) && !userId.equals(form.getUserId())) {
             throw fail("request form is not owned by current user");
         }
+    }
+
+    private void requireRequestFormEditable(RequestForm form) {
+        if (form == null) {
+            return;
+        }
+        if (isRequestFormCompleted(form.getState())) {
+            throw fail("request form is completed and cannot be modified");
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)
+                && !Integer.valueOf(StockBizConstant.REQUEST_STATE_DRAFT).equals(form.getState())
+                && !Integer.valueOf(StockBizConstant.REQUEST_STATE_SUBMITTED).equals(form.getState())) {
+            throw fail("request form state is not editable for current user");
+        }
+    }
+
+    private void validateRequestFormState(Integer state, Long userId) {
+        if (state == null) {
+            return;
+        }
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
+        boolean allowed = admin
+                ? state >= StockBizConstant.REQUEST_STATE_DRAFT && state <= StockBizConstant.REQUEST_STATE_CANCELED
+                : state.equals(StockBizConstant.REQUEST_STATE_DRAFT)
+                || state.equals(StockBizConstant.REQUEST_STATE_SUBMITTED);
+        if (!allowed) {
+            throw fail("request form state is not allowed for current user");
+        }
+    }
+
+    private boolean isRequestFormCompleted(Integer state) {
+        return Integer.valueOf(StockBizConstant.REQUEST_STATE_FINISHED).equals(state);
     }
 
     private BusinessException fail(String message) {

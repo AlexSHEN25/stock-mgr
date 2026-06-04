@@ -25,8 +25,15 @@ public final class StockBizConstant {
     public static final int INBOUND_SCENE_SELF = 1;
     public static final int INBOUND_SCENE_RESALE = 2;
 
-    public static final int REQUEST_STATE_CREATED = 1;
-    public static final int REQUEST_STATE_REINBOUND_APPLIED = 2;
+    public static final int REQUEST_STATE_DRAFT = 0;
+    public static final int REQUEST_STATE_SUBMITTED = 1;
+    public static final int REQUEST_STATE_FINISHED = 2;
+    public static final int REQUEST_STATE_REJECTED = 3;
+    public static final int REQUEST_STATE_REJECTED_ALT = 4;
+    public static final int REQUEST_STATE_CANCELED = 5;
+
+    public static final int REQUEST_STATE_CREATED = REQUEST_STATE_DRAFT;
+    public static final int REQUEST_STATE_REINBOUND_APPLIED = REQUEST_STATE_FINISHED;
 
     public static final int REQUEST_ITEM_STATE_REMOVED = 0;
     public static final int REQUEST_ITEM_STATE_ADDED = 1;

@@ -30,6 +30,7 @@ public class RequestItemQueryDTO extends PageQuery {
     private Long warehouseId;
     private BigDecimal price;
     private BigDecimal discountPrice;
+    private BigDecimal exchangeRate;
     private String currency;
     private BigDecimal discount;
     private Integer requestQty;
@@ -39,6 +40,7 @@ public class RequestItemQueryDTO extends PageQuery {
     private BigDecimal depositAmt;
     private LocalDateTime depositTime;
     private BigDecimal depositFee;
+    private BigDecimal unpaidAmt;
     private Long stockRecordId;
     private String remark;
 }

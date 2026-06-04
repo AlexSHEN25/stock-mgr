@@ -26,11 +26,21 @@ public class RequestFormItemBatchDTO {
 
     @Data
     public static class Item {
-        @NotNull(message = "stockRecordIdは必須です")
+        @NotNull(message = "stockRecordId is required")
         private Long stockRecordId;
 
-        @NotNull(message = "requestQtyは必須です")
-        @PositiveOrZero(message = "requestQtyは0以上で入力してください")
+        /**
+         * Optional matched handle stock record selected for a knife row.
+         */
+        private Long handleStockRecordId;
+
+        /**
+         * Optional matched handle stock records when one knife row needs multiple handles.
+         */
+        private List<Long> handleStockRecordIds;
+
+        @NotNull(message = "requestQty is required")
+        @PositiveOrZero(message = "requestQty must be zero or greater")
         private Integer requestQty;
     }
 }
