@@ -17,7 +17,6 @@ public class UpdateStockDTO {
     @NotNull(message = "商品IDは必須です")
     private Integer goodsId;
 
-    @NotBlank(message = "商品名は必須です")
     private String goodsName;
 
     @NotNull(message = "SKU IDは必須です")

@@ -98,7 +98,14 @@
         gs.sku_code,
         gs.sku_name,
         gs.price,
-        gs.currency
+        gs.currency,
+        COALESCE((
+            SELECT SUM(st.current_qty)
+            FROM t_stock st
+            WHERE st.deleted = 0
+              AND st.goods_id = g.id
+              AND (gs.id IS NULL OR st.sku_id = gs.id)
+        ), 0) AS current_qty
         <include refid="fromAndWhere"/>
         ORDER BY g.update_time DESC, gs.update_time DESC
         LIMIT #{offset}, #{size}

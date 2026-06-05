@@ -45,21 +45,9 @@ public final class ModuleEndpointStrategy {
                 PATH_PREFIX + AppConstants.Module.STOCK + "/{id}",
                 PATH_PREFIX + AppConstants.Module.STOCK + "/batch"
         ));
-        CONFIGS.put(AppConstants.Module.SELF_STOCK, stockScopeConfig("self"));
-        CONFIGS.put(AppConstants.Module.HANDLE_STOCK, stockScopeConfig("handle"));
-    }
-
-    private static EndpointConfig stockScopeConfig(String scope) {
-        String basePath = PATH_PREFIX + AppConstants.Module.STOCK + "/" + scope;
-        return new EndpointConfig(
-                HttpMethod.GET,
-                basePath + AppConstants.ApiPath.PAGE_SUFFIX,
-                AppConstants.ApiPath.STOCK_INBOUND,
-                basePath + "/{id}",
-                basePath,
-                basePath + "/{id}",
-                basePath + "/batch"
-        );
+        EndpointConfig stockConfig = CONFIGS.get(AppConstants.Module.STOCK);
+        CONFIGS.put(AppConstants.Module.SELF_STOCK, stockConfig);
+        CONFIGS.put(AppConstants.Module.HANDLE_STOCK, stockConfig);
     }
 
     private static EndpointConfig defaultConfig(String moduleKey) {

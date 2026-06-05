@@ -168,8 +168,14 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         }
         UpdateWrapper<T> wrapper = new UpdateWrapper<>();
         wrapper.eq(FieldNameConstant.COLUMN_ID, entity.getId()).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
-        Long oldVersion = extractVersionValue(entity);
-        if (hasVersionField(entity.getClass())) {
+        boolean versioned = hasVersionField(entity.getClass());
+        Long oldVersion = null;
+        if (versioned) {
+            T existed = getByIdNotDeleted(entity.getId());
+            if (existed == null) {
+                return false;
+            }
+            oldVersion = extractVersionValue(existed);
             if (oldVersion == null) {
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
@@ -179,7 +185,6 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             wrapper.eq(FieldNameConstant.COLUMN_VERSION, oldVersion);
         }
         buildUpdateSet(entity, wrapper);
-        boolean versioned = hasVersionField(entity.getClass());
         if (versioned && oldVersion != null) {
             wrapper.set(FieldNameConstant.COLUMN_VERSION, oldVersion + 1L);
         }

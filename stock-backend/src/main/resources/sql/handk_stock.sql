@@ -357,7 +357,8 @@ create TABLE t_warehouse
     `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
     create_time  DATETIME        DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time  DATETIME        DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_warehouse_code (code, deleted)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '仓库表';

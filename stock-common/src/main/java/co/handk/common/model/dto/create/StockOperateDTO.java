@@ -28,5 +28,13 @@ public class StockOperateDTO {
      */
     private Integer sourceType;
 
+    private Long customerId;
+
+    private String customerName;
+
+    private Long deptId;
+
+    private String outboundMode;
+
     private String remark;
 }

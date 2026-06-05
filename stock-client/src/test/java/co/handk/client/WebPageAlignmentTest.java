@@ -32,19 +32,19 @@ class WebPageAlignmentTest {
     }
 
     @Test
-    void splitStockMenusUseScopedBackendEndpoints() {
-        assertEquals("/stock/self/page", ModuleEndpointStrategy.pagePath("selfStock"));
+    void stockMenusUseUnifiedBackendEndpoints() {
+        assertEquals("/stock/page", ModuleEndpointStrategy.pagePath("selfStock"));
         assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("selfStock"));
-        assertEquals("/stock/self/1", ModuleEndpointStrategy.detailPath("selfStock", "1"));
-        assertEquals("/stock/self", ModuleEndpointStrategy.updatePath("selfStock", "1"));
-        assertEquals("/stock/self/1", ModuleEndpointStrategy.deletePath("selfStock", "1"));
-        assertEquals("/stock/self/batch", ModuleEndpointStrategy.batchDeletePath("selfStock"));
-        assertEquals("/stock/handle/page", ModuleEndpointStrategy.pagePath("handleStock"));
+        assertEquals("/stock/1", ModuleEndpointStrategy.detailPath("selfStock", "1"));
+        assertEquals("/stock", ModuleEndpointStrategy.updatePath("selfStock", "1"));
+        assertEquals("/stock/1", ModuleEndpointStrategy.deletePath("selfStock", "1"));
+        assertEquals("/stock/batch", ModuleEndpointStrategy.batchDeletePath("selfStock"));
+        assertEquals("/stock/page", ModuleEndpointStrategy.pagePath("handleStock"));
         assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("handleStock"));
-        assertEquals("/stock/handle/1", ModuleEndpointStrategy.detailPath("handleStock", "1"));
-        assertEquals("/stock/handle", ModuleEndpointStrategy.updatePath("handleStock", "1"));
-        assertEquals("/stock/handle/1", ModuleEndpointStrategy.deletePath("handleStock", "1"));
-        assertEquals("/stock/handle/batch", ModuleEndpointStrategy.batchDeletePath("handleStock"));
+        assertEquals("/stock/1", ModuleEndpointStrategy.detailPath("handleStock", "1"));
+        assertEquals("/stock", ModuleEndpointStrategy.updatePath("handleStock", "1"));
+        assertEquals("/stock/1", ModuleEndpointStrategy.deletePath("handleStock", "1"));
+        assertEquals("/stock/batch", ModuleEndpointStrategy.batchDeletePath("handleStock"));
     }
 
     @Test
