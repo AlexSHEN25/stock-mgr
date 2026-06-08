@@ -22,6 +22,8 @@ public interface RequestFormService extends BaseService<RequestForm, RequestForm
 
     Long reapplyInbound(Long requestId);
 
+    Long reapplyInboundItem(RequestFormItemBatchDTO dto);
+
     java.util.List<RequestCandidateItemVO> listCandidateItems(Long requestId);
 
     Boolean addItemsFromStockOrder(RequestFormItemBatchDTO dto);

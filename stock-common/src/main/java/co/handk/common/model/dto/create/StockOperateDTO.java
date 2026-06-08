@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class StockOperateDTO {
 
@@ -35,6 +37,8 @@ public class StockOperateDTO {
     private Long deptId;
 
     private String outboundMode;
+
+    private LocalDateTime saleDeadline;
 
     private String remark;
 }

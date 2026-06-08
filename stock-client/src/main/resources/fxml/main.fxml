@@ -52,7 +52,6 @@
                                 <Button text="%main.menu.selfStock" userData="selfStock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.handleStock" userData="handleStock" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockOrder" userData="stockOrder" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="%main.menu.stockOrderItem" userData="stockOrderItem" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockType" userData="stockType" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.stockRecord" userData="stockRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
                                 <Button text="%main.menu.priceRecord" userData="priceRecord" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
@@ -129,6 +128,11 @@
                     <Button fx:id="deleteButton" text="%main.btn.delete" onAction="#onDelete" styleClass="danger-btn"/>
                 </FlowPane>
             </VBox>
+
+            <HBox fx:id="stockSubNav" spacing="8" visible="false" managed="false" styleClass="sub-nav">
+                <Button fx:id="stockOrderTabButton" text="%main.menu.stockOrder" onAction="#onStockOrderTab" styleClass="tab-btn"/>
+                <Button fx:id="stockOrderItemTabButton" text="%main.menu.stockOrderItem" onAction="#onStockOrderItemTab" styleClass="tab-btn"/>
+            </HBox>
 
             <VBox spacing="8" styleClass="table-panel" VBox.vgrow="ALWAYS">
                 <Label fx:id="pageInfoLabel" text="" styleClass="muted-label"/>

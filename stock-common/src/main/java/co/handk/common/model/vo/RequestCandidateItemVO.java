@@ -13,6 +13,7 @@ public class RequestCandidateItemVO {
     private Long stockOrderItemId;
     private String orderNo;
     private Integer orderType;
+    private Integer state;
     private LocalDate bizDate;
     private Long goodsId;
     private Long skuId;
@@ -27,12 +28,17 @@ public class RequestCandidateItemVO {
     private String stockTypeName;
     private String makerName;
     private Integer changeQty;
+    private Integer availableQty;
     private BigDecimal price;
     private String currency;
+    private String requesterName;
+    private String operatorName;
     private Boolean selected;
     private Integer requestQty;
     private Integer requestItemState;
     private Long requestItemId;
+    private Boolean inboundApplied;
+    private Long inboundOrderId;
     private Boolean knife;
     private Boolean handle;
     private List<RequestCandidateItemVO> handleCandidates;

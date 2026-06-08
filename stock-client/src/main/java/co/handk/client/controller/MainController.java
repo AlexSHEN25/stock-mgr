@@ -51,6 +51,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -65,6 +66,7 @@ import static co.handk.client.constant.AppConstants.Module;
 public class MainController {
 
     private static final String SELECTED_KEY = "__selected";
+    private static final String STOCK_TAB_SELECTED_STYLE = "tab-btn-selected";
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     @FXML private Label currentUserLabel;
@@ -80,6 +82,9 @@ public class MainController {
     @FXML private Button editButton;
     @FXML private Button batchDeleteButton;
     @FXML private Button deleteButton;
+    @FXML private HBox stockSubNav;
+    @FXML private Button stockOrderTabButton;
+    @FXML private Button stockOrderItemTabButton;
     @FXML private TableView<Map<String, Object>> dataTable;
     @FXML private FlowPane queryFieldsPane;
 
@@ -93,6 +98,7 @@ public class MainController {
     private final TableRowService tableRowService = new TableRowService();
     private final UiFeedbackService uiFeedback = new UiFeedbackService();
     private final UserAccountService userAccountService = new UserAccountService();
+    private final Map<String, Integer> pageNumByModule = new HashMap<>();
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
 
@@ -122,12 +128,14 @@ public class MainController {
     private void onRefresh() {
         resetQueryControls();
         pageNum = 1;
+        pageNumByModule.put(currentModule, pageNum);
         loadData();
     }
 
     @FXML
     private void onSearch() {
         pageNum = 1;
+        pageNumByModule.put(currentModule, pageNum);
         loadData();
     }
 
@@ -135,6 +143,7 @@ public class MainController {
     private void onPrevPage() {
         if (pageNum > 1) {
             pageNum--;
+            pageNumByModule.put(currentModule, pageNum);
             loadData();
         }
     }
@@ -142,6 +151,7 @@ public class MainController {
     @FXML
     private void onNextPage() {
         pageNum++;
+        pageNumByModule.put(currentModule, pageNum);
         loadData();
     }
 
@@ -361,14 +371,26 @@ public class MainController {
     }
 
     private void switchModule(String module, String title) {
+        pageNumByModule.put(currentModule, pageNum);
         currentModule = module;
-        pageNum = 1;
+        pageNum = pageNumByModule.getOrDefault(module, 1);
         pageTitleLabel.setText(title);
         inlineEditingRow = null;
         inlineBackup = null;
+        updateStockSubNav();
         rebuildQueryFields();
         applyActionPolicy();
         loadData();
+    }
+
+    @FXML
+    private void onStockOrderTab() {
+        switchModule(Module.STOCK_ORDER, UiText.MENU_STOCK_ORDER);
+    }
+
+    @FXML
+    private void onStockOrderItemTab() {
+        switchModule(Module.STOCK_ORDER_ITEM, UiText.MENU_STOCK_ORDER_ITEM);
     }
 
     private void rebuildQueryFields() {
@@ -391,6 +413,7 @@ public class MainController {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
         boolean canWrite = ModuleMeta.canWriteByPermission(currentModule);
         boolean messageModule = Module.MESSAGE.equals(currentModule);
+        updateStockSubNav();
         addButton.setDisable(!policy.canCreate || !canWrite);
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
@@ -402,6 +425,39 @@ public class MainController {
         batchDeleteButton.setDisable(!policy.canBatchDelete || !canWrite);
         deleteIdField.setDisable(!policy.canDelete || !canWrite);
         deleteButton.setDisable(!policy.canDelete || !canWrite);
+    }
+
+    private void updateStockSubNav() {
+        boolean stockModule = Module.STOCK_ORDER.equals(currentModule) || Module.STOCK_ORDER_ITEM.equals(currentModule);
+        stockSubNav.setVisible(stockModule);
+        stockSubNav.setManaged(stockModule);
+        if (!stockModule) {
+            stockOrderTabButton.getStyleClass().remove(STOCK_TAB_SELECTED_STYLE);
+            stockOrderItemTabButton.getStyleClass().remove(STOCK_TAB_SELECTED_STYLE);
+            return;
+        }
+        boolean orderView = Module.STOCK_ORDER.equals(currentModule);
+        stockOrderTabButton.setDisable(orderView);
+        stockOrderItemTabButton.setDisable(!orderView);
+        if (orderView) {
+            addSelectedStyle(stockOrderTabButton);
+            removeSelectedStyle(stockOrderItemTabButton);
+        } else {
+            addSelectedStyle(stockOrderItemTabButton);
+            removeSelectedStyle(stockOrderTabButton);
+        }
+    }
+
+    private void addSelectedStyle(Button button) {
+        if (button != null && !button.getStyleClass().contains(STOCK_TAB_SELECTED_STYLE)) {
+            button.getStyleClass().add(STOCK_TAB_SELECTED_STYLE);
+        }
+    }
+
+    private void removeSelectedStyle(Button button) {
+        if (button != null) {
+            button.getStyleClass().remove(STOCK_TAB_SELECTED_STYLE);
+        }
     }
 
     private Control createControl(String field) {

@@ -12,6 +12,13 @@
         LEFT JOIN t_series s ON s.id = g.series_id AND s.deleted = 0
         LEFT JOIN t_category c ON c.id = g.category_id AND c.deleted = 0
         LEFT JOIN t_maker m ON m.id = g.maker_id AND m.deleted = 0
+        LEFT JOIN (
+            SELECT goods_id, sku_id, SUM(current_qty) AS current_qty
+            FROM t_stock
+            WHERE deleted = 0
+            GROUP BY goods_id, sku_id
+        ) stock_summary ON stock_summary.goods_id = g.id
+            AND stock_summary.sku_id = gs.id
         WHERE g.deleted = 0
         <if test="q != null">
             <if test="q.name != null and q.name != ''">
@@ -99,13 +106,9 @@
         gs.sku_name,
         gs.price,
         gs.currency,
-        COALESCE((
-            SELECT SUM(st.current_qty)
-            FROM t_stock st
-            WHERE st.deleted = 0
-              AND st.goods_id = g.id
-              AND (gs.id IS NULL OR st.sku_id = gs.id)
-        ), 0) AS current_qty
+        COALESCE(stock_summary.current_qty, 0) AS current_qty,
+        CASE WHEN COALESCE(stock_summary.current_qty, 0) > 0 THEN TRUE ELSE FALSE END AS inbound_done,
+        COALESCE(stock_summary.current_qty, 0) AS outbound_max_qty
         <include refid="fromAndWhere"/>
         ORDER BY g.update_time DESC, gs.update_time DESC
         LIMIT #{offset}, #{size}

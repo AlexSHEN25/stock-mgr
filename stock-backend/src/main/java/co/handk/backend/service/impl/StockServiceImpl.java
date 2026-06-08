@@ -8,14 +8,17 @@ import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateStockDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
+import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private static final int MESSAGE_IS_UNREAD = 0;
     private static final int MESSAGE_STATE_SENT = 1;
     private static final int LOW_STOCK_THRESHOLD = 10;
+    private static final String GROUP_CODES_CONFIG = "stock.group.codes";
 
     @Autowired
     private GoodsService goodsService;
@@ -56,6 +60,16 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private PriceRecordService priceRecordService;
     @Autowired
     private PermissionQueryService permissionQueryService;
+    @Autowired
+    private StockBatchService stockBatchService;
+    @Autowired
+    private DeptService deptService;
+    @Autowired
+    private CustomerService customerService;
+    @Autowired
+    private ConfigService configService;
+    @Autowired
+    private WarehouseService warehouseService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -131,10 +145,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType,
                 needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
-        saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
+        StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
         if (!needApprove) {
             updateStockQuantityWithVersion(stock, afterQty);
             saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
+            stockBatchService.recordInbound(order, item, stock);
             notifyInbound(sku.getSkuCode(), dto.getQuantity(), afterQty, order.getId());
         }
         return order.getId();
@@ -143,12 +158,19 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long outbound(StockOperateDTO dto) {
+        prepareOutboundAccess(dto);
         Stock stock = requireStock(dto.getStockId(), dto.getWarehouseId());
+        requireAccessibleOutboundStock(stock, dto.getOutboundMode());
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
         String stockTypeName = getStockTypeName(stock.getStockTypeId());
 
-        int beforeQty = safeInt(stock.getCurrentQty());
+        boolean groupCustomer = StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER
+                .equals(normalizeOutboundMode(dto.getOutboundMode()));
+        int beforeQty = groupCustomer
+                ? stockBatchService.getGroupAvailableQty(dto.getDeptId(), Long.valueOf(stock.getGoodsId()),
+                stock.getSkuId(), Long.valueOf(stock.getWarehouseId()), stock.getStockTypeId())
+                : safeInt(stock.getCurrentQty());
         if (beforeQty < dto.getQuantity()) {
             notifyInsufficientStock(sku.getSkuCode(), dto.getQuantity(), beforeQty, stock.getId());
             throw new co.handk.backend.exception.BusinessException(
@@ -160,6 +182,150 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING);
         saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
         return order.getId();
+    }
+
+    @Override
+    public Integer getMyGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
+        Dept dept = resolveAccessibleGroupDept(null);
+        return stockBatchService.getGroupAvailableQty(
+                dept.getId(), goodsId, skuId, warehouseId, stockTypeId);
+    }
+
+    @Override
+    public PageResult<StockVO> pageSelfStock(StockQueryDTO query) {
+        query.setWarehouseId(requireWarehouseByCode("SELF").getId());
+        return page(query);
+    }
+
+    @Override
+    public PageResult<StockVO> pageGroupStock(StockQueryDTO query, Long deptId) {
+        Dept dept = resolveAccessibleGroupDept(deptId);
+        Page<Stock> page = new Page<>(query.getPageNum(), query.getPageSize());
+        QueryWrapper<Stock> wrapper = buildWrapper(query)
+                .inSql("id", "SELECT stock_id FROM t_group_stock"
+                        + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
+                        + " AND current_qty > 0 AND dept_id = " + dept.getId())
+                .orderByDesc("update_time");
+        Page<Stock> result = this.page(page, wrapper);
+        List<StockVO> records = result.getRecords().stream()
+                .map(stock -> toGroupStockVO(stock, dept))
+                .toList();
+        return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), records);
+    }
+
+    private Long currentDeptId() {
+        User user = userService.getByIdNotDeleted(UserContext.getUserIdOrDefault());
+        return user == null ? null : user.getDeptId();
+    }
+
+    private void prepareOutboundAccess(StockOperateDTO dto) {
+        String mode = normalizeOutboundMode(dto.getOutboundMode());
+        dto.setOutboundMode(mode);
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
+
+        if (StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE.equals(mode)) {
+            if (!admin) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "only administrators can allocate self stock to a group");
+            }
+            dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId()).getId());
+            return;
+        }
+
+        if (StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(mode)) {
+            dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId()).getId());
+            return;
+        }
+
+        if (!admin) {
+            dto.setDeptId(null);
+        }
+    }
+
+    private void requireAccessibleOutboundStock(Stock stock, String outboundMode) {
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)
+                || StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(outboundMode)) {
+            return;
+        }
+        Warehouse selfWarehouse = requireWarehouseByCode("SELF");
+        if (stock.getWarehouseId() == null || !selfWarehouse.getId().equals(Long.valueOf(stock.getWarehouseId()))) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "users can only request outbound from self stock or their own group stock");
+        }
+    }
+
+    private Warehouse requireWarehouseByCode(String code) {
+        Warehouse warehouse = warehouseService.getOne(new QueryWrapper<Warehouse>()
+                .eq("code", code)
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (warehouse == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "required warehouse is not configured: " + code);
+        }
+        return warehouse;
+    }
+
+    private Dept resolveAccessibleGroupDept(Long requestedDeptId) {
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
+        Long userDeptId = currentDeptId();
+        Long targetDeptId;
+        if (admin) {
+            targetDeptId = requestedDeptId;
+        } else {
+            if (requestedDeptId != null && !requestedDeptId.equals(userDeptId)) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "users can only operate stock for their own department");
+            }
+            targetDeptId = userDeptId;
+        }
+        if (targetDeptId == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "a stock group department is required");
+        }
+        Dept dept = deptService.getByIdNotDeleted(targetDeptId);
+        if (dept == null || dept.getCode() == null || !isConfiguredGroupCode(dept.getCode())) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "department is not configured as stock group");
+        }
+        return dept;
+    }
+
+    private boolean isConfiguredGroupCode(String deptCode) {
+        Config config = configService.getOne(new QueryWrapper<Config>()
+                .eq("name", GROUP_CODES_CONFIG)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        String value = config == null || config.getValue() == null || config.getValue().isBlank()
+                ? "A,B,C" : config.getValue();
+        for (String code : value.split("[,，\\n\\r]+")) {
+            if (deptCode.equalsIgnoreCase(code.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private StockVO toGroupStockVO(Stock stock, Dept dept) {
+        StockVO vo = toVO(stock);
+        int quantity = stockBatchService.getGroupAvailableQty(
+                dept.getId(), Long.valueOf(stock.getGoodsId()), stock.getSkuId(),
+                Long.valueOf(stock.getWarehouseId()), stock.getStockTypeId());
+        vo.setCurrentQty(quantity);
+        vo.setGroupAQty("A".equalsIgnoreCase(dept.getCode()) ? quantity : 0);
+        vo.setGroupBQty("B".equalsIgnoreCase(dept.getCode()) ? quantity : 0);
+        vo.setGroupCQty("C".equalsIgnoreCase(dept.getCode()) ? quantity : 0);
+        return vo;
     }
 
     @Override
@@ -215,9 +381,15 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫商品が存在しません");
             }
 
-            int beforeQty = safeInt(stock.getCurrentQty());
             int changeQty = safeInt(item.getChangeQty());
-            int afterQty = Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
+            boolean groupCustomer = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())
+                    && StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(order.getOutboundMode());
+            int beforeQty = groupCustomer
+                    ? stockBatchService.getGroupAvailableQty(order.getDeptId(), item.getGoodsId(), item.getSkuId(),
+                    order.getWarehouseId(), item.getStockTypeId())
+                    : safeInt(stock.getCurrentQty());
+            int afterQty = groupCustomer ? beforeQty - changeQty
+                    : Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
                     ? beforeQty + changeQty : beforeQty - changeQty;
             if (afterQty < 0) {
                 notifyInsufficientStock(item.getSkuCode(), changeQty, beforeQty, stock.getId());
@@ -225,7 +397,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                         "insufficient stock for approved outbound order: SKU[" + item.getSkuCode() + "]");
             }
-            updateStockQuantityWithVersion(stock, afterQty);
+            if (groupCustomer) {
+                stockBatchService.consumeGroupStock(order, stock, changeQty);
+            } else {
+                if (Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
+                    stockBatchService.applyOutbound(order, item, stock);
+                }
+                updateStockQuantityWithVersion(stock, afterQty);
+            }
             item.setBeforeQty(beforeQty);
             item.setAfterQty(afterQty);
             if (!stockOrderItemService.updateById(item)) {
@@ -262,6 +441,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             record.setPrice(item.getPrice());
             record.setCurrency(item.getCurrency());
             record.setPriceUpdateTime(stock.getPriceUpdateTime());
+            record.setCustomerId(order.getCustomerId());
+            record.setCustomerName(order.getCustomerName());
+            record.setDeptId(order.getDeptId());
+            record.setDeptCode(order.getDeptCode());
+            record.setOutboundMode(order.getOutboundMode());
             record.setRequesterId(order.getRequesterId());
             record.setRequesterName(order.getRequesterName());
             record.setOperatorId(order.getOperatorId());
@@ -274,6 +458,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
 
             if (Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())) {
+                stockBatchService.recordInbound(order, item, stock);
                 notifyInbound(item.getSkuCode(), changeQty, afterQty, order.getId());
             } else {
                 notifyLowStock(item.getSkuCode(), afterQty, order.getId());
@@ -311,6 +496,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
         for (StockOrderSubmitItemDTO itemDTO : dto.getItems()) {
             Stock stock = requireStock(itemDTO.getStockId());
+            if (orderType == StockBizConstant.ORDER_TYPE_OUTBOUND) {
+                requireAccessibleOutboundStock(stock, StockBizConstant.OUTBOUND_MODE_CUSTOMER);
+            }
             if (warehouseId == null) {
                 warehouseId = Long.valueOf(stock.getWarehouseId());
             } else if (!warehouseId.equals(Long.valueOf(stock.getWarehouseId()))) {
@@ -585,6 +773,24 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setOperatorId(userId);
         order.setOperatorName(user == null ? null : user.getUsername());
         order.setRemark(dto.getRemark());
+        order.setOutboundMode(normalizeOutboundMode(dto.getOutboundMode()));
+        order.setCustomerId(dto.getCustomerId());
+        if (dto.getCustomerId() != null) {
+            Customer customer = customerService.getByIdNotDeleted(dto.getCustomerId());
+            order.setCustomerName(customer == null ? dto.getCustomerName() : customer.getName());
+        } else {
+            order.setCustomerName(dto.getCustomerName());
+        }
+        Long targetDeptId = dto.getDeptId();
+        if (StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(order.getOutboundMode()) && targetDeptId == null) {
+            targetDeptId = user == null ? null : user.getDeptId();
+        }
+        order.setDeptId(targetDeptId);
+        order.setSaleDeadline(dto.getSaleDeadline());
+        if (targetDeptId != null) {
+            Dept dept = deptService.getByIdNotDeleted(targetDeptId);
+            order.setDeptCode(dept == null ? null : dept.getCode());
+        }
         order.setBizDate(LocalDate.now());
         if (state == StockBizConstant.ORDER_STATE_FINISHED) {
             order.setFinishTime(LocalDateTime.now());
@@ -594,6 +800,19 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "処理に失敗しました");
         }
         return order;
+    }
+
+    private String normalizeOutboundMode(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return StockBizConstant.OUTBOUND_MODE_CUSTOMER;
+        }
+        if ("dept".equalsIgnoreCase(mode) || "group_allocate".equalsIgnoreCase(mode)) {
+            return StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE;
+        }
+        if ("group_customer".equalsIgnoreCase(mode)) {
+            return StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER;
+        }
+        return StockBizConstant.OUTBOUND_MODE_CUSTOMER;
     }
 
     private StockOrderItem saveOrderItem(Long orderId,
@@ -778,6 +997,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         StockVO vo = new StockVO();
         BeanUtils.copyProperties(entity, vo);
         vo.setStockTypeName(getStockTypeName(entity.getStockTypeId()));
+        java.util.Map<String, Integer> groupQty = stockBatchService.getGroupQuantities(entity.getId());
+        vo.setGroupAQty(groupQty.getOrDefault("A", 0));
+        vo.setGroupBQty(groupQty.getOrDefault("B", 0));
+        vo.setGroupCQty(groupQty.getOrDefault("C", 0));
         return vo;
     }
 }

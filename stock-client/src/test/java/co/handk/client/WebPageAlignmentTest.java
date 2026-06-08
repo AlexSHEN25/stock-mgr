@@ -24,7 +24,6 @@ class WebPageAlignmentTest {
                 "userData=\"selfStock\"",
                 "userData=\"handleStock\"",
                 "userData=\"stockOrder\"",
-                "userData=\"stockOrderItem\"",
                 "userData=\"stockType\"",
                 "userData=\"stockRecord\"",
                 "userData=\"priceRecord\""

@@ -47,4 +47,16 @@ public class StockOrder extends BaseEntity {
     private Long version;
 
     private LocalDateTime finishTime;
+
+    private String outboundMode;
+
+    private Long customerId;
+
+    private String customerName;
+
+    private Long deptId;
+
+    private String deptCode;
+
+    private LocalDateTime saleDeadline;
 }

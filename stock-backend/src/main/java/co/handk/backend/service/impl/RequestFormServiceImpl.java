@@ -74,6 +74,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private static final String FORMAT_PDF = "pdf";
     private static final String REMARK_REAPPLY_INBOUND = "Reapply inbound for request form: ";
     private static final String REMARK_REAPPLY_INBOUND_ITEM = "Reapply inbound from request form";
+    private static final String REMARK_DELIVERY_INBOUND = "Delivery schedule inbound from stock record: ";
     private static final String DEFAULT_ERROR_CODE = "RF000";
     private static final Map<String, String> ERROR_CODE_BY_MESSAGE = Map.ofEntries(
             Map.entry("request form operation failed", DEFAULT_ERROR_CODE),
@@ -539,6 +540,107 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long reapplyInboundItem(RequestFormItemBatchDTO dto) {
+        RequestForm form = this.getByIdNotDeleted(dto.getRequestId());
+        if (form == null) {
+            throw fail("request form not found");
+        }
+        requireOwned(form);
+        requireRequestFormEditable(form);
+
+        Map<Long, Integer> requestedQuantities = resolveRequestedQuantities(dto);
+        if (requestedQuantities.size() != 1) {
+            throw fail("no source outbound items selected");
+        }
+
+        Map.Entry<Long, Integer> entry = requestedQuantities.entrySet().iterator().next();
+        StockRecord record = requireAvailableOutboundRecord(entry.getKey());
+        int inboundQty = entry.getValue() == null ? 0 : Math.abs(entry.getValue());
+        if (inboundQty <= 0) {
+            throw fail("requested qty must be >= 0");
+        }
+
+        RequestItem requestItem = requestItemService.getOne(new QueryWrapper<RequestItem>()
+                .eq("request_id", form.getId())
+                .eq("stock_record_id", record.getId())
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (requestItem == null) {
+            throw fail("selected stock record is not available");
+        }
+        int requestQty = requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
+        if (inboundQty > requestQty) {
+            throw fail("requested qty cannot exceed available outbound qty");
+        }
+
+        StockOrder existed = findDeliveryInboundOrder(record.getId());
+        if (existed != null) {
+            return existed.getId();
+        }
+
+        Stock stock = findStock(record.getGoodsId(), record.getSkuId(), record.getWarehouseId(), record.getStockTypeId());
+        if (stock == null) {
+            throw fail("stock not found for request item");
+        }
+
+        Long loginUserId = UserContext.getUserIdOrDefault();
+        User user = userService.getByIdNotDeleted(loginUserId);
+        String username = user == null ? form.getUsername() : user.getUsername();
+
+        StockOrder inboundOrder = new StockOrder();
+        inboundOrder.setOrderNo(generateInboundNo());
+        inboundOrder.setOrderType(StockBizConstant.ORDER_TYPE_INBOUND);
+        inboundOrder.setWarehouseId(record.getWarehouseId());
+        inboundOrder.setSourceType(StockBizConstant.SOURCE_TYPE_REQUEST);
+        inboundOrder.setSourceId(record.getId());
+        inboundOrder.setState(StockBizConstant.ORDER_STATE_APPROVING);
+        inboundOrder.setRequesterId(loginUserId);
+        inboundOrder.setRequesterName(username);
+        inboundOrder.setOperatorId(loginUserId);
+        inboundOrder.setOperatorName(username);
+        inboundOrder.setRemark(REMARK_DELIVERY_INBOUND + record.getId() + ", request form: " + form.getBizNo());
+        inboundOrder.setBizDate(LocalDate.now());
+        inboundOrder.setTotalQty(inboundQty);
+        inboundOrder.setStockTypeId(record.getStockTypeId());
+        if (!stockOrderService.save(inboundOrder)) {
+            throw fail("failed to create inbound order");
+        }
+
+        int beforeQty = stock.getCurrentQty() == null ? 0 : stock.getCurrentQty();
+        StockOrderItem orderItem = new StockOrderItem();
+        orderItem.setOrderId(inboundOrder.getId());
+        orderItem.setGoodsId(record.getGoodsId());
+        orderItem.setSkuId(record.getSkuId());
+        orderItem.setSkuCode(record.getSkuCode());
+        orderItem.setGoodsName(record.getGoodsName());
+        orderItem.setEnglishName(record.getEnglishName());
+        orderItem.setBrandId(record.getBrandId());
+        orderItem.setBrandName(record.getBrandName());
+        orderItem.setSeriesId(record.getSeriesId());
+        orderItem.setSeriesName(record.getSeriesName());
+        orderItem.setCategoryId(record.getCategoryId());
+        orderItem.setCategoryName(record.getCategoryName());
+        orderItem.setStockTypeId(record.getStockTypeId());
+        orderItem.setStockTypeName(record.getStockTypeName());
+        orderItem.setMakerId(record.getMakerId());
+        orderItem.setMakerName(record.getMakerName());
+        orderItem.setBeforeQty(beforeQty);
+        orderItem.setChangeQty(inboundQty);
+        orderItem.setAfterQty(beforeQty + inboundQty);
+        orderItem.setPrice(record.getPrice());
+        orderItem.setCurrency(record.getCurrency());
+        orderItem.setRemark(REMARK_DELIVERY_INBOUND + record.getId());
+        orderItem.setBizDate(LocalDate.now());
+        if (!stockOrderItemService.save(orderItem)) {
+            throw fail("failed to save inbound order item");
+        }
+
+        return inboundOrder.getId();
+    }
+
+    @Override
     public List<RequestCandidateItemVO> listCandidateItems(Long requestId) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {
@@ -546,7 +648,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         requireOwned(form);
 
-        List<StockRecord> records = listSourceOutboundRecords(form);
+        List<StockRecord> records = listAvailableOutboundRecords();
         if (records.isEmpty()) {
             return new ArrayList<>();
         }
@@ -555,7 +657,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("request_id", requestId)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
         Map<Long, RequestItem> selectedMap = new HashMap<>();
-        Map<String, RequestItem> selectedBySkuMap = new HashMap<>();
         for (RequestItem requestItem : existing) {
             if (!Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(requestItem.getState())) {
                 continue;
@@ -563,23 +664,18 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             if (requestItem.getStockRecordId() != null) {
                 selectedMap.put(requestItem.getStockRecordId(), requestItem);
             }
-            if (requestItem.getGoodsId() != null && requestItem.getSkuId() != null) {
-                selectedBySkuMap.put(requestItem.getGoodsId() + "_" + requestItem.getSkuId(), requestItem);
-            }
         }
 
         List<RequestCandidateItemVO> result = new ArrayList<>();
         for (StockRecord record : records) {
             RequestItem selected = selectedMap.get(record.getId());
-            if (selected == null && record.getGoodsId() != null && record.getSkuId() != null) {
-                selected = selectedBySkuMap.get(record.getGoodsId() + "_" + record.getSkuId());
-            }
             RequestCandidateItemVO vo = new RequestCandidateItemVO();
             vo.setStockRecordId(record.getId());
             vo.setStockOrderId(record.getOrderId());
             vo.setStockOrderItemId(record.getOrderItemId());
             vo.setOrderNo(record.getBizNo());
             vo.setOrderType(record.getOrderType());
+            vo.setState(StockBizConstant.ORDER_STATE_FINISHED);
             vo.setBizDate(record.getBizDate());
             vo.setGoodsId(record.getGoodsId());
             vo.setSkuId(record.getSkuId());
@@ -605,13 +701,20 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 }
             }
             int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
-            vo.setChangeQty(Math.min(originalQty, remainingQty + selectedQty));
+            int availableQty = Math.min(originalQty, remainingQty + selectedQty);
+            vo.setChangeQty(availableQty);
+            vo.setAvailableQty(availableQty);
             vo.setPrice(record.getPrice());
             vo.setCurrency(record.getCurrency());
+            vo.setRequesterName(record.getRequesterName());
+            vo.setOperatorName(record.getOperatorName());
             vo.setSelected(selected != null);
             vo.setRequestQty(selectedQty);
             vo.setRequestItemState(selected == null ? null : selected.getState());
             vo.setRequestItemId(selected == null ? null : selected.getId());
+            StockOrder inboundOrder = findDeliveryInboundOrder(record.getId());
+            vo.setInboundApplied(inboundOrder != null);
+            vo.setInboundOrderId(inboundOrder == null ? null : inboundOrder.getId());
             vo.setKnife(isKnifeCategory(record.getCategoryName()));
             vo.setHandle(isHandleCategory(record.getCategoryName()));
             result.add(vo);
@@ -668,11 +771,10 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (requestedQuantities.isEmpty()) {
             return true;
         }
-        requireOwnedSourceOutbound(form);
         for (Map.Entry<Long, Integer> entry : requestedQuantities.entrySet()) {
             Long stockRecordId = entry.getKey();
             int requestedQty = entry.getValue();
-            StockRecord stockRecord = requireSourceStockRecord(form, stockRecordId);
+            StockRecord stockRecord = requireAvailableOutboundRecord(stockRecordId);
 
             RequestItem existing = requestItemService.getOne(new QueryWrapper<RequestItem>()
                     .eq("request_id", form.getId())
@@ -710,7 +812,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
 
         validateKnifeHandleQuantity(form.getId());
-        validateSourceBalance(form);
         recalculateRequestFormSummary(form.getId());
         return true;
     }
@@ -758,7 +859,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         requireOwned(form);
         requireRequestFormEditable(form);
-        requireOwnedSourceOutbound(form);
         List<Long> stockRecordIds = !normalizeStockRecordIds(dto.getStockOrderItemIds()).isEmpty()
                 ? normalizeStockRecordIds(dto.getStockOrderItemIds())
                 : new ArrayList<>(resolveRequestedQuantities(dto).keySet());
@@ -776,14 +876,13 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
         for (RequestItem requestItem : existing) {
             int currentQty = requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
-            StockRecord record = requireSourceStockRecord(form, requestItem.getStockRecordId());
+            StockRecord record = requireAvailableOutboundRecord(requestItem.getStockRecordId());
             applyOutboundRemainderByRequested(record, 0, currentQty);
             requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_REMOVED);
             if (!requestItemService.updateById(requestItem)) {
                 throw fail("failed to remove request item");
             }
         }
-        validateSourceBalance(form);
         recalculateRequestFormSummary(form.getId());
         return true;
     }
@@ -1397,6 +1496,25 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return record;
     }
 
+    private StockRecord requireAvailableOutboundRecord(Long stockRecordId) {
+        StockRecord record = stockRecordService.getByIdNotDeleted(stockRecordId);
+        if (record == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(record.getOrderType())) {
+            throw fail("selected stock record is not available");
+        }
+        StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
+        if (order == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())
+                || !Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(order.getState())) {
+            throw fail("source outbound order is not finished");
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)
+                && !userId.equals(record.getRequesterId())
+                && !userId.equals(record.getOperatorId())) {
+            throw fail("source outbound order is not owned by current user");
+        }
+        return record;
+    }
+
     private void applyOutboundRemainderDelta(StockRecord record, int deltaQty) {
         if (deltaQty == 0) {
             return;
@@ -1569,7 +1687,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         requestItem.setStockTypeName(record.getStockTypeName());
         requestItem.setMakerId(record.getMakerId());
         requestItem.setMakerName(record.getMakerName());
-        requestItem.setWarehouseId(form.getWarehouseId());
+        requestItem.setWarehouseId(record.getWarehouseId());
         requestItem.setPrice(record.getPrice());
         requestItem.setDiscountPrice(record.getPrice());
         requestItem.setExchangeRate(BigDecimal.ONE);
@@ -1616,6 +1734,42 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("deleted", DeleteEnum.UNDELETED.getCode()));
     }
 
+    private List<StockRecord> listAvailableOutboundRecords() {
+        Long userId = UserContext.getUserIdOrDefault();
+        QueryWrapper<StockRecord> wrapper = new QueryWrapper<StockRecord>()
+                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .orderByDesc("biz_date", "id");
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            wrapper.and(query -> query.eq("requester_id", userId).or().eq("operator_id", userId));
+        }
+        List<StockRecord> records = stockRecordService.list(wrapper);
+        if (records.isEmpty()) {
+            return records;
+        }
+
+        Set<Long> orderIds = new HashSet<>();
+        for (StockRecord record : records) {
+            if (record.getOrderId() != null) {
+                orderIds.add(record.getOrderId());
+            }
+        }
+        if (orderIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Set<Long> finishedOrderIds = new HashSet<>();
+        for (StockOrder order : stockOrderService.list(new QueryWrapper<StockOrder>()
+                .in("id", orderIds)
+                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                .eq("state", StockBizConstant.ORDER_STATE_FINISHED)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()))) {
+            finishedOrderIds.add(order.getId());
+        }
+        return records.stream()
+                .filter(record -> finishedOrderIds.contains(record.getOrderId()))
+                .toList();
+    }
+
     private void validateKnifeHandleQuantity(Long requestId) {
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
@@ -1652,9 +1806,13 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private boolean sourceHasKnifeAndHandle(RequestForm form) {
         boolean hasKnife = false;
         boolean hasHandle = false;
-        for (StockRecord record : listSourceOutboundRecords(form)) {
-            hasKnife = hasKnife || isKnifeCategory(record.getCategoryName());
-            hasHandle = hasHandle || isHandleCategory(record.getCategoryName());
+        List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
+                .eq("request_id", form.getId())
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        for (RequestItem item : items) {
+            hasKnife = hasKnife || isKnifeCategory(item.getCategoryName());
+            hasHandle = hasHandle || isHandleCategory(item.getCategoryName());
         }
         return hasKnife && hasHandle;
     }
@@ -1707,6 +1865,19 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return stockMapper.selectOne(wrapper);
     }
 
+    private StockOrder findDeliveryInboundOrder(Long stockRecordId) {
+        if (stockRecordId == null) {
+            return null;
+        }
+        return stockOrderService.getOne(new QueryWrapper<StockOrder>()
+                .eq("order_type", StockBizConstant.ORDER_TYPE_INBOUND)
+                .eq("source_type", StockBizConstant.SOURCE_TYPE_REQUEST)
+                .eq("source_id", stockRecordId)
+                .likeRight("remark", REMARK_DELIVERY_INBOUND)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+    }
+
     private String generateRequestNo() {
         return "REQ" + System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(100, 1000);
     }
@@ -1735,8 +1906,10 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     }
 
     private void applyRequestFormCreateDefaults(CreateRequestFormDTO dto) {
-        StockOrder sourceOrder = requireCreateSourceOutbound(dto.getSourceOrderId());
-        dto.setWarehouseId(sourceOrder.getWarehouseId());
+        if (dto.getSourceOrderId() != null) {
+            StockOrder sourceOrder = requireCreateSourceOutbound(dto.getSourceOrderId());
+            dto.setWarehouseId(sourceOrder.getWarehouseId());
+        }
         dto.setTotalQty(0);
         dto.setRequestQty(0);
         dto.setTotalAmt(BigDecimal.ZERO);

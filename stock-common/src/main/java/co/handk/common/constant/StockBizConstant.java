@@ -25,6 +25,14 @@ public final class StockBizConstant {
     public static final int INBOUND_SCENE_SELF = 1;
     public static final int INBOUND_SCENE_RESALE = 2;
 
+    public static final String OUTBOUND_MODE_CUSTOMER = "CUSTOMER";
+    public static final String OUTBOUND_MODE_GROUP_ALLOCATE = "GROUP_ALLOCATE";
+    public static final String OUTBOUND_MODE_GROUP_CUSTOMER = "GROUP_CUSTOMER";
+
+    public static final int BATCH_STATE_ACTIVE = 0;
+    public static final int BATCH_STATE_EXHAUSTED = 1;
+    public static final int BATCH_STATE_EXPIRED = 2;
+
     public static final int REQUEST_STATE_DRAFT = 0;
     public static final int REQUEST_STATE_SUBMITTED = 1;
     public static final int REQUEST_STATE_FINISHED = 2;

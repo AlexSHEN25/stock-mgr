@@ -14,6 +14,8 @@ public class GoodsListVO extends BaseVO {
     private BigDecimal price;
     private String currency;
     private Integer currentQty;
+    private Boolean inboundDone;
+    private Integer outboundMaxQty;
     private Long brandId;
     private String brandName;
     private Long seriesId;

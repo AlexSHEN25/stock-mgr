@@ -46,6 +46,12 @@ CREATE TABLE `t_dept`
   COLLATE = utf8mb4_unicode_ci
     COMMENT ='部门表';
 
+INSERT INTO `t_dept`
+(`id`, `parent_id`, `name`, `code`, `leader_id`, `sort`, `status`, `deleted`, `created_by`, `updated_by`)
+VALUES (1, 0, 'Aグループ', 'A', NULL, 1, 1, 0, 1, 1),
+       (2, 0, 'Bグループ', 'B', NULL, 2, 1, 0, 1, 1),
+       (3, 0, 'Cグループ', 'C', NULL, 3, 1, 0, 1, 1);
+
 
 DROP TABLE IF EXISTS `t_user_token`;
 create TABLE `t_user_token`
@@ -209,6 +215,12 @@ CREATE TABLE t_stock_order
     `biz_date`       DATETIME                  DEFAULT NULL COMMENT '业务日期',
     `version`        BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '版本控制',
     `finish_time`    DATETIME                  DEFAULT NULL COMMENT '完成时间',
+    `outbound_mode`  VARCHAR(32)               DEFAULT NULL COMMENT 'CUSTOMER/GROUP_ALLOCATE/GROUP_CUSTOMER',
+    `customer_id`    BIGINT UNSIGNED           DEFAULT NULL COMMENT '客户ID',
+    `customer_name`  VARCHAR(255)              DEFAULT NULL COMMENT '客户名称',
+    `dept_id`        BIGINT UNSIGNED           DEFAULT NULL COMMENT '组别部门ID',
+    `dept_code`      VARCHAR(32)               DEFAULT NULL COMMENT '组别编码',
+    `sale_deadline`  DATETIME                  DEFAULT NULL COMMENT '销售期限',
     `deleted`        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `created_by`     BIGINT UNSIGNED           DEFAULT NULL COMMENT '创建人ID',
     `updated_by`     BIGINT UNSIGNED           DEFAULT NULL COMMENT '更新人ID',
@@ -314,6 +326,10 @@ create TABLE `t_stock_record`
     `price_update_time` DATETIME                  DEFAULT NULL COMMENT '价格最后更新时间',
     `customer_id`       BIGINT UNSIGNED           DEFAULT NULL COMMENT '客户ID',
     `customer_name`     VARCHAR(255)              DEFAULT NULL COMMENT '客户名称',
+    `batch_id`          BIGINT UNSIGNED           DEFAULT NULL COMMENT '入库批次ID',
+    `dept_id`           BIGINT UNSIGNED           DEFAULT NULL COMMENT '组别部门ID',
+    `dept_code`         VARCHAR(32)               DEFAULT NULL COMMENT '组别编码',
+    `outbound_mode`     VARCHAR(32)               DEFAULT NULL COMMENT '出库区分',
     `requester_id`      BIGINT UNSIGNED           DEFAULT NULL COMMENT '申请人id',
     `requester_name`    VARCHAR(64)               DEFAULT NULL COMMENT '申请人名',
     `operator_id`       BIGINT UNSIGNED           DEFAULT NULL COMMENT '操作人id',
@@ -342,6 +358,61 @@ create TABLE `t_stock_record`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '库存流水表';
+
+DROP TABLE IF EXISTS `t_group_stock`;
+DROP TABLE IF EXISTS `t_stock_batch`;
+CREATE TABLE `t_stock_batch`
+(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `inbound_order_id` BIGINT UNSIGNED NOT NULL,
+    `inbound_order_item_id` BIGINT UNSIGNED NOT NULL,
+    `stock_id` BIGINT UNSIGNED NOT NULL,
+    `goods_id` BIGINT UNSIGNED NOT NULL,
+    `sku_id` BIGINT UNSIGNED NOT NULL,
+    `warehouse_id` BIGINT UNSIGNED NOT NULL,
+    `stock_type_id` BIGINT UNSIGNED DEFAULT NULL,
+    `original_qty` INT NOT NULL,
+    `available_qty` INT NOT NULL,
+    `allocated_qty` INT NOT NULL DEFAULT 0,
+    `customer_out_qty` INT NOT NULL DEFAULT 0,
+    `sale_deadline` DATETIME DEFAULT NULL,
+    `state` TINYINT NOT NULL DEFAULT 0,
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    `created_by` BIGINT UNSIGNED DEFAULT NULL,
+    `updated_by` BIGINT UNSIGNED DEFAULT NULL,
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_inbound_item` (`inbound_order_item_id`, `deleted`),
+    KEY `idx_batch_stock_deadline` (`stock_id`, `sale_deadline`, `state`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '入库批次';
+
+CREATE TABLE `t_group_stock`
+(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `batch_id` BIGINT UNSIGNED NOT NULL,
+    `dept_id` BIGINT UNSIGNED NOT NULL,
+    `dept_code` VARCHAR(32) NOT NULL,
+    `stock_id` BIGINT UNSIGNED NOT NULL,
+    `goods_id` BIGINT UNSIGNED NOT NULL,
+    `sku_id` BIGINT UNSIGNED NOT NULL,
+    `warehouse_id` BIGINT UNSIGNED NOT NULL,
+    `stock_type_id` BIGINT UNSIGNED DEFAULT NULL,
+    `allocated_qty` INT NOT NULL,
+    `current_qty` INT NOT NULL,
+    `sale_deadline` DATETIME DEFAULT NULL,
+    `state` TINYINT NOT NULL DEFAULT 0,
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    `created_by` BIGINT UNSIGNED DEFAULT NULL,
+    `updated_by` BIGINT UNSIGNED DEFAULT NULL,
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_batch_dept` (`batch_id`, `dept_id`, `deleted`),
+    KEY `idx_group_available` (`dept_id`, `stock_id`, `sale_deadline`, `state`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '组别独立库存';
 
 DROP TABLE IF EXISTS `t_warehouse`;
 create TABLE t_warehouse
@@ -821,7 +892,9 @@ VALUES ('request.form.template.default', 'request', 'Default request template', 
         'string', '厨刀,刀', NULL, 1, 1),
        ('handle_keywords', 'request', 'Handle category keywords',
         'Comma separated keywords used to identify handle categories for request item matching',
-        'string', 'ハンドル,柄', NULL, 1, 1);
+         'string', 'ハンドル,柄', NULL, 1, 1),
+       ('stock.group.codes', 'stock', 'Stock group codes',
+        'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1);
 
 DROP TABLE IF EXISTS `t_operate_log`;
 create TABLE `t_operate_log`

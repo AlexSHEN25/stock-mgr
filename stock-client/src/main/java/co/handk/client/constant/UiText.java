@@ -26,6 +26,8 @@ public final class UiText {
     public static final String ACTION_DOWNLOAD_EXCEL = t("action.downloadExcel");
     public static final String ACTION_DOWNLOAD_PDF = t("action.downloadPdf");
     public static final String ACTION_MATCH_REQUEST_ITEMS = t("action.matchRequestItems");
+    public static final String MENU_STOCK_ORDER = t("main.menu.stockOrder");
+    public static final String MENU_STOCK_ORDER_ITEM = t("main.menu.stockOrderItem");
 
     public static final String TITLE_CONFIRM_BATCH_DELETE = t("title.confirmBatchDelete");
     public static final String TITLE_CONFIRM_DELETE = t("title.confirmDelete");

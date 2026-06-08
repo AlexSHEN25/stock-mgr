@@ -71,6 +71,14 @@ public class StockRecord extends BaseEntity {
 
     private String customerName;
 
+    private Long batchId;
+
+    private Long deptId;
+
+    private String deptCode;
+
+    private String outboundMode;
+
     private Long requesterId;
 
     private String requesterName;

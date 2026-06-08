@@ -14,6 +14,8 @@ TRUNCATE TABLE t_request_form;
 TRUNCATE TABLE t_customer;
 TRUNCATE TABLE t_customer_level;
 TRUNCATE TABLE t_stock_record;
+TRUNCATE TABLE t_group_stock;
+TRUNCATE TABLE t_stock_batch;
 TRUNCATE TABLE t_stock_order_item;
 TRUNCATE TABLE t_stock_order;
 TRUNCATE TABLE t_price_record;
@@ -38,6 +40,9 @@ TRUNCATE TABLE t_user;
 TRUNCATE TABLE t_dept;
 
 -- current database data
+INSERT INTO `t_dept` (`id`, `parent_id`, `name`, `code`, `leader_id`, `sort`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,0,'Aグループ','A',NULL,1,1,0,1,1,NOW(),NOW());
+INSERT INTO `t_dept` (`id`, `parent_id`, `name`, `code`, `leader_id`, `sort`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,0,'Bグループ','B',NULL,2,1,0,1,1,NOW(),NOW());
+INSERT INTO `t_dept` (`id`, `parent_id`, `name`, `code`, `leader_id`, `sort`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,0,'Cグループ','C',NULL,3,1,0,1,1,NOW(),NOW());
 INSERT INTO `t_warehouse` (`id`, `name`, `code`, `address`, `manager_id`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'自社在庫','SELF','自社倉庫',NULL,1,0,1,1,NOW(),NOW());
 INSERT INTO `t_warehouse` (`id`, `name`, `code`, `address`, `manager_id`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'ハンドル在庫','HANDLE','ハンドル倉庫',NULL,1,0,1,1,NOW(),NOW());
 INSERT INTO `t_brand` (`id`, `name`, `english_name`, `image`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'藤次郎','TOJIRO','/upload/brand/mpvzbt5335f576.png','藤次郎作为日本10大厨刀品牌之一，厨刀在传统“夹钢”工艺基础上专注于特种钢材的开发，采用特殊的钴合金“DP法”以防止内部脱碳，使刀具锋利、坚韧、防腐蚀，连获日本政府各类产品设计大奖，并在日本厨刀厂商中唯一取得ISO9001国际认证和ISO14001环境体系认证。其高档产品更是采用了高速粉末钢系列和63层大马士革钢。藤次郎厨刀开刃角度是15度，刃的前部分为两段，一段是15-20度向25度过度的“小刃止”；另一段是最前端，刃幅0.02-0.2mm的“刃先”，是30-35度。在切割试验机上实验，对比直接研磨成15度的\"刃先\",切割锋利度无差异，但锋利度耐久性延长。.\n\n1953年 \"建立Fujitora农场设备。开始制造农用设备的机器零件和刀片。\"\n1955年 开始生产烹饪刀具。\n1953年 \"建立Fujitora农场设备。开始制造农用设备的机器零件和刀片。\"\n1964年 成立富士达实业有限公司 资本基金为200万日元。\n1965年 资本扩张至300万日元。\n1968年 吉田工厂的新建设。制造部迁移到新工厂。\n1969年 资本扩张至600万日元。\n1970年 我们的产品被认为是新泻县的优秀推荐产品。\n1971年 收购吉田工厂扩建1500m2土地。\n1972年 吉田第二工厂的建设完成。\n1973年 资本扩张至1100万日元。\n1978年 吉田第三工厂的建设完成。\n1980年 我们的产品荣获MITI优良设计奖                                                                                                                \n1985年 业务总部搬迁到吉田工厂。\n1988年 吉田第4工厂的建设完成。销售部迁入现任总部。\n1992年 业务总部搬迁到现任总部。\n1993年 吉田工厂专用淬火设施的新建设。\n1994年 在吉田工厂扩建抛光设施。\n1995年 与German Dick GmbH合作开始合作刀具。\n1996年 扩大总部仓库。Tojiro被授予了MITI的优良设计奖和长寿命设计奖。\n1998年 吉田第三工厂的扩建完成。\n2000年 Tojiro-Pro SD日本刀系列被MITI授予2000年优良设计奖。\n2001年 赞助2次法国食品文化中心的比赛。\n2003年 2000认证ISO 9001。\n公司logo\n\n2004年 第一次展览在法兰克福展览中心Ambiente。认证ISO14001。\n2005年 董事长藤井弘先生去世。（72岁）\n2006年 收购吉田工厂扩建土地1500m2。\n2008年 在吉田南厂的“Tojiro刀工作室”的建设完成。\n2010年 在吉田南厂的抛光和清洗设施的扩大。\n2012年 \"Tojiro ORIGAMI获得IF设计奖2012（德国）。FUJI CUTLERY物流中心的装修完成。\"\n2013年 在吉田工厂采用制造工艺管理系统，安装数控磨床。',1,0,1,1,'2026-06-02 10:49:21','2026-06-02 10:49:21');
@@ -60,6 +65,8 @@ INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, 
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (4,'request.form.template.A','request','Request template A','Template used by department code A','file','template/request_form_template_A.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'request.form.template.B','request','Request template B','Template used by department code B','file','template/request_form_template_B.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (6,'request.form.template.C','request','Request template C','Template used by department code C','file','template/request_form_template_C.xlsx',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (7,'stock.group.codes','stock','Stock group codes','Department codes allowed to own group stock','string','A,B,C',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.json','permission','Group menu scope json','Menu codes visible to each group department code','json','{"A":["stock","selfStock","requestForm"],"B":["stock","selfStock"],"C":["stock","selfStock"]}',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'三悦',1,0,1,1,'2026-06-02 12:40:01','2026-06-02 12:40:01');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'二唐',1,0,1,1,'2026-06-02 12:40:12','2026-06-02 12:40:12');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'アシタ　二唐',1,0,1,1,'2026-06-02 12:40:18','2026-06-02 12:40:18');

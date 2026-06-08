@@ -1,20 +1,28 @@
 package co.handk.backend.service.impl;
 
 import co.handk.backend.constant.SecurityConstant;
+import co.handk.backend.entity.Dept;
 import co.handk.backend.entity.Permission;
 import co.handk.backend.entity.Role;
 import co.handk.backend.entity.RolePermission;
+import co.handk.backend.entity.User;
 import co.handk.backend.entity.UserRole;
+import co.handk.backend.mapper.DeptMapper;
 import co.handk.backend.mapper.PermissionMapper;
 import co.handk.backend.mapper.RoleMapper;
 import co.handk.backend.mapper.RolePermissionMapper;
+import co.handk.backend.mapper.UserMapper;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.PermissionQueryService;
+import co.handk.backend.service.ConfigService;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.PermissionTypeEnum;
 import co.handk.common.enums.StatusEnum;
+import co.handk.backend.entity.Config;
 import co.handk.common.model.vo.PermissionScopeVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,10 +30,12 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,6 +45,14 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     private static final String DATA_SCOPE_ALL = "ALL";
     private static final String DATA_SCOPE_OWN = "OWN";
     private static final String DATA_SCOPE_READONLY = "READONLY";
+    private static final String GROUP_CODE_CONFIG = "stock.group.codes";
+    private static final String GROUP_MENU_JSON_CONFIG = "perm.group.menu.json";
+    private static final Map<String, String> MENU_KEY_ALIASES = Map.of(
+            "stockOrderItem", "stockOrder"
+    );
+    private static final Set<String> DEFAULT_GROUP_MENU_CODES_A = Set.of("stock", "selfStock", "requestForm");
+    private static final Set<String> DEFAULT_GROUP_MENU_CODES_B = Set.of("stock", "selfStock");
+    private static final Set<String> DEFAULT_GROUP_MENU_CODES_C = Set.of("stock", "selfStock");
     private static final Set<String> NORMAL_USER_OWN_WRITE_MODULES = Set.of(
             "stockOrder",
             "stockOrderItem",
@@ -60,8 +78,8 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             Map.entry("stockOrderItem", "\u5165\u51fa\u5eab\u660e\u7d30"),
             Map.entry("stockRecord", "\u5728\u5eab\u5c65\u6b74"),
             Map.entry("priceRecord", "\u4fa1\u683c\u5c65\u6b74"),
-            Map.entry("requestForm", "\u8acb\u6c42\u66f8\u7ba1\u7406"),
-            Map.entry("requestItem", "\u8acb\u6c42\u66f8\u660e\u7d30"),
+            Map.entry("requestForm", "\u307e\u3068\u3081\u7d0d\u54c1\u66f8"),
+            Map.entry("requestItem", "\u307e\u3068\u3081\u7d0d\u54c1\u66f8\u660e\u7d30"),
             Map.entry("customer", "\u9867\u5ba2\u7ba1\u7406"),
             Map.entry("customerLevel", "\u9867\u5ba2\u30e9\u30f3\u30af\u7ba1\u7406"),
             Map.entry("config", "\u30b7\u30b9\u30c6\u30e0\u8a2d\u5b9a"),
@@ -73,6 +91,10 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     private final RoleMapper roleMapper;
     private final RolePermissionMapper rolePermissionMapper;
     private final PermissionMapper permissionMapper;
+    private final UserMapper userMapper;
+    private final DeptMapper deptMapper;
+    private final ConfigService configService;
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean isSuperAdmin(Long userId) {
@@ -148,6 +170,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         Set<String> codes = getPermissionCodes(userId);
         boolean superAdmin = codes.contains(SecurityConstant.ROLE_SUPER_ADMIN);
         boolean allDataWrite = superAdmin || codes.contains(SecurityConstant.DATA_ALL_WRITE);
+        String deptCode = resolveDeptCode(userId);
         PermissionScopeVO scope = new PermissionScopeVO();
         scope.setSuperAdmin(superAdmin);
         scope.setAllDataWrite(allDataWrite);
@@ -170,7 +193,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .toList();
 
         for (Permission permission : dataPermissions) {
-            String key = resolveModuleKey(permission.getPath());
+            String key = resolveMenuKey(permission.getPath());
             String code = permission.getCode();
             if (key.isBlank() || code == null || code.isBlank()) {
                 continue;
@@ -204,6 +227,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         }
         scope.setMenus(menus.values().stream()
                 .filter(menu -> menu.getActions().isRead())
+                .filter(menu -> isVisibleMenuForUser(menu.getKey(), deptCode, superAdmin))
                 .sorted(Comparator
                         .comparing((PermissionScopeVO.MenuPermissionVO menu) -> menu.getSort() == null ? 0 : menu.getSort())
                         .thenComparing(PermissionScopeVO.MenuPermissionVO::getKey))
@@ -286,6 +310,11 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         return value.replace("*", "").trim();
     }
 
+    private String resolveMenuKey(String path) {
+        String key = resolveModuleKey(path);
+        return MENU_KEY_ALIASES.getOrDefault(key, key);
+    }
+
     private String resolveMenuLabel(Permission permission) {
         String moduleKey = resolveModuleKey(permission.getPath());
         String fixedLabel = MENU_LABEL_BY_MODULE.get(moduleKey);
@@ -343,6 +372,111 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         }
         return code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)
                 && SecurityConstant.isNormalUserWriteApiPath(permission.getPath());
+    }
+
+    private boolean isVisibleMenuForUser(String moduleKey, String deptCode, boolean superAdmin) {
+        if (superAdmin) {
+            return true;
+        }
+        if (deptCode == null || deptCode.isBlank()) {
+            return true;
+        }
+        String normalizedDeptCode = deptCode.trim().toUpperCase();
+        if (!isConfiguredGroupDept(normalizedDeptCode)) {
+            return true;
+        }
+        return getGroupMenuCodes(normalizedDeptCode).contains(moduleKey);
+    }
+
+    private String resolveDeptCode(Long userId) {
+        if (userId == null || userId <= 0L) {
+            return null;
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null || user.getDeptId() == null) {
+            return null;
+        }
+        Dept dept = deptMapper.selectById(user.getDeptId());
+        return dept == null ? null : dept.getCode();
+    }
+
+    private boolean isConfiguredGroupDept(String deptCode) {
+        return getConfiguredGroupDeptCodes().contains(deptCode);
+    }
+
+    private Set<String> getConfiguredGroupDeptCodes() {
+        return parseCsvConfig(GROUP_CODE_CONFIG);
+    }
+
+    private Set<String> getGroupMenuCodes(String deptCode) {
+        Map<String, Set<String>> configured = parseGroupMenuJsonConfig();
+        Set<String> codes = configured.get(deptCode.toUpperCase());
+        if (codes != null && !codes.isEmpty()) {
+            return codes;
+        }
+        if ("A".equalsIgnoreCase(deptCode)) {
+            return DEFAULT_GROUP_MENU_CODES_A;
+        }
+        if ("B".equalsIgnoreCase(deptCode)) {
+            return DEFAULT_GROUP_MENU_CODES_B;
+        }
+        if ("C".equalsIgnoreCase(deptCode)) {
+            return DEFAULT_GROUP_MENU_CODES_C;
+        }
+        return Collections.emptySet();
+    }
+
+    private Map<String, Set<String>> parseGroupMenuJsonConfig() {
+        Config config = configService.getOne(new QueryWrapper<Config>()
+                .select("value")
+                .eq("name", GROUP_MENU_JSON_CONFIG)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (config == null || config.getValue() == null || config.getValue().isBlank()) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<String, List<String>> raw = objectMapper.readValue(
+                    config.getValue(), new TypeReference<Map<String, List<String>>>() {
+                    });
+            Map<String, Set<String>> result = new LinkedHashMap<>();
+            if (raw != null) {
+                for (Map.Entry<String, List<String>> entry : raw.entrySet()) {
+                    if (entry.getKey() == null || entry.getValue() == null) {
+                        continue;
+                    }
+                    Set<String> menuCodes = entry.getValue().stream()
+                            .filter(value -> value != null && !value.isBlank())
+                            .map(String::trim)
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    if (!menuCodes.isEmpty()) {
+                        result.put(entry.getKey().trim().toUpperCase(), menuCodes);
+                    }
+                }
+            }
+            return result;
+        } catch (Exception ex) {
+            log.warn("parse group menu json config failed, configName={}", GROUP_MENU_JSON_CONFIG, ex);
+            return Collections.emptyMap();
+        }
+    }
+
+    private Set<String> parseCsvConfig(String name) {
+        if (name == null || name.isBlank()) {
+            return Collections.emptySet();
+        }
+        Config config = configService.getOne(new QueryWrapper<Config>()
+                .select("value")
+                .eq("name", name)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (config == null || config.getValue() == null || config.getValue().isBlank()) {
+            return Collections.emptySet();
+        }
+        return java.util.Arrays.stream(config.getValue().split(","))
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
     }
 }
 

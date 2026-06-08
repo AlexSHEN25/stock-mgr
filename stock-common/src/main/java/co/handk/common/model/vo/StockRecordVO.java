@@ -38,6 +38,10 @@ public class StockRecordVO extends BaseVO {
     private LocalDateTime priceUpdateTime;
     private Long customerId;
     private String customerName;
+    private Long batchId;
+    private Long deptId;
+    private String deptCode;
+    private String outboundMode;
     private Long requesterId;
     private String requesterName;
     private Long operatorId;

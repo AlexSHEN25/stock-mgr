@@ -25,7 +25,6 @@ public class CreateRequestFormDTO {
 
     private Long warehouseId;
 
-    @NotNull(message = "sourceOrderId is required")
     private Long sourceOrderId;
 
     @PositiveOrZero(message = "value must be greater than or equal to 0")

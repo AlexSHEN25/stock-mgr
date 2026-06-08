@@ -48,6 +48,11 @@ public class RequestFormController {
         return requestFormService.reapplyInbound(id);
     }
 
+    @PostMapping("/items/reapplyInbound")
+    public Long reapplyInboundItem(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
+        return requestFormService.reapplyInboundItem(dto);
+    }
+
     @GetMapping("/{id}/candidateItems")
     public List<RequestCandidateItemVO> candidateItems(@PathVariable("id") @NotNull Long id) {
         return requestFormService.listCandidateItems(id);
