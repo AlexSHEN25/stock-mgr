@@ -1,5 +1,6 @@
 package co.handk.common.model.dto.create;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -32,7 +33,9 @@ public class CreateStockOrderDTO {
     private String remark;
     private Long approverId;
     private String approverName;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime approveTime;
     private LocalDate bizDate;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime finishTime;
 }

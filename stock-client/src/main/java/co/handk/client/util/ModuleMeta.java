@@ -33,7 +33,7 @@ public final class ModuleMeta {
     }
 
     public enum RowActionType {
-        DETAIL, DOWNLOAD_REQUEST_FORM, MATCH_REQUEST_ITEMS, PREVIEW_FIELDS, MARK_READ
+        DETAIL, DOWNLOAD_REQUEST_FORM, MATCH_REQUEST_ITEMS, PREVIEW_FIELDS, MARK_READ, APPROVE_ORDER, REJECT_ORDER
     }
 
     public static final class Option {
@@ -343,7 +343,9 @@ public final class ModuleMeta {
         DEPENDENCY_RULES.put(STOCK_ORDER_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
 
         ROW_ACTIONS.put(STOCK_ORDER, List.of(
-                new RowAction(RowActionType.DETAIL, "action.orderDetail", STOCK_ORDER_ITEM, "orderId")
+                new RowAction(RowActionType.DETAIL, "action.orderDetail", STOCK_ORDER_ITEM, "orderId"),
+                new RowAction(RowActionType.APPROVE_ORDER, "action.approve", null, null),
+                new RowAction(RowActionType.REJECT_ORDER, "action.reject", null, null)
         ));
         ROW_ACTIONS.put(REQUEST_FORM, List.of(
                 new RowAction(RowActionType.DETAIL, "action.requestDetail", REQUEST_ITEM, "requestId"),

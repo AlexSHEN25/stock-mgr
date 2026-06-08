@@ -4,7 +4,9 @@ import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.*;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.service.*;
+import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
+import co.handk.common.constant.RedisKey;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
@@ -28,6 +30,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
@@ -70,6 +73,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private ConfigService configService;
     @Autowired
     private WarehouseService warehouseService;
+    @Autowired
+    private StringRedisUtil stringRedisUtil;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -159,11 +164,12 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Transactional(rollbackFor = Exception.class)
     public Long outbound(StockOperateDTO dto) {
         prepareOutboundAccess(dto);
-        Stock stock = requireStock(dto.getStockId(), dto.getWarehouseId());
+        Stock stock = resolveOutboundStock(dto);
         requireAccessibleOutboundStock(stock, dto.getOutboundMode());
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
         String stockTypeName = getStockTypeName(stock.getStockTypeId());
+        requireOutboundIdempotency(dto, stock);
 
         boolean groupCustomer = StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER
                 .equals(normalizeOutboundMode(dto.getOutboundMode()));
@@ -204,7 +210,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         QueryWrapper<Stock> wrapper = buildWrapper(query)
                 .inSql("id", "SELECT stock_id FROM t_group_stock"
                         + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
-                        + " AND current_qty > 0 AND dept_id = " + dept.getId())
+                        + " AND dept_id = " + dept.getId())
                 .orderByDesc("update_time");
         Page<Stock> result = this.page(page, wrapper);
         List<StockVO> records = result.getRecords().stream()
@@ -382,13 +388,17 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
 
             int changeQty = safeInt(item.getChangeQty());
+            boolean groupAllocate = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())
+                    && StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE.equals(order.getOutboundMode());
             boolean groupCustomer = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())
                     && StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(order.getOutboundMode());
-            int beforeQty = groupCustomer
+            int beforeQty = groupAllocate
+                    ? safeInt(stock.getCurrentQty())
+                    : groupCustomer
                     ? stockBatchService.getGroupAvailableQty(order.getDeptId(), item.getGoodsId(), item.getSkuId(),
                     order.getWarehouseId(), item.getStockTypeId())
                     : safeInt(stock.getCurrentQty());
-            int afterQty = groupCustomer ? beforeQty - changeQty
+            int afterQty = (groupAllocate || groupCustomer) ? beforeQty - changeQty
                     : Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
                     ? beforeQty + changeQty : beforeQty - changeQty;
             if (afterQty < 0) {
@@ -397,7 +407,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                         "insufficient stock for approved outbound order: SKU[" + item.getSkuCode() + "]");
             }
-            if (groupCustomer) {
+            if (groupAllocate) {
+                stockBatchService.applyOutbound(order, item, stock);
+                updateStockQuantityWithVersion(stock, afterQty);
+            } else if (groupCustomer) {
                 stockBatchService.consumeGroupStock(order, stock, changeQty);
             } else {
                 if (Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
@@ -712,6 +725,25 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return stock;
     }
 
+    private Stock resolveOutboundStock(StockOperateDTO dto) {
+        if (dto.getStockId() != null) {
+            return requireStock(dto.getStockId(), dto.getWarehouseId());
+        }
+        if (dto.getGoodsId() == null || dto.getSkuId() == null || dto.getWarehouseId() == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "goodsId, skuId and warehouseId are required for outbound");
+        }
+        Long warehouseId = Long.valueOf(dto.getWarehouseId());
+        Stock stock = findStock(Long.valueOf(dto.getGoodsId()), dto.getSkuId(), warehouseId, dto.getStockTypeId());
+        if (stock == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "stock not found for outbound");
+        }
+        return stock;
+    }
+
     private Goods requireGoods(Integer goodsId) {
         Goods goods = goodsService.getByIdNotDeleted(Long.valueOf(goodsId));
         if (goods == null) {
@@ -958,6 +990,29 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private void notifyInsufficientStock(String skuCode, int requestQty, int currentQty, Long sourceId) {
         String text = String.format("在庫不足: SKU[%s] 要求=%d, 現在庫=%d", skuCode, requestQty, currentQty);
         saveMessage(MESSAGE_TYPE_WARNING, text, sourceId);
+    }
+
+    private void requireOutboundIdempotency(StockOperateDTO dto, Stock stock) {
+        Long userId = UserContext.getUserIdOrDefault();
+        String key = RedisKey.IDEMPOTENCY_REQUEST
+                + "stock:outbound:"
+                + userId + ":"
+                + stock.getId() + ":"
+                + stock.getGoodsId() + ":"
+                + stock.getSkuId() + ":"
+                + stock.getWarehouseId() + ":"
+                + (stock.getStockTypeId() == null ? "null" : stock.getStockTypeId()) + ":"
+                + dto.getQuantity() + ":"
+                + (dto.getDeptId() == null ? "null" : dto.getDeptId()) + ":"
+                + (dto.getCustomerId() == null ? "null" : dto.getCustomerId()) + ":"
+                + normalizeOutboundMode(dto.getOutboundMode()) + ":"
+                + (dto.getSaleDeadline() == null ? "null" : dto.getSaleDeadline());
+        Boolean accepted = stringRedisUtil.setIfAbsent(key, "1", 300L, TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(accepted)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "duplicate outbound request detected, please retry later");
+        }
     }
 
     private void notifyLowStock(String skuCode, int afterQty, Long sourceId) {

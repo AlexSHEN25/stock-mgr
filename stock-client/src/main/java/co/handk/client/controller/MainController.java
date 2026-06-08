@@ -25,6 +25,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.PasswordField;
@@ -653,7 +654,72 @@ public class MainController {
         if (action.type == ModuleMeta.RowActionType.MARK_READ) {
             return createMarkReadActionColumn(UiText.byKey(action.titleKey));
         }
+        if (action.type == ModuleMeta.RowActionType.APPROVE_ORDER) {
+            return createApproveOrderActionColumn(UiText.ACTION_APPROVE_ORDER, true);
+        }
+        if (action.type == ModuleMeta.RowActionType.REJECT_ORDER) {
+            return createApproveOrderActionColumn(UiText.ACTION_REJECT_ORDER, false);
+        }
         return createDetailActionColumn(UiText.byKey(action.titleKey), action.targetModule, action.filterField);
+    }
+
+    private TableColumn<Map<String, Object>, Void> createApproveOrderActionColumn(String title, boolean approved) {
+        TableColumn<Map<String, Object>, Void> col = new TableColumn<>(title);
+        col.setPrefWidth(100);
+        col.setSortable(false);
+        col.setReorderable(false);
+        col.setCellFactory(param -> new TableCell<>() {
+            private final Button btn = new Button(title);
+            {
+                btn.setOnAction(event -> {
+                    Map<String, Object> row = getTableView().getItems().get(getIndex());
+                    Object id = row.get(Field.ID);
+                    if (id == null) {
+                        messageLabel.setText(UiText.MSG_RELATION_ID_NOT_FOUND);
+                        return;
+                    }
+                    String remark = null;
+                    if (!approved) {
+                        TextInputDialog dialog = new TextInputDialog();
+                        dialog.setTitle(title);
+                        dialog.setHeaderText(title);
+                        dialog.setContentText("备注");
+                        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+                        if (owner != null) {
+                            dialog.initOwner(owner);
+                        }
+                        Optional<String> result = dialog.showAndWait();
+                        if (result.isEmpty()) {
+                            return;
+                        }
+                        remark = result.get().trim();
+                    }
+                    try {
+                        JSONObject json = tableActionService.approveStockOrder(String.valueOf(id), approved, remark);
+                        if (uiFeedback.isSuccess(json)) {
+                            messageLabel.setText(approved ? "审批已通过" : "审批已拒绝");
+                            loadData();
+                        } else {
+                            messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_SAVE_FAILED));
+                        }
+                    } catch (Exception ex) {
+                        messageLabel.setText((approved ? "审批通过失败" : "审批拒绝失败") + ": " + ex.getMessage());
+                    }
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                    return;
+                }
+                Map<String, Object> row = getTableView().getItems().get(getIndex());
+                boolean approving = "1".equals(String.valueOf(row.get(Field.STATE)));
+                setGraphic(approving ? btn : null);
+            }
+        });
+        return col;
     }
 
     private TableColumn<Map<String, Object>, Void> createMarkReadActionColumn(String title) {

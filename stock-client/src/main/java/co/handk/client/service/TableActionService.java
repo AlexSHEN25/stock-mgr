@@ -98,4 +98,13 @@ public class TableActionService {
         body.put("items", items);
         return new JSONObject(ApiClient.post(ApiPath.REQUEST_FORM_MATCH_ITEMS, body.toString()));
     }
+
+    public JSONObject approveStockOrder(String orderId, boolean approved, String remark) throws Exception {
+        String path = "/stock/approve/" + orderId + "?approved=" + approved;
+        if (remark != null && !remark.isBlank()) {
+            path += "&remark=" + java.net.URLEncoder.encode(remark, java.nio.charset.StandardCharsets.UTF_8);
+        }
+        String res = ApiClient.post(path, "{}");
+        return new JSONObject(res);
+    }
 }

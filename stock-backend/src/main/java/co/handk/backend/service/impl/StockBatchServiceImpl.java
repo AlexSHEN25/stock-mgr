@@ -224,7 +224,7 @@ public class StockBatchServiceImpl implements StockBatchService {
         int remaining = quantity;
         List<StockBatch> batches = activeBatches(stockId);
         if (batches.isEmpty()) {
-            return;
+            throw new IllegalStateException("available inbound batch quantity is insufficient");
         }
         for (StockBatch batch : batches) {
             if (remaining <= 0) break;

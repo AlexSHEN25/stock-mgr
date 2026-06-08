@@ -82,10 +82,13 @@ public class ModuleFormController {
 
     public JSONObject toJson() {
         String raw = rawJsonArea.getText();
+        JSONObject dto;
         if (raw != null && !raw.isBlank() && !raw.equals(generatedRawJson)) {
-            return new JSONObject(raw);
+            dto = new JSONObject(raw);
+        } else {
+            dto = toJsonFromControls();
         }
-        return toJsonFromControls();
+        return applyModuleSpecificValues(dto);
     }
 
     @FXML
@@ -296,6 +299,26 @@ public class ModuleFormController {
             dto.put(key, text);
         }
         return dto;
+    }
+
+    private JSONObject applyModuleSpecificValues(JSONObject dto) {
+        if (dto == null) {
+            return new JSONObject();
+        }
+        if ("stock".equals(module) && isBlankJsonValue(dto.opt("stockId"))) {
+            Object stockId = sourceValues.get("stockId");
+            if (stockId == null) {
+                stockId = sourceValues.get("id");
+            }
+            if (stockId != null && !String.valueOf(stockId).isBlank()) {
+                dto.put("stockId", stockId);
+            }
+        }
+        return dto;
+    }
+
+    private boolean isBlankJsonValue(Object value) {
+        return value == null || String.valueOf(value).trim().isEmpty() || "null".equalsIgnoreCase(String.valueOf(value).trim());
     }
 
     private Object extractValue(Control c) {
