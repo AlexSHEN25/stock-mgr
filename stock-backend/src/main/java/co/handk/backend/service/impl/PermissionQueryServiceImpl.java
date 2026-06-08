@@ -50,9 +50,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     private static final Map<String, String> MENU_KEY_ALIASES = Map.of(
             "stockOrderItem", "stockOrder"
     );
-    private static final Set<String> DEFAULT_GROUP_MENU_CODES_A = Set.of("stock", "selfStock", "requestForm");
-    private static final Set<String> DEFAULT_GROUP_MENU_CODES_B = Set.of("stock", "selfStock");
-    private static final Set<String> DEFAULT_GROUP_MENU_CODES_C = Set.of("stock", "selfStock");
     private static final Set<String> NORMAL_USER_OWN_WRITE_MODULES = Set.of(
             "stockOrder",
             "stockOrderItem",
@@ -62,29 +59,29 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     );
     private static final Set<String> NORMAL_USER_ALL_WRITE_MODULES = Set.of("customerLevel");
     private static final Map<String, String> MENU_LABEL_BY_MODULE = Map.ofEntries(
-            Map.entry("user", "\u30e6\u30fc\u30b6\u30fc\u7ba1\u7406"),
-            Map.entry("dept", "\u90e8\u7f72\u7ba1\u7406"),
-            Map.entry("warehouse", "\u5009\u5eab\u7ba1\u7406"),
-            Map.entry("role", "\u30ed\u30fc\u30eb\u7ba1\u7406"),
-            Map.entry("permission", "\u6a29\u9650\u7ba1\u7406"),
-            Map.entry("goods", "\u5546\u54c1\u7ba1\u7406"),
-            Map.entry("maker", "\u30e1\u30fc\u30ab\u30fc\u7ba1\u7406"),
-            Map.entry("brand", "\u30d6\u30e9\u30f3\u30c9\u7ba1\u7406"),
-            Map.entry("category", "\u30ab\u30c6\u30b4\u30ea\u7ba1\u7406"),
-            Map.entry("series", "\u30b7\u30ea\u30fc\u30ba\u7ba1\u7406"),
-            Map.entry("stock", "\u81ea\u793e\u5728\u5eab\u7ba1\u7406"),
-            Map.entry("stockType", "\u5728\u5eab\u5206\u985e"),
-            Map.entry("stockOrder", "\u5165\u51fa\u5eab\u4f1d\u7968"),
-            Map.entry("stockOrderItem", "\u5165\u51fa\u5eab\u660e\u7d30"),
-            Map.entry("stockRecord", "\u5728\u5eab\u5c65\u6b74"),
-            Map.entry("priceRecord", "\u4fa1\u683c\u5c65\u6b74"),
-            Map.entry("requestForm", "\u307e\u3068\u3081\u7d0d\u54c1\u66f8"),
-            Map.entry("requestItem", "\u307e\u3068\u3081\u7d0d\u54c1\u66f8\u660e\u7d30"),
-            Map.entry("customer", "\u9867\u5ba2\u7ba1\u7406"),
-            Map.entry("customerLevel", "\u9867\u5ba2\u30e9\u30f3\u30af\u7ba1\u7406"),
-            Map.entry("config", "\u30b7\u30b9\u30c6\u30e0\u8a2d\u5b9a"),
-            Map.entry("message", "\u30e1\u30c3\u30bb\u30fc\u30b8\u7ba1\u7406"),
-            Map.entry("operateLog", "\u64cd\u4f5c\u30ed\u30b0")
+            Map.entry("user", "ユーザー管理"),
+            Map.entry("dept", "部署管理"),
+            Map.entry("warehouse", "倉庫管理"),
+            Map.entry("role", "ロール管理"),
+            Map.entry("permission", "権限管理"),
+            Map.entry("goods", "商品管理"),
+            Map.entry("maker", "メーカー管理"),
+            Map.entry("brand", "ブランド管理"),
+            Map.entry("category", "カテゴリ管理"),
+            Map.entry("series", "シリーズ管理"),
+            Map.entry("stock", "自社在庫管理"),
+            Map.entry("stockType", "在庫分類"),
+            Map.entry("stockOrder", "入出庫伝票"),
+            Map.entry("stockOrderItem", "入出庫明細"),
+            Map.entry("stockRecord", "在庫履歴"),
+            Map.entry("priceRecord", "価格履歴"),
+            Map.entry("requestForm", "まとめ納品書"),
+            Map.entry("requestItem", "まとめ納品書明細"),
+            Map.entry("customer", "顧客管理"),
+            Map.entry("customerLevel", "顧客ランク管理"),
+            Map.entry("config", "システム設定"),
+            Map.entry("message", "メッセージ管理"),
+            Map.entry("operateLog", "操作ログ")
     );
 
     private final UserRoleMapper userRoleMapper;
@@ -326,13 +323,13 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             return moduleKey;
         }
         return name
-                .replace("\u95b2\u89a7", "")
-                .replace("\u7de8\u96c6", "")
-                .replace("\u53c2\u7167", "")
-                .replace("\u66f4\u65b0", "")
-                .replace("\u8aad\u53d6", "")
-                .replace("\u66f8\u8fbc", "")
-                .replaceAll("[-\u30fb\\s]+$", "")
+                .replace("閲覧", "")
+                .replace("編集", "")
+                .replace("参照", "")
+                .replace("更新", "")
+                .replace("読取", "")
+                .replace("書込", "")
+                .replaceAll("[-・\\s]+$", "")
                 .trim();
     }
 
@@ -385,7 +382,12 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         if (!isConfiguredGroupDept(normalizedDeptCode)) {
             return true;
         }
-        return getGroupMenuCodes(normalizedDeptCode).contains(moduleKey);
+        Set<String> configuredMenuCodes = getGroupMenuCodes(normalizedDeptCode);
+        if (configuredMenuCodes.isEmpty()) {
+            log.warn("group menu config missing or empty, deptCode={}, allow menu by default", normalizedDeptCode);
+            return true;
+        }
+        return configuredMenuCodes.contains(moduleKey);
     }
 
     private String resolveDeptCode(Long userId) {
@@ -411,19 +413,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     private Set<String> getGroupMenuCodes(String deptCode) {
         Map<String, Set<String>> configured = parseGroupMenuJsonConfig();
         Set<String> codes = configured.get(deptCode.toUpperCase());
-        if (codes != null && !codes.isEmpty()) {
-            return codes;
-        }
-        if ("A".equalsIgnoreCase(deptCode)) {
-            return DEFAULT_GROUP_MENU_CODES_A;
-        }
-        if ("B".equalsIgnoreCase(deptCode)) {
-            return DEFAULT_GROUP_MENU_CODES_B;
-        }
-        if ("C".equalsIgnoreCase(deptCode)) {
-            return DEFAULT_GROUP_MENU_CODES_C;
-        }
-        return Collections.emptySet();
+        return codes == null ? Collections.emptySet() : codes;
     }
 
     private Map<String, Set<String>> parseGroupMenuJsonConfig() {

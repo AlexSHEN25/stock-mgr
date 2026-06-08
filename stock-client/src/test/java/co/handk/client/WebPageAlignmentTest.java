@@ -1,7 +1,7 @@
 package co.handk.client;
 
-import co.handk.client.util.ModuleMeta;
 import co.handk.client.constant.ModuleEndpointStrategy;
+import co.handk.client.util.ModuleMeta;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -21,8 +21,7 @@ class WebPageAlignmentTest {
         String mainFxml = loadText("fxml/main.fxml");
 
         assertInOrder(mainFxml, List.of(
-                "userData=\"selfStock\"",
-                "userData=\"handleStock\"",
+                "userData=\"stock\"",
                 "userData=\"stockOrder\"",
                 "userData=\"stockType\"",
                 "userData=\"stockRecord\"",
@@ -32,18 +31,12 @@ class WebPageAlignmentTest {
 
     @Test
     void stockMenusUseUnifiedBackendEndpoints() {
-        assertEquals("/stock/page", ModuleEndpointStrategy.pagePath("selfStock"));
-        assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("selfStock"));
-        assertEquals("/stock/1", ModuleEndpointStrategy.detailPath("selfStock", "1"));
-        assertEquals("/stock", ModuleEndpointStrategy.updatePath("selfStock", "1"));
-        assertEquals("/stock/1", ModuleEndpointStrategy.deletePath("selfStock", "1"));
-        assertEquals("/stock/batch", ModuleEndpointStrategy.batchDeletePath("selfStock"));
-        assertEquals("/stock/page", ModuleEndpointStrategy.pagePath("handleStock"));
-        assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("handleStock"));
-        assertEquals("/stock/1", ModuleEndpointStrategy.detailPath("handleStock", "1"));
-        assertEquals("/stock", ModuleEndpointStrategy.updatePath("handleStock", "1"));
-        assertEquals("/stock/1", ModuleEndpointStrategy.deletePath("handleStock", "1"));
-        assertEquals("/stock/batch", ModuleEndpointStrategy.batchDeletePath("handleStock"));
+        assertEquals("/stock/page", ModuleEndpointStrategy.pagePath("stock"));
+        assertEquals("/stock/inbound", ModuleEndpointStrategy.createPath("stock"));
+        assertEquals("/stock/1", ModuleEndpointStrategy.detailPath("stock", "1"));
+        assertEquals("/stock", ModuleEndpointStrategy.updatePath("stock", "1"));
+        assertEquals("/stock/1", ModuleEndpointStrategy.deletePath("stock", "1"));
+        assertEquals("/stock/batch", ModuleEndpointStrategy.batchDeletePath("stock"));
     }
 
     @Test
@@ -90,17 +83,13 @@ class WebPageAlignmentTest {
     }
 
     @Test
-    void splitStockFormsDefaultWarehouseAndFilterGoodsByWarehouse() {
+    void stockFormsUseUnifiedModuleMetadata() {
         assertEquals(
                 List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"),
-                ModuleMeta.formFields("selfStock"));
-        assertEquals(ModuleMeta.formFields("selfStock"), ModuleMeta.formFields("handleStock"));
+                ModuleMeta.formFields("stock"));
         assertEquals(Map.of("name", "\u81ea\u793e\u5728\u5eab"),
-                ModuleMeta.initialRelationFilters("selfStock", "warehouseId"));
-        assertEquals(Map.of("name", "\u30cf\u30f3\u30c9\u30eb\u5728\u5eab"),
-                ModuleMeta.initialRelationFilters("handleStock", "warehouseId"));
-        assertTrue(ModuleMeta.shouldAutoSelectFirstRelation("selfStock", "warehouseId"));
-        assertTrue(ModuleMeta.shouldAutoSelectFirstRelation("handleStock", "warehouseId"));
+                ModuleMeta.initialRelationFilters("stock", "warehouseId"));
+        assertTrue(ModuleMeta.shouldAutoSelectFirstRelation("stock", "warehouseId"));
     }
 
     @Test

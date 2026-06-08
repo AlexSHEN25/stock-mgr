@@ -66,7 +66,7 @@ INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, 
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'request.form.template.B','request','Request template B','Template used by department code B','file','template/request_form_template_B.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (6,'request.form.template.C','request','Request template C','Template used by department code C','file','template/request_form_template_C.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (7,'stock.group.codes','stock','Stock group codes','Department codes allowed to own group stock','string','A,B,C',NULL,0,1,1,NOW(),NOW());
-INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.json','permission','Group menu scope json','Menu codes visible to each group department code','json','{"A":["stock","selfStock","requestForm"],"B":["stock","selfStock"],"C":["stock","selfStock"]}',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.json','permission','Group menu scope json','Menu codes visible to each group department code','json','{"A":["stock","requestForm"],"B":["stock"],"C":["stock"]}',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'三悦',1,0,1,1,'2026-06-02 12:40:01','2026-06-02 12:40:01');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'二唐',1,0,1,1,'2026-06-02 12:40:12','2026-06-02 12:40:12');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'アシタ　二唐',1,0,1,1,'2026-06-02 12:40:18','2026-06-02 12:40:18');
@@ -209,9 +209,9 @@ INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `c
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (63,2,1,0,1,1,'2026-05-25 15:46:25','2026-05-25 15:46:25');
 
 -- Latest ROLE_NORMAL_USER permissions:
--- all menus visible, all data readable, write only for own stock/request/customer flows and customer levels.
+-- all menus visible, write only for request, self stock, and own group stock flows.
 UPDATE t_role
-SET remark = '全メニュー閲覧可。自分の入出庫伝票／入出庫明細、請求書／請求書明細、顧客、顧客ランクのみ登録・更新可'
+SET remark = '全メニュー閲覧可。請求書、自社在庫、所属グループ在庫のみ登録・更新可'
 WHERE code = 'ROLE_NORMAL_USER';
 
 DELETE rp
@@ -252,52 +252,9 @@ WHERE r.code = 'ROLE_NORMAL_USER'
               OR p.path = '/api/stockOrderItem' OR p.path LIKE '/api/stockOrderItem/%'
               OR p.path = '/api/requestForm' OR p.path LIKE '/api/requestForm/%'
               OR p.path = '/api/requestItem' OR p.path LIKE '/api/requestItem/%'
-              OR p.path = '/api/customer' OR p.path LIKE '/api/customer/%'
-              OR p.path = '/api/customerLevel' OR p.path LIKE '/api/customerLevel/%'
+              OR p.path = '/api/stock' OR p.path LIKE '/api/stock/%'
           )
       )
   );
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'隼',NULL,4,NULL,1,0,1,1,'2026-06-02 12:30:13','2026-06-02 12:30:13');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'細氷',NULL,4,NULL,1,0,1,1,'2026-06-02 12:30:54','2026-06-02 12:30:54');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'砂嵐',NULL,4,NULL,1,0,1,1,'2026-06-02 12:31:19','2026-06-02 12:31:19');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (4,'稲妻',NULL,4,NULL,1,0,1,1,'2026-06-02 12:31:29','2026-06-02 12:31:29');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'黒鷺',NULL,4,NULL,1,0,1,1,'2026-06-02 12:31:39','2026-06-02 12:31:39');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (6,'白鷺',NULL,4,NULL,1,0,1,1,'2026-06-02 12:31:51','2026-06-02 12:31:51');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (7,'雲影',NULL,4,NULL,1,0,1,1,'2026-06-02 12:32:21','2026-06-02 12:32:21');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'氷紋',NULL,4,NULL,1,0,1,1,'2026-06-02 12:32:36','2026-06-02 12:32:36');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (9,'蜃気楼',NULL,4,NULL,1,0,1,1,'2026-06-02 12:32:49','2026-06-02 12:32:49');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (10,'刀',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:01','2026-06-02 12:33:01');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (11,'木漏れ日',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:12','2026-06-02 12:33:12');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (12,'夜明け',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:23','2026-06-02 12:33:23');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (13,'銀葉',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:32','2026-06-02 12:33:32');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (14,'黒風　',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:40','2026-06-02 12:33:40');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (15,'喜び',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:48','2026-06-02 12:33:48');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (16,'中華包丁',NULL,4,NULL,1,0,1,1,'2026-06-02 12:33:59','2026-06-02 12:33:59');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (17,'黒鯨',NULL,4,NULL,1,0,1,1,'2026-06-02 12:34:08','2026-06-02 12:34:08');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (18,'銀霜',NULL,4,NULL,1,0,1,1,'2026-06-02 12:34:16','2026-06-02 12:34:16');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (19,'彩り',NULL,4,NULL,1,0,1,1,'2026-06-02 12:34:38','2026-06-02 12:34:38');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (20,'流水',NULL,4,NULL,1,0,1,1,'2026-06-02 12:34:53','2026-06-02 12:34:53');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (21,'銀河34',NULL,4,NULL,1,0,1,1,'2026-06-02 12:35:12','2026-06-02 12:35:12');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (22,'黒風',NULL,4,NULL,1,0,1,1,'2026-06-02 12:35:35','2026-06-02 12:35:35');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (23,'黒熊',NULL,4,NULL,1,0,1,1,'2026-06-02 12:35:49','2026-06-02 12:35:49');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (24,'墨',NULL,4,NULL,1,0,1,1,'2026-06-02 12:35:58','2026-06-02 12:35:58');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (25,'漆黒',NULL,4,NULL,1,0,1,1,'2026-06-02 12:36:07','2026-06-02 12:36:07');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (26,'黒橡',NULL,4,NULL,1,0,1,1,'2026-06-02 12:36:17','2026-06-02 12:36:17');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (27,'黒波',NULL,4,NULL,1,0,1,1,'2026-06-02 12:36:39','2026-06-02 12:36:39');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (28,'黒鉄',NULL,4,NULL,1,0,1,1,'2026-06-02 12:37:07','2026-06-02 12:37:07');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (29,'光',NULL,4,NULL,1,0,1,1,'2026-06-02 12:37:14','2026-06-02 12:37:14');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (30,'孔雀 ',NULL,4,NULL,1,0,1,1,'2026-06-02 12:37:24','2026-06-02 12:37:24');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (31,'青鍛',NULL,4,NULL,1,0,1,1,'2026-06-02 12:37:32','2026-06-02 12:37:32');
-INSERT INTO `t_series` (`id`, `name`, `english_name`, `brand_id`, `content`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (32,'火ノ鳥 ',NULL,4,NULL,1,0,1,1,'2026-06-02 12:37:39','2026-06-02 12:37:39');
-INSERT INTO `t_user` (`id`, `username`, `password`, `dept_id`, `salt`, `email`, `phone`, `avatar`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'admin','53ed35e1ac326eec04db3a65aa7f0276',1,'salt_admin','admin@test.com','09000000001','/avatar/upload/1_0cf14549-8988-4f0d-9132-975344b88071.png',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user` (`id`, `username`, `password`, `dept_id`, `salt`, `email`, `phone`, `avatar`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'sales01','285cb306e6caa304a5cdbf9d2f9bfacb',2,'salt_sales01','sales01@test.com','09000000002','/avatar/sales01.png',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user` (`id`, `username`, `password`, `dept_id`, `salt`, `email`, `phone`, `avatar`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'warehouse01','8750063d034114ef8d4aca57898550dd',3,'salt_wh01','warehouse01@test.com','09000000003','/avatar/warehouse01.png',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user` (`id`, `username`, `password`, `dept_id`, `salt`, `email`, `phone`, `avatar`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (4,'viewer01','4fbc57eea3b37fdc30dc096dbc483176',1,'salt_viewer','viewer01@test.com','09000000004','/avatar/viewer01.png',1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user` (`id`, `username`, `password`, `dept_id`, `salt`, `email`, `phone`, `avatar`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'sales02','256c07013bc6ec48d0d3483ad34592bf',2,'60e92491f5099c82bfe87aaf4a5247c6','sales02@handk.o','07711112222','/avatar/upload/mpq9wepm05c389.png',1,0,1,1,'2026-05-27 21:10:26','2026-05-29 10:58:38');
-INSERT INTO `t_user_role` (`id`, `user_id`, `role_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,1,1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user_role` (`id`, `user_id`, `role_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,2,2,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user_role` (`id`, `user_id`, `role_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,3,2,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user_role` (`id`, `user_id`, `role_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (4,4,2,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_user_role` (`id`, `user_id`, `role_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,5,1,0,1,1,'2026-05-27 21:10:26','2026-05-27 21:10:26');
 
 SET FOREIGN_KEY_CHECKS = 1;

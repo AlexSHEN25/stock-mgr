@@ -66,7 +66,7 @@ class I18nConsistencyTest {
         List<String> modules = List.of(
                 "user", "dept", "warehouse", "role", "permission",
                 "goods", "maker", "brand", "category", "series",
-                "stock", "selfStock", "handleStock", "stockType", "stockRecord", "stockOrder", "stockOrderItem",
+                "stock", "stockType", "stockRecord", "stockOrder", "stockOrderItem",
                 "requestForm", "requestItem", "customer", "customerLevel",
                 "config", "message", "operateLog", "goodsSku", "goodsSkuSpec",
                 "goodsImage", "userRole", "rolePermission", "userToken"

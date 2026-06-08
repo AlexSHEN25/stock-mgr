@@ -43,7 +43,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     private final UserService userService;
     private final StockTypeService stockTypeService;
     private static final DateTimeFormatter ORDER_NO_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final String DEFAULT_STOCK_TYPE_NAME = "\u901a\u5e38\u54c1";
+    private static final String DEFAULT_STOCK_TYPE_NAME = "通常品";
 
     @Override
     protected StockOrderVO toVO(StockOrder entity) {

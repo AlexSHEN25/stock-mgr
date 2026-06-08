@@ -45,9 +45,6 @@ public final class ModuleEndpointStrategy {
                 PATH_PREFIX + AppConstants.Module.STOCK + "/{id}",
                 PATH_PREFIX + AppConstants.Module.STOCK + "/batch"
         ));
-        EndpointConfig stockConfig = CONFIGS.get(AppConstants.Module.STOCK);
-        CONFIGS.put(AppConstants.Module.SELF_STOCK, stockConfig);
-        CONFIGS.put(AppConstants.Module.HANDLE_STOCK, stockConfig);
     }
 
     private static EndpointConfig defaultConfig(String moduleKey) {

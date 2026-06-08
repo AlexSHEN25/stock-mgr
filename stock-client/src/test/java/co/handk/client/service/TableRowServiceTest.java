@@ -72,17 +72,17 @@ class TableRowServiceTest {
 
     @Test
     void displayCellValueMatchesWebPageFormatting() {
-        assertEquals("\u306f\u3044", service.displayCellValue("goods", "isHot", Map.of("isHot", 1)));
-        assertEquals("\u3044\u3044\u3048", service.displayCellValue("goods", "isHot", Map.of("isHot", 0)));
+        assertEquals("はい", service.displayCellValue("goods", "isHot", Map.of("isHot", 1)));
+        assertEquals("いいえ", service.displayCellValue("goods", "isHot", Map.of("isHot", 0)));
         assertEquals("12.5", service.displayCellValue("stockRecord", "changeQty", Map.of("changeQty", -12.50)));
         assertEquals(
-                "\u7d0d\u54c1\u65e5: 2026-06-01 10:20:30",
+                "納品日: 2026-06-01 10:20:30",
                 service.displayCellValue("stockOrder", "bizDate", Map.of(
                         "bizDate", "2026-06-01T10:20:30",
                         "orderType", 1)));
-        assertEquals("\u6709\u52b9", service.displayCellValue("goods", "statusDesc", Map.of("statusDesc", "NORMAL")));
-        assertEquals("\u7121\u52b9", service.displayCellValue("goods", "statusDesc", Map.of("statusDesc", "", "status", 0)));
-        assertEquals("\u5165\u5eab", service.displayCellValue("stockOrder", "orderType", Map.of("orderType", 1)));
+        assertEquals("有効", service.displayCellValue("goods", "statusDesc", Map.of("statusDesc", "NORMAL")));
+        assertEquals("無効", service.displayCellValue("goods", "statusDesc", Map.of("statusDesc", "", "status", 0)));
+        assertEquals("入庫", service.displayCellValue("stockOrder", "orderType", Map.of("orderType", 1)));
     }
 
     @Test

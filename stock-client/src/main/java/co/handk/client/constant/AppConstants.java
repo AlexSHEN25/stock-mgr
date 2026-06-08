@@ -15,8 +15,6 @@ public final class AppConstants {
         public static final String STOCK_ORDER = "stockOrder";
         public static final String STOCK_ORDER_ITEM = "stockOrderItem";
         public static final String STOCK = "stock";
-        public static final String SELF_STOCK = "selfStock";
-        public static final String HANDLE_STOCK = "handleStock";
         public static final String REQUEST_FORM = "requestForm";
         public static final String REQUEST_ITEM = "requestItem";
 

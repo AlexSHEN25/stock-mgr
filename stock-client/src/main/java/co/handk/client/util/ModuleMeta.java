@@ -132,8 +132,6 @@ public final class ModuleMeta {
     private static final String MODULE_BRAND = "brand";
     private static final String MODULE_CATEGORY = "category";
     private static final String MODULE_STOCK = "stock";
-    private static final String MODULE_SELF_STOCK = "selfStock";
-    private static final String MODULE_HANDLE_STOCK = "handleStock";
     private static final String MODULE_STOCK_TYPE = "stockType";
     private static final String MODULE_STOCK_RECORD = "stockRecord";
     private static final String MODULE_PRICE_RECORD = "priceRecord";
@@ -147,7 +145,7 @@ public final class ModuleMeta {
     private static final String MODULE_USER_ROLE = "userRole";
     private static final String MODULE_ROLE_PERMISSION = "rolePermission";
     private static final String MODULE_USER_TOKEN = "userToken";
-    private static final String DEFAULT_FIELD_TITLE = "\u9805\u76ee";
+    private static final String DEFAULT_FIELD_TITLE = "項目";
     private static final Set<String> ALWAYS_HIDDEN_COLUMNS = Set.of("beforeqty", "afterqty");
     private static final Set<String> GOODS_HIDDEN_ID_COLUMNS = Set.of("brandid", "seriesid", "categoryid", "makerid");
     private static final Set<String> GOODS_DETAIL_ONLY_COLUMNS = Set.of("costprice", "updateprice", "priceupdatetime", "barcode", "weight", "volume", "imageurl");
@@ -184,8 +182,6 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(MODULE_CATEGORY, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(SERIES, List.of(ID, "name", "englishName", "brandId", "content", "status"));
         QUERY_FIELDS.put(MODULE_STOCK, List.of(ID, "goodsId", "goodsName", "skuCode", "skuId", "stockTypeId", "currentQty", "lockQty", "price", "priceUpdateTime", "currency", "warehouseId", "status"));
-        QUERY_FIELDS.put(MODULE_SELF_STOCK, QUERY_FIELDS.get(MODULE_STOCK));
-        QUERY_FIELDS.put(MODULE_HANDLE_STOCK, QUERY_FIELDS.get(MODULE_STOCK));
         QUERY_FIELDS.put(MODULE_STOCK_TYPE, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(STOCK_ORDER, List.of(ID, "orderNo", "orderType", "bizDate", "stockTypeId", "warehouseId", "sourceType", "sourceId", "totalQty", "state", "requesterId", "requesterName", "operatorId", "operatorName", "approverId", "approverName", "approveTime", "finishTime", "remark"));
         QUERY_FIELDS.put(STOCK_ORDER_ITEM, List.of(ID, "orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
@@ -209,8 +205,6 @@ public final class ModuleMeta {
         FORM_FIELDS.put(MODULE_DEPT, List.of("parentId", "name", "code", "leaderId", "sort", "status"));
         FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "seriesId", "categoryId", "makerId", "description", "isHot", "skuCode", "skuName", "price", "status"));
         FORM_FIELDS.put(MODULE_STOCK, List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"));
-        FORM_FIELDS.put(MODULE_SELF_STOCK, FORM_FIELDS.get(MODULE_STOCK));
-        FORM_FIELDS.put(MODULE_HANDLE_STOCK, FORM_FIELDS.get(MODULE_STOCK));
         FORM_FIELDS.put(STOCK_ORDER, List.of("orderType", "bizDate", "warehouseId", "sourceType", "stockTypeId", "state", "remark"));
         FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
@@ -229,8 +223,6 @@ public final class ModuleMeta {
         REQUIRED_FORM_FIELDS.put(MODULE_DEPT, List.of("name", "code", "status"));
         REQUIRED_FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "categoryId", "skuCode"));
         REQUIRED_FORM_FIELDS.put(MODULE_STOCK, List.of("goodsId", "skuId", "sourceType", "warehouseId", "stockTypeId", "quantity"));
-        REQUIRED_FORM_FIELDS.put(MODULE_SELF_STOCK, REQUIRED_FORM_FIELDS.get(MODULE_STOCK));
-        REQUIRED_FORM_FIELDS.put(MODULE_HANDLE_STOCK, REQUIRED_FORM_FIELDS.get(MODULE_STOCK));
         REQUIRED_FORM_FIELDS.put(STOCK_ORDER, List.of("orderType", "warehouseId"));
         REQUIRED_FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "goodsName", "changeQty"));
         REQUIRED_FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "goodsName", "changeQty", "orderType", "sourceType"));
@@ -301,42 +293,40 @@ public final class ModuleMeta {
         setType("isHot", FieldType.SELECT);
         RELATION_FIELD_MODULE.keySet().forEach(key -> setType(key, FieldType.RELATION));
 
-        putOptions("status", List.of(new Option("\u6709\u52b9", "1"), new Option("\u7121\u52b9", "0")));
-        putOptions(GOODS + ".isHot", List.of(new Option("\u306f\u3044", "1"), new Option("\u3044\u3044\u3048", "0")));
+        putOptions("status", List.of(new Option("有効", "1"), new Option("無効", "0")));
+        putOptions(GOODS + ".isHot", List.of(new Option("はい", "1"), new Option("いいえ", "0")));
         putOptions(STOCK_ORDER + ".orderType", List.of(
-                new Option("\u5165\u5eab", "1"), new Option("\u51fa\u5eab", "2"), new Option("\u8abf\u6574", "3"),
-                new Option("\u68da\u5378", "4"), new Option("\u79fb\u52d5", "5"), new Option("\u8fd4\u54c1", "6")
+                new Option("入庫", "1"), new Option("出庫", "2"), new Option("調整", "3"),
+                new Option("棚卸", "4"), new Option("移動", "5"), new Option("返品", "6")
         ));
         putOptions(STOCK_ORDER + ".sourceType", List.of(
-                new Option("\u6ce8\u6587", "1"), new Option("\u8fd4\u54c1", "2"), new Option("\u7533\u8acb\u66f8", "3"), new Option("\u624b\u52d5", "4")
+                new Option("注文", "1"), new Option("返品", "2"), new Option("申請書", "3"), new Option("手動", "4")
         ));
         putOptions(STOCK_ORDER + ".state", List.of(
-                new Option("\u8349\u7a3f", "0"), new Option("\u5be9\u67fb\u4e2d", "1"), new Option("\u5b8c\u4e86", "2"), new Option("\u53d6\u6d88", "3")
+                new Option("草稿", "0"), new Option("審査中", "1"), new Option("完了", "2"), new Option("取消", "3")
         ));
         putOptions(REQUEST_FORM + ".state", List.of(
-                new Option("\u8349\u7a3f", "0"), new Option("\u5be9\u67fb\u4e2d", "1"), new Option("\u5b8c\u4e86", "2"), new Option("\u53d6\u6d88", "3")
+                new Option("草稿", "0"), new Option("審査中", "1"), new Option("完了", "2"), new Option("取消", "3")
         ));
         putOptions(MODULE_STOCK + ".sourceType", List.of(
-                new Option("\u81ea\u793e\u5165\u5eab\uff08\u627f\u8a8d\u5fc5\u9808\uff09", "1"),
-                new Option("\u518d\u8ca9\u58f2\u5165\u5eab\uff08\u5373\u6642\u5165\u5eab\uff09", "2")
+                new Option("自社入庫（承認必須）", "1"),
+                new Option("再販売入庫（即時入庫）", "2")
         ));
-        SELECT_OPTIONS.put(MODULE_SELF_STOCK + ".sourceType", SELECT_OPTIONS.get(MODULE_STOCK + ".sourceType"));
-        SELECT_OPTIONS.put(MODULE_HANDLE_STOCK + ".sourceType", SELECT_OPTIONS.get(MODULE_STOCK + ".sourceType"));
         putOptions(MODULE_STOCK_RECORD + ".orderType", List.of(
-                new Option("\u5165\u5eab", "1"), new Option("\u51fa\u5eab", "2"), new Option("\u8abf\u6574", "3"),
-                new Option("\u68da\u5378", "4"), new Option("\u79fb\u52d5", "5"), new Option("\u8fd4\u54c1", "6")
+                new Option("入庫", "1"), new Option("出庫", "2"), new Option("調整", "3"),
+                new Option("棚卸", "4"), new Option("移動", "5"), new Option("返品", "6")
         ));
         putOptions(MODULE_STOCK_RECORD + ".sourceType", List.of(
-                new Option("\u6ce8\u6587", "1"), new Option("\u8fd4\u54c1", "2"), new Option("\u7533\u8acb\u66f8", "3"), new Option("\u624b\u52d5", "4")
+                new Option("注文", "1"), new Option("返品", "2"), new Option("申請書", "3"), new Option("手動", "4")
         ));
         putOptions(MODULE_STOCK_RECORD + ".state", List.of(
-                new Option("\u8349\u7a3f", "0"), new Option("\u5be9\u67fb\u4e2d", "1"), new Option("\u5b8c\u4e86", "2"), new Option("\u53d6\u6d88", "3")
+                new Option("草稿", "0"), new Option("審査中", "1"), new Option("完了", "2"), new Option("取消", "3")
         ));
         putOptions(MODULE_MESSAGE + ".isRead", List.of(
-                new Option("\u672a\u8aad", "0"), new Option("\u65e2\u8aad", "1")
+                new Option("未読", "0"), new Option("既読", "1")
         ));
         putOptions(MODULE_MESSAGE + ".state", List.of(
-                new Option("\u672a\u8aad", "0"), new Option("\u65e2\u8aad", "1")
+                new Option("未読", "0"), new Option("既読", "1")
         ));
 
         DEPENDENCY_RULES.put(GOODS, List.of(
@@ -349,8 +339,6 @@ public final class ModuleMeta {
                 new DependencyRule("warehouseId", "goodsId", GOODS, "warehouseId", List.of("skuId")),
                 new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())
         ));
-        DEPENDENCY_RULES.put(MODULE_SELF_STOCK, DEPENDENCY_RULES.get(MODULE_STOCK));
-        DEPENDENCY_RULES.put(MODULE_HANDLE_STOCK, DEPENDENCY_RULES.get(MODULE_STOCK));
         DEPENDENCY_RULES.put(REQUEST_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
         DEPENDENCY_RULES.put(STOCK_ORDER_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
 
@@ -407,14 +395,11 @@ public final class ModuleMeta {
                 FormValueRule.defaultIfBlank("sourceType", "4"),
                 FormValueRule.defaultIfBlank("state", "0")
         ));
-        INITIAL_RELATION_FILTERS.put(MODULE_SELF_STOCK, Map.of(
-                "warehouseId", Map.of("name", "\u81ea\u793e\u5728\u5eab")
-        ));
-        INITIAL_RELATION_FILTERS.put(MODULE_HANDLE_STOCK, Map.of(
-                "warehouseId", Map.of("name", "\u30cf\u30f3\u30c9\u30eb\u5728\u5eab")
+        INITIAL_RELATION_FILTERS.put(MODULE_STOCK, Map.of(
+                "warehouseId", Map.of("name", "自社在庫")
         ));
         INITIAL_RELATION_FILTERS.put(STOCK_ORDER, Map.of(
-                "stockTypeId", Map.of("name", "\u901a\u5e38\u54c1")
+                "stockTypeId", Map.of("name", "通常品")
         ));
     }
 
@@ -789,16 +774,16 @@ public final class ModuleMeta {
         String text = key.trim();
         String lower = text.toLowerCase(Locale.ROOT);
         if ("id".equals(lower)) return "ID";
-        if ("createtime".equals(lower)) return "\u4f5c\u6210\u65e5\u6642";
-        if ("updatetime".equals(lower)) return "\u66f4\u65b0\u65e5\u6642";
-        if ("statusdesc".equals(lower) || "status".equals(lower)) return "\u72b6\u614b";
-        if (text.endsWith("Names")) return readable(text.substring(0, text.length() - 5)) + "\u540d";
-        if (text.endsWith("Name")) return readable(text.substring(0, text.length() - 4)) + "\u540d";
-        if (text.endsWith("Ids")) return readable(text.substring(0, text.length() - 3)) + "ID\u4e00\u89a7";
+        if ("createtime".equals(lower)) return "作成日時";
+        if ("updatetime".equals(lower)) return "更新日時";
+        if ("statusdesc".equals(lower) || "status".equals(lower)) return "状態";
+        if (text.endsWith("Names")) return readable(text.substring(0, text.length() - 5)) + "名";
+        if (text.endsWith("Name")) return readable(text.substring(0, text.length() - 4)) + "名";
+        if (text.endsWith("Ids")) return readable(text.substring(0, text.length() - 3)) + "ID一覧";
         if (text.endsWith("Id")) return readable(text.substring(0, text.length() - 2)) + "ID";
-        if (text.endsWith("Code")) return readable(text.substring(0, text.length() - 4)) + "\u30b3\u30fc\u30c9";
+        if (text.endsWith("Code")) return readable(text.substring(0, text.length() - 4)) + "コード";
         if (text.endsWith("Time") || text.endsWith("Date")) {
-            return readable(text.replaceAll("(Time|Date)$", "")) + "\u65e5\u6642";
+            return readable(text.replaceAll("(Time|Date)$", "")) + "日時";
         }
         return readable(text);
     }

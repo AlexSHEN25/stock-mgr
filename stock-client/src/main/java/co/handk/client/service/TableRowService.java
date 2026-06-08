@@ -113,7 +113,7 @@ public class TableRowService {
             return normalizeStatusDescription(value, row.get(Field.STATUS));
         }
         if ("isHot".equalsIgnoreCase(key)) {
-            return "1".equals(String.valueOf(value)) ? "\u306f\u3044" : "\u3044\u3044\u3048";
+            return "1".equals(String.valueOf(value)) ? "はい" : "いいえ";
         }
         if ("changeQty".equalsIgnoreCase(key)) {
             return formatAbsoluteNumber(value);
@@ -209,15 +209,15 @@ public class TableRowService {
     private String normalizeStatusDescription(Object value, Object status) {
         String text = value == null ? "" : String.valueOf(value).trim();
         if ("NORMAL".equalsIgnoreCase(text) || "ON".equalsIgnoreCase(text)) {
-            return "\u6709\u52b9";
+            return "有効";
         }
         if ("OFF".equalsIgnoreCase(text)) {
-            return "\u7121\u52b9";
+            return "無効";
         }
         if (!text.isEmpty()) {
             return text;
         }
-        return "1".equals(String.valueOf(status)) ? "\u6709\u52b9" : "\u7121\u52b9";
+        return "1".equals(String.valueOf(status)) ? "有効" : "無効";
     }
 
     private String formatAbsoluteNumber(Object value) {
@@ -238,10 +238,10 @@ public class TableRowService {
             return formatted;
         }
         if ("1".equals(String.valueOf(orderType))) {
-            return "\u7d0d\u54c1\u65e5: " + formatted;
+            return "納品日: " + formatted;
         }
         if ("2".equals(String.valueOf(orderType))) {
-            return "\u51fa\u8377\u65e5: " + formatted;
+            return "出荷日: " + formatted;
         }
         return formatted;
     }
