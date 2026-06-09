@@ -107,7 +107,16 @@
         gs.price,
         gs.currency,
         COALESCE(stock_summary.current_qty, 0) AS current_qty,
-        CASE WHEN COALESCE(stock_summary.current_qty, 0) > 0 THEN TRUE ELSE FALSE END AS inbound_done,
+        CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM t_stock st
+                WHERE st.deleted = 0
+                  AND st.goods_id = g.id
+                  AND st.sku_id = gs.id
+            ) THEN TRUE
+            ELSE FALSE
+        END AS inbound_done,
         COALESCE(stock_summary.current_qty, 0) AS outbound_max_qty
         <include refid="fromAndWhere"/>
         ORDER BY g.update_time DESC, gs.update_time DESC
