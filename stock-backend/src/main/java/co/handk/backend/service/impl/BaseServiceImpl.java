@@ -52,7 +52,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
      */
     @Override
     public T getByIdNotDeleted(Serializable id) {
-        return getOne(new QueryWrapper<T>().eq(FieldNameConstant.COLUMN_ID, id).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()));
+        return getOne(new QueryWrapper<T>().eq(FieldNameConstant.COLUMN_ID, id));
     }
 
     @Override
@@ -167,7 +167,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             throw new co.handk.backend.exception.BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "IDは必須です");
         }
         UpdateWrapper<T> wrapper = new UpdateWrapper<>();
-        wrapper.eq(FieldNameConstant.COLUMN_ID, entity.getId()).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
+        wrapper.eq(FieldNameConstant.COLUMN_ID, entity.getId());
         boolean versioned = hasVersionField(entity.getClass());
         Long oldVersion = null;
         if (versioned) {
@@ -206,7 +206,6 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     public int deleteByIdLogic(Long id) {
         UpdateWrapper<T> wrapper = new UpdateWrapper<T>()
                 .eq(FieldNameConstant.COLUMN_ID, id)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                 .set(FieldNameConstant.COLUMN_DELETED, DeleteEnum.DELETED.getCode());
         if (hasVersionField(resolveEntityClass())) {
             T existed = getByIdNotDeleted(id);
@@ -245,13 +244,12 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         }
 
         return baseMapper.update(null, new UpdateWrapper<T>().in(FieldNameConstant.COLUMN_ID, ids)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                 .set(FieldNameConstant.COLUMN_DELETED, DeleteEnum.DELETED.getCode()));
     }
 
     @Override
     public boolean existsById(Long id) {
-        return count(new QueryWrapper<T>().eq(FieldNameConstant.COLUMN_ID, id).eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())) > NumberConstant.ZERO;
+        return count(new QueryWrapper<T>().eq(FieldNameConstant.COLUMN_ID, id)) > NumberConstant.ZERO;
     }
 
     /**
@@ -260,7 +258,6 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
     protected <Q> QueryWrapper<T> buildWrapper(Q dto) {
         QueryWrapper<T> wrapper = new QueryWrapper<>();
         // internal helper
-        wrapper.eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode());
         if (dto == null) return wrapper;
         for (Field field : dto.getClass().getDeclaredFields()) {
             field.setAccessible(true);
