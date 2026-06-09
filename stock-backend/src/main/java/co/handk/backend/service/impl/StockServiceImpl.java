@@ -17,7 +17,6 @@ import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
-import co.handk.common.model.vo.GroupStockVO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -31,8 +30,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockVO> implements StockService {
@@ -192,6 +191,24 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     @Override
+    public <Q extends co.handk.common.model.PageQuery> PageResult<StockVO> page(Q dto) {
+        if (!(dto instanceof StockQueryDTO query)) {
+            return super.page(dto);
+        }
+        String scope = query.getStockScope() == null ? null : query.getStockScope().trim().toLowerCase();
+        if ("self".equals(scope)) {
+            query.setWarehouseId(requireWarehouseByCode("SELF").getId());
+            return super.page(query);
+        }
+        if ("group".equals(scope)) {
+            Dept dept = resolveGroupDeptForScope(query.getGroupCode());
+            QueryWrapper<Stock> wrapper = buildGroupStockPageWrapper(query, dept);
+            return pageStockWithWrapper(query, wrapper);
+        }
+        return super.page(query);
+    }
+
+    @Override
     public Integer getMyGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
         Dept dept = resolveAccessibleGroupDept(null);
         return stockBatchService.getGroupAvailableQty(
@@ -201,6 +218,75 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private Long currentDeptId() {
         User user = userService.getByIdNotDeleted(UserContext.getUserIdOrDefault());
         return user == null ? null : user.getDeptId();
+    }
+
+    private Dept resolveGroupDeptForScope(String groupCode) {
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
+        if (groupCode != null && !groupCode.isBlank()) {
+            Dept requested = deptService.getOne(new QueryWrapper<Dept>()
+                    .eq("code", groupCode.trim())
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (requested == null) {
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "department is not configured: " + groupCode);
+            }
+            if (!admin) {
+                Long userDeptId = currentDeptId();
+                if (userDeptId == null || !userDeptId.equals(requested.getId())) {
+                    throw new co.handk.backend.exception.BusinessException(
+                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                            "users can only view stock for their own department");
+                }
+            }
+            return requested;
+        }
+        return resolveAccessibleGroupDept(null);
+    }
+
+    private QueryWrapper<Stock> buildGroupStockPageWrapper(StockQueryDTO query, Dept dept) {
+        QueryWrapper<Stock> wrapper = buildWrapper(query)
+                .inSql("id", "SELECT stock_id FROM t_group_stock"
+                        + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
+                        + " AND dept_id = " + dept.getId())
+                .orderByDesc("update_time");
+        return wrapper;
+    }
+
+    private PageResult<StockVO> pageStockWithWrapper(StockQueryDTO query, QueryWrapper<Stock> wrapper) {
+        Page<Stock> page = new Page<>(query.getPageNum(), query.getPageSize());
+        Page<Stock> result = this.page(page, wrapper);
+        List<StockVO> records = result.getRecords().stream()
+                .map(this::toVO)
+                .peek(this::fillStatusDesc)
+                .toList();
+        fillStockJoins(records);
+        return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), records);
+    }
+
+    private void fillStockJoins(List<StockVO> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        for (StockVO vo : records) {
+            if (vo == null) {
+                continue;
+            }
+            if (vo.getGoodsId() != null) {
+                Goods goods = goodsService.getByIdNotDeleted(Long.valueOf(vo.getGoodsId()));
+                vo.setGoodsName(goods == null ? null : goods.getName());
+            }
+            if (vo.getWarehouseId() != null) {
+                Warehouse warehouse = warehouseService.getByIdNotDeleted(Long.valueOf(vo.getWarehouseId()));
+                vo.setWarehouseName(warehouse == null ? null : warehouse.getName());
+            }
+            if (vo.getStockTypeId() != null) {
+                StockType stockType = stockTypeService.getByIdNotDeleted(vo.getStockTypeId());
+                vo.setStockTypeName(stockType == null ? null : stockType.getName());
+            }
+        }
     }
 
     private void prepareOutboundAccess(StockOperateDTO dto) {

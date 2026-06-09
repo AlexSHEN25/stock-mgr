@@ -181,7 +181,7 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(MODULE_BRAND, List.of(ID, "name", "englishName", "image", "content", "status"));
         QUERY_FIELDS.put(MODULE_CATEGORY, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(SERIES, List.of(ID, "name", "englishName", "brandId", "content", "status"));
-        QUERY_FIELDS.put(MODULE_STOCK, List.of(ID, "goodsId", "goodsName", "skuCode", "skuId", "stockTypeId", "currentQty", "lockQty", "price", "priceUpdateTime", "currency", "warehouseId", "status"));
+        QUERY_FIELDS.put(MODULE_STOCK, List.of(ID, "goodsId", "goodsName", "skuCode", "skuId", "stockTypeId", "currentQty", "lockQty", "price", "priceUpdateTime", "currency", "warehouseId", "stockScope", "groupCode", "status"));
         QUERY_FIELDS.put(MODULE_STOCK_TYPE, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(STOCK_ORDER, List.of(ID, "orderNo", "orderType", "bizDate", "stockTypeId", "warehouseId", "sourceType", "sourceId", "totalQty", "state", "requesterId", "requesterName", "operatorId", "operatorName", "approverId", "approverName", "approveTime", "finishTime", "remark"));
         QUERY_FIELDS.put(STOCK_ORDER_ITEM, List.of(ID, "orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
@@ -311,6 +311,11 @@ public final class ModuleMeta {
         putOptions(MODULE_STOCK + ".sourceType", List.of(
                 new Option("自社入庫（承認必須）", "1"),
                 new Option("再販売入庫（即時入庫）", "2")
+        ));
+        putOptions(MODULE_STOCK + ".stockScope", List.of(
+                new Option("全部", "all"),
+                new Option("自社在庫", "self"),
+                new Option("组别在库", "group")
         ));
         putOptions(MODULE_STOCK_RECORD + ".orderType", List.of(
                 new Option("入庫", "1"), new Option("出庫", "2"), new Option("調整", "3"),

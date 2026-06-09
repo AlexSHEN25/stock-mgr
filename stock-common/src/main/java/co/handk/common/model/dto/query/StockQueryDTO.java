@@ -21,6 +21,8 @@ public class StockQueryDTO extends PageQuery {
     private LocalDateTime priceUpdateTime;
     private String currency;
     private Long warehouseId;
+    private String stockScope;
+    private String groupCode;
     private StatusEnum status;
 }
 
