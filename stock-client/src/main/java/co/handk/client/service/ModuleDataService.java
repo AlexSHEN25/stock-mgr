@@ -1,6 +1,7 @@
 package co.handk.client.service;
 
 import co.handk.client.constant.UiText;
+import co.handk.client.constant.AppConstants.ApiPath;
 import co.handk.client.constant.ModuleEndpointStrategy;
 import co.handk.client.util.ApiClient;
 import org.json.JSONArray;
@@ -44,6 +45,14 @@ public class ModuleDataService {
             res = ApiClient.post(ModuleEndpointStrategy.createPath(module), dto.toString());
         }
         return new JSONObject(res);
+    }
+
+    public JSONObject inboundStock(JSONObject dto) throws Exception {
+        return new JSONObject(ApiClient.post(ApiPath.STOCK_INBOUND, dto.toString()));
+    }
+
+    public JSONObject outboundStock(JSONObject dto) throws Exception {
+        return new JSONObject(ApiClient.post(ApiPath.STOCK_OUTBOUND, dto.toString()));
     }
 
     public JSONObject delete(String module, String id) throws Exception {

@@ -85,7 +85,7 @@ class WebPageAlignmentTest {
     @Test
     void stockFormsUseUnifiedModuleMetadata() {
         assertEquals(
-                List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"),
+                List.of("warehouseId", "goodsId", "skuId", "sourceType", "outboundMode", "stockTypeId", "quantity", "remark"),
                 ModuleMeta.formFields("stock"));
         assertEquals(Map.of("name", "\u81ea\u793e\u5728\u5eab"),
                 ModuleMeta.initialRelationFilters("stock", "warehouseId"));

@@ -152,7 +152,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             if (superAdmin) {
                 codes.add(SecurityConstant.ROLE_SUPER_ADMIN);
                 codes.add(SecurityConstant.DATA_ALL_WRITE);
-            } else {
+            } else if (codes.isEmpty()) {
                 codes = getNormalUserPermissionCodes();
             }
             return codes;
@@ -468,5 +468,4 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .collect(Collectors.toCollection(HashSet::new));
     }
 }
-
 

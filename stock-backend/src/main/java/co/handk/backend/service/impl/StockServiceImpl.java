@@ -367,7 +367,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (dept == null || dept.getCode() == null || !isConfiguredGroupCode(dept.getCode())) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "department is not configured as stock group");
+                    "department is not configured as stock group: " + (dept == null ? "null" : dept.getCode()));
         }
         return dept;
     }
@@ -379,8 +379,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .last("LIMIT 1"));
         String value = config == null || config.getValue() == null || config.getValue().isBlank()
                 ? "A,B,C" : config.getValue();
-        for (String code : value.split("[,，\\n\\r]+")) {
-            if (deptCode.equalsIgnoreCase(code.trim())) {
+        for (String code : value.split("[,，\\s\\n\\r]+")) {
+            if (deptCode != null && deptCode.trim().equalsIgnoreCase(code.trim())) {
                 return true;
             }
         }

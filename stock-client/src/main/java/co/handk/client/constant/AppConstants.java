@@ -62,6 +62,7 @@ public final class AppConstants {
         public static final String MESSAGE_READ_PREFIX = "/message/read/";
         public static final String MESSAGE_READ_ALL = "/message/read-all";
         public static final String STOCK_INBOUND = "/stock/inbound";
+        public static final String STOCK_OUTBOUND = "/stock/outbound";
 
         private ApiPath() {
         }

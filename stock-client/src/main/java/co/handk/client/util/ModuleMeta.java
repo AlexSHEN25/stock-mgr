@@ -204,7 +204,7 @@ public final class ModuleMeta {
         FORM_FIELDS.put(USER, List.of("username", "password", "deptId", "roleId", "email", "phone", "avatar", "status"));
         FORM_FIELDS.put(MODULE_DEPT, List.of("parentId", "name", "code", "leaderId", "sort", "status"));
         FORM_FIELDS.put(GOODS, List.of("name", "englishName", "brandId", "seriesId", "categoryId", "makerId", "description", "isHot", "skuCode", "skuName", "price", "status"));
-        FORM_FIELDS.put(MODULE_STOCK, List.of("warehouseId", "goodsId", "skuId", "sourceType", "stockTypeId", "quantity", "remark"));
+        FORM_FIELDS.put(MODULE_STOCK, List.of("warehouseId", "goodsId", "skuId", "sourceType", "outboundMode", "stockTypeId", "quantity", "remark"));
         FORM_FIELDS.put(STOCK_ORDER, List.of("orderType", "bizDate", "warehouseId", "sourceType", "stockTypeId", "state", "remark"));
         FORM_FIELDS.put(STOCK_ORDER_ITEM, List.of("orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         FORM_FIELDS.put(MODULE_STOCK_RECORD, List.of("bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
@@ -806,3 +806,4 @@ public final class ModuleMeta {
         return Character.toUpperCase(text.charAt(0)) + text.substring(1);
     }
 }
+

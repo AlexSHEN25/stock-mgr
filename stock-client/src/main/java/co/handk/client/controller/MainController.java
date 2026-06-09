@@ -75,6 +75,8 @@ public class MainController {
     @FXML private Label pageInfoLabel;
     @FXML private Label messageLabel;
     @FXML private TextField deleteIdField;
+    @FXML private Button stockInboundButton;
+    @FXML private Button stockOutboundButton;
     @FXML private Button addButton;
     @FXML private Button readAllButton;
     @FXML private Button inlineEditButton;
@@ -102,6 +104,7 @@ public class MainController {
     private final Map<String, Integer> pageNumByModule = new HashMap<>();
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
+    private String pendingStockOperation;
 
     public void setApp(MainApp app) {
         this.app = app;
@@ -162,7 +165,26 @@ public class MainController {
             messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
         }
+        pendingStockOperation = null;
         openFormDialog(UiText.ACTION_CREATE, false);
+    }
+
+    @FXML
+    private void onStockInbound() {
+        if (!Module.STOCK.equals(currentModule)) {
+            return;
+        }
+        pendingStockOperation = "inbound";
+        openFormDialog(UiText.byKey("main.btn.stockInbound"), false);
+    }
+
+    @FXML
+    private void onStockOutbound() {
+        if (!Module.STOCK.equals(currentModule)) {
+            return;
+        }
+        pendingStockOperation = "outbound";
+        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false);
     }
 
     @FXML
@@ -414,8 +436,15 @@ public class MainController {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
         boolean canWrite = ModuleMeta.canWriteByPermission(currentModule);
         boolean messageModule = Module.MESSAGE.equals(currentModule);
+        boolean stockModule = Module.STOCK.equals(currentModule);
         updateStockSubNav();
         addButton.setDisable(!policy.canCreate || !canWrite);
+        stockInboundButton.setVisible(stockModule);
+        stockInboundButton.setManaged(stockModule);
+        stockOutboundButton.setVisible(stockModule);
+        stockOutboundButton.setManaged(stockModule);
+        stockInboundButton.setDisable(!stockModule || !canWrite);
+        stockOutboundButton.setDisable(!stockModule || !canWrite);
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
         readAllButton.setDisable(!messageModule || !canWrite);
@@ -581,7 +610,14 @@ public class MainController {
     private void submitForm(boolean editMode, JSONObject dto) {
         try {
             dto = ModuleMeta.applyFormValueRules(currentModule, dto);
-            JSONObject json = dataService.save(currentModule, editMode, dto);
+            JSONObject json;
+            if (Module.STOCK.equals(currentModule) && "outbound".equals(pendingStockOperation)) {
+                json = dataService.outboundStock(dto);
+            } else if (Module.STOCK.equals(currentModule) && "inbound".equals(pendingStockOperation)) {
+                json = dataService.inboundStock(dto);
+            } else {
+                json = dataService.save(currentModule, editMode, dto);
+            }
             if (uiFeedback.isSuccess(json)) {
                 messageLabel.setText(uiFeedback.saveSuccess(editMode));
                 loadData();
@@ -590,6 +626,8 @@ public class MainController {
             }
         } catch (Exception ex) {
             messageLabel.setText(uiFeedback.saveFailed(ex));
+        } finally {
+            pendingStockOperation = null;
         }
     }
 

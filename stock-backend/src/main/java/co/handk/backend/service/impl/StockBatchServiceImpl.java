@@ -261,8 +261,9 @@ public class StockBatchServiceImpl implements StockBatchService {
 
     private Dept requireGroupDept(Long deptId) {
         Dept dept = deptId == null ? null : deptService.getByIdNotDeleted(deptId);
-        if (dept == null || !allowedGroupCodes().contains(dept.getCode().toUpperCase())) {
-            throw new IllegalArgumentException("department is not configured as stock group");
+        if (dept == null || dept.getCode() == null || !allowedGroupCodes().contains(dept.getCode().trim().toUpperCase())) {
+            throw new IllegalArgumentException("department is not configured as stock group: "
+                    + (dept == null ? "null" : dept.getCode()));
         }
         return dept;
     }
@@ -273,7 +274,7 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         String value = config == null ? "A,B,C" : config.getValue();
-        return Arrays.stream(value.split(","))
+        return Arrays.stream(value.split("[,，\\s\\r\\n]+"))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .map(String::toUpperCase)
