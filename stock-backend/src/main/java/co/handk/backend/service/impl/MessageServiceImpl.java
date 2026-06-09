@@ -120,7 +120,6 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
     @Override
     protected <Q> QueryWrapper<Message> buildWrapper(Q dto) {
         QueryWrapper<Message> wrapper = new QueryWrapper<>();
-        wrapper.eq("deleted", DeleteEnum.UNDELETED.getCode());
         if (!(dto instanceof MessageQueryDTO query)) {
             return wrapper;
         }
@@ -195,8 +194,7 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
     public long countByReadStatus(Integer isRead) {
         Long userId = UserContext.getUserIdOrDefault();
         LambdaQueryWrapper<Message> wrapper = new LambdaQueryWrapper<Message>()
-                .eq(Message::getUserId, userId)
-                .eq(Message::getDeleted, DeleteEnum.UNDELETED.getCode());
+                .eq(Message::getUserId, userId);
         if (isRead != null) {
             wrapper.eq(Message::getIsRead, isRead);
         }

@@ -1036,7 +1036,20 @@ VALUES ('request.form.template.default', 'request', 'Default request template', 
         'Comma separated keywords used to identify handle categories for request item matching',
          'string', 'ハンドル,柄', NULL, 1, 1),
        ('stock.group.codes', 'stock', 'Stock group codes',
-        'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1);
+        'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1),
+       ('perm.group.menu.json', 'permission', 'Group menu scope json',
+        'Menu codes visible to each group department code', 'json',
+        '{"A":["selfStock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["selfStock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["selfStock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',
+        NULL, 1, 1);
+
+INSERT INTO `t_config` (`name`, `group`, `title`, `tip`, `type`, `value`, `content`, `created_by`, `updated_by`)
+VALUES('stock.group.codes', 'stock', 'Stock group codes',
+       'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1),
+      ('perm.group.menu.json', 'permission', 'Group menu scope json',
+       'Menu codes visible to each group department code', 'json',
+       '{"A":["selfStock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["selfStock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["selfStock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',
+       NULL, 1, 1);
+
 
 DROP TABLE IF EXISTS `t_operate_log`;
 create TABLE `t_operate_log`
@@ -1067,5 +1080,4 @@ create TABLE `t_operate_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='操作日志表';
-
 

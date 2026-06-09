@@ -41,6 +41,8 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         extends ServiceImpl<M, T>
         implements BaseService<T, V>, ApplicationContextAware {
 
+    private static final Set<String> SKIP_DEFAULT_QUERY_FIELDS = Set.of("stockScope", "groupCode");
+
     private ApplicationContext applicationContext;
     @Autowired(required = false)
     private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
@@ -261,6 +263,9 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         if (dto == null) return wrapper;
         for (Field field : dto.getClass().getDeclaredFields()) {
             field.setAccessible(true);
+            if (SKIP_DEFAULT_QUERY_FIELDS.contains(field.getName())) {
+                continue;
+            }
             QueryField queryField = field.getAnnotation(QueryField.class);
             try {
                 Object value = field.get(dto);

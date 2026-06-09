@@ -66,7 +66,7 @@ INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, 
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'request.form.template.B','request','Request template B','Template used by department code B','file','template/request_form_template_B.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (6,'request.form.template.C','request','Request template C','Template used by department code C','file','template/request_form_template_C.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (7,'stock.group.codes','stock','Stock group codes','Department codes allowed to own group stock','string','A,B,C',NULL,0,1,1,NOW(),NOW());
-INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.json','permission','Group menu scope json','Menu codes visible to each group department code','json','{"A":["stock","requestForm"],"B":["stock"],"C":["stock"]}',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.json','permission','Group menu scope json','Menu codes visible to each group department code','json','{"A":["selfStock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["selfStock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["selfStock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'三悦',1,0,1,1,'2026-06-02 12:40:01','2026-06-02 12:40:01');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'二唐',1,0,1,1,'2026-06-02 12:40:12','2026-06-02 12:40:12');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'アシタ　二唐',1,0,1,1,'2026-06-02 12:40:18','2026-06-02 12:40:18');
@@ -349,4 +349,3 @@ VALUES
 
 INSERT INTO `t_role_permission` ( `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
 values ( 1, 1, 0, 1, 1, NOW(), NOW());
-
