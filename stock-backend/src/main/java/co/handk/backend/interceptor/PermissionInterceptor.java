@@ -42,6 +42,9 @@ public class PermissionInterceptor implements HandlerInterceptor {
         }
 
         String uri = normalizePath(request.getRequestURI());
+        if (isAllowedSelfContextRead(uri, request.getMethod())) {
+            return true;
+        }
         if (isNonAdminWriteAllowedByWhitelist(uri, request.getMethod())) {
             return true;
         }
@@ -136,6 +139,22 @@ public class PermissionInterceptor implements HandlerInterceptor {
         return "/user/logout".equals(path)
                 || "/user/refresh-token".equals(path)
                 || path.matches("/user/\\d+/password");
+    }
+
+    private boolean isAllowedSelfContextRead(String uri, String method) {
+        if (!HttpMethod.GET.matches(method == null ? EMPTY : method.toUpperCase(Locale.ROOT))) {
+            return false;
+        }
+        if (uri == null) {
+            return false;
+        }
+        String path = uri.startsWith(SecurityConstant.API_PREFIX)
+                ? uri.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX)
+                : uri;
+        return "/user/permission-scope".equals(path)
+                || "/user/permissions".equals(path)
+                || "/user/profile".equals(path)
+                || "/user/me".equals(path);
     }
 
     private String normalizePath(String path) {

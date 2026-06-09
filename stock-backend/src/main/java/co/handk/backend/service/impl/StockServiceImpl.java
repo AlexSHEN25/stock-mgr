@@ -74,6 +74,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Autowired
     private WarehouseService warehouseService;
     @Autowired
+    private RequestFormService requestFormService;
+    @Autowired
     private StringRedisUtil stringRedisUtil;
 
     @Override
@@ -536,6 +538,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (!stockOrderService.updateById(order)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "伝票更新に失敗しました");
+        }
+        if (Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
+            requestFormService.createFromOutbound(order,
+                    items.stream().map(StockOrderItem::getId).toList(),
+                    approveRemark);
         }
         return true;
     }

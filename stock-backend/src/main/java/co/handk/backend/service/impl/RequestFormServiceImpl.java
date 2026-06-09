@@ -448,6 +448,115 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public Long createFromOutbound(StockOrder outboundOrder, List<Long> stockOrderItemIds, String remark) {
+        if (outboundOrder == null) {
+            throw fail("source outbound order not found");
+        }
+        if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(outboundOrder.getOrderType())) {
+            throw fail("source outbound order not found");
+        }
+        if (!Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(outboundOrder.getState())) {
+            throw fail("source outbound order is not finished");
+        }
+
+        Long ownerUserId = outboundOrder.getRequesterId() == null ? outboundOrder.getOperatorId() : outboundOrder.getRequesterId();
+        User user = ownerUserId == null ? null : userService.getByIdNotDeleted(ownerUserId);
+        Dept dept = user != null && user.getDeptId() != null ? deptService.getByIdNotDeleted(user.getDeptId()) : null;
+
+        List<StockOrderItem> allItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
+                .eq("order_id", outboundOrder.getId())
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        if (allItems.isEmpty()) {
+            throw fail("source outbound order has no items");
+        }
+
+        List<StockOrderItem> selectedItems = filterItems(allItems, stockOrderItemIds);
+        if (selectedItems.isEmpty()) {
+            throw fail("no source outbound items selected");
+        }
+
+        RequestForm form = this.getOne(new QueryWrapper<RequestForm>()
+                .eq("source_order_id", outboundOrder.getId())
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (form == null) {
+            form = new RequestForm();
+            form.setBizNo(generateRequestNo());
+            form.setUserId(ownerUserId);
+            form.setUsername(user == null ? outboundOrder.getRequesterName() : user.getUsername());
+            form.setDeptId(user == null ? null : user.getDeptId());
+            form.setDeptName(dept == null ? null : dept.getName());
+            form.setWarehouseId(outboundOrder.getWarehouseId());
+            form.setSourceOrderId(outboundOrder.getId());
+            form.setState(StockBizConstant.REQUEST_STATE_CREATED);
+            form.setApproveRemark(remark);
+            form.setTotalQty(0);
+            form.setRequestQty(0);
+            form.setTotalAmt(BigDecimal.ZERO);
+            if (!this.save(form)) {
+                throw fail("failed to save request form");
+            }
+        }
+
+        int totalQty = form.getTotalQty() == null ? 0 : form.getTotalQty();
+        BigDecimal totalAmt = form.getTotalAmt() == null ? BigDecimal.ZERO : form.getTotalAmt();
+        for (StockOrderItem orderItem : selectedItems) {
+            StockRecord stockRecord = stockRecordService.getOne(new QueryWrapper<StockRecord>()
+                    .eq("order_id", outboundOrder.getId())
+                    .eq("order_item_id", orderItem.getId())
+                    .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (stockRecord == null) {
+                throw fail("source outbound stock record not found");
+            }
+            int requestQty = stockRecord.getChangeQty() == null ? 0 : Math.abs(stockRecord.getChangeQty());
+            RequestItem existing = requestItemService.getOne(new QueryWrapper<RequestItem>()
+                    .eq("request_id", form.getId())
+                    .eq("stock_record_id", stockRecord.getId())
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (existing == null) {
+                RequestItem requestItem = buildRequestItemFromStockRecord(form, stockRecord, remark);
+                requestItem.setRequestQty(requestQty);
+                requestItem.setOutQty(requestQty);
+                requestItem.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestQty)));
+                applyOutboundRemainderDelta(stockRecord, requestQty);
+                if (!requestItemService.save(requestItem)) {
+                    throw fail("failed to save request item");
+                }
+            } else {
+                existing.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
+                existing.setRequestQty(requestQty);
+                existing.setOutQty(requestQty);
+                existing.setPrice(stockRecord.getPrice());
+                existing.setCurrency(stockRecord.getCurrency());
+                existing.setTotalAmt(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestQty)));
+                existing.setStockRecordId(stockRecord.getId());
+                if (remark != null && !remark.isBlank()) {
+                    existing.setRemark(remark);
+                }
+                if (!requestItemService.updateById(existing)) {
+                    throw fail("failed to update request item");
+                }
+            }
+            totalQty += requestQty;
+            totalAmt = totalAmt.add(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestQty)));
+        }
+
+        form.setTotalQty(totalQty);
+        form.setRequestQty(totalQty);
+        form.setTotalAmt(totalAmt);
+        form.setApproveRemark(remark);
+        if (!this.updateById(form)) {
+            throw fail("failed to update request form");
+        }
+        validateSourceBalance(form);
+        return form.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long reapplyInbound(Long requestId) {
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null) {

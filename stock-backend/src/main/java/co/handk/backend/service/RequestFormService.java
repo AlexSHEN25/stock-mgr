@@ -1,6 +1,7 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.RequestForm;
+import co.handk.backend.entity.StockOrder;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
@@ -15,6 +16,8 @@ import org.springframework.validation.annotation.Validated;
 public interface RequestFormService extends BaseService<RequestForm, RequestFormVO> {
 
     Long createFromOutbound(CreateRequestFromOutboundDTO dto);
+
+    Long createFromOutbound(StockOrder outboundOrder, java.util.List<Long> stockOrderItemIds, String remark);
 
     Long saveWithItems(RequestFormWithItemsDTO dto);
 
