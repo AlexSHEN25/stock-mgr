@@ -17,6 +17,7 @@ import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
+import co.handk.common.model.vo.GroupStockVO;
 import co.handk.common.model.vo.StockVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -197,28 +198,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 dept.getId(), goodsId, skuId, warehouseId, stockTypeId);
     }
 
-    @Override
-    public PageResult<StockVO> pageSelfStock(StockQueryDTO query) {
-        query.setWarehouseId(requireWarehouseByCode("SELF").getId());
-        return page(query);
-    }
-
-    @Override
-    public PageResult<StockVO> pageGroupStock(StockQueryDTO query, Long deptId) {
-        Dept dept = resolveAccessibleGroupDept(deptId);
-        Page<Stock> page = new Page<>(query.getPageNum(), query.getPageSize());
-        QueryWrapper<Stock> wrapper = buildWrapper(query)
-                .inSql("id", "SELECT stock_id FROM t_group_stock"
-                        + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
-                        + " AND dept_id = " + dept.getId())
-                .orderByDesc("update_time");
-        Page<Stock> result = this.page(page, wrapper);
-        List<StockVO> records = result.getRecords().stream()
-                .map(stock -> toGroupStockVO(stock, dept))
-                .toList();
-        return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), records);
-    }
-
     private Long currentDeptId() {
         User user = userService.getByIdNotDeleted(UserContext.getUserIdOrDefault());
         return user == null ? null : user.getDeptId();
@@ -320,18 +299,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
         }
         return false;
-    }
-
-    private StockVO toGroupStockVO(Stock stock, Dept dept) {
-        StockVO vo = toVO(stock);
-        int quantity = stockBatchService.getGroupAvailableQty(
-                dept.getId(), Long.valueOf(stock.getGoodsId()), stock.getSkuId(),
-                Long.valueOf(stock.getWarehouseId()), stock.getStockTypeId());
-        vo.setCurrentQty(quantity);
-        vo.setGroupAQty("A".equalsIgnoreCase(dept.getCode()) ? quantity : 0);
-        vo.setGroupBQty("B".equalsIgnoreCase(dept.getCode()) ? quantity : 0);
-        vo.setGroupCQty("C".equalsIgnoreCase(dept.getCode()) ? quantity : 0);
-        return vo;
     }
 
     @Override

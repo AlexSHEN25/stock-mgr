@@ -3,13 +3,19 @@ package co.handk.backend.service.impl;
 import co.handk.backend.entity.Goods;
 import co.handk.backend.entity.GoodsImage;
 import co.handk.backend.entity.GoodsSku;
+import co.handk.backend.entity.BrandMakerRelation;
+import co.handk.backend.entity.SeriesBrandRelation;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.GoodsMapper;
+import co.handk.backend.mapper.BrandMakerRelationMapper;
+import co.handk.backend.mapper.SeriesBrandRelationMapper;
 import co.handk.backend.constant.UploadBizType;
 import co.handk.backend.service.FileStorageService;
+import co.handk.backend.service.BrandMakerRelationService;
 import co.handk.backend.service.GoodsImageService;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
+import co.handk.backend.service.SeriesBrandRelationService;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.enums.DeleteEnum;
@@ -41,6 +47,10 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private final GoodsSkuService goodsSkuService;
     private final GoodsImageService goodsImageService;
     private final FileStorageService fileStorageService;
+    private final BrandMakerRelationService brandMakerRelationService;
+    private final SeriesBrandRelationService seriesBrandRelationService;
+    private final BrandMakerRelationMapper brandMakerRelationMapper;
+    private final SeriesBrandRelationMapper seriesBrandRelationMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,6 +69,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!goodsSaved) {
             return false;
         }
+        syncCascadingRelations(goods.getBrandId(), goods.getSeriesId(), goods.getMakerId());
 
         GoodsSku sku = new GoodsSku();
         sku.setGoodsId(goods.getId());
@@ -135,6 +146,10 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     @Transactional(rollbackFor = Exception.class)
     public Boolean updateGoods(UpdateGoodsDTO dto) {
         validatePriceUpdateFields(dto.getUpdatePrice(), dto.getPriceUpdateTime());
+        Goods existed = this.getByIdNotDeleted(dto.getId());
+        if (existed == null) {
+            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品不存在");
+        }
         Goods goods = new Goods();
         BeanUtils.copyProperties(dto, goods);
         goods.setStatus(dto.getStatus() == null ? null : dto.getStatus().getCode());
@@ -142,6 +157,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!goodsUpdated) {
             return false;
         }
+        syncCascadingRelations(goods.getBrandId(), goods.getSeriesId(), goods.getMakerId());
+        cleanupCascadingRelations(existed.getBrandId(), existed.getSeriesId(), existed.getMakerId());
 
         String skuNameToSave = StringUtils.hasText(dto.getSkuName()) ? dto.getSkuName() : dto.getName();
         Integer skuStatusCode = dto.getSkuStatus() == null ? null : dto.getSkuStatus().getCode();
@@ -189,6 +206,10 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteGoodsById(Long id) {
+        Goods existed = this.getByIdNotDeleted(id);
+        if (existed == null) {
+            return 0;
+        }
         int goodsRows = super.deleteByIdLogic(id);
         goodsSkuService.update(null, new UpdateWrapper<GoodsSku>()
                 .eq("goods_id", id)
@@ -198,7 +219,68 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 .eq("goods_id", id)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .set("deleted", DeleteEnum.DELETED.getCode()));
+        cleanupCascadingRelations(existed.getBrandId(), existed.getSeriesId(), existed.getMakerId());
         return goodsRows;
+    }
+
+    private void syncCascadingRelations(Long brandId, Long seriesId, Long makerId) {
+        if (brandId != null && seriesId != null) {
+            SeriesBrandRelation seriesRelation = seriesBrandRelationService.getOne(new QueryWrapper<SeriesBrandRelation>()
+                    .eq("brand_id", brandId)
+                    .eq("series_id", seriesId)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (seriesRelation == null) {
+                seriesRelation = new SeriesBrandRelation();
+                seriesRelation.setBrandId(brandId);
+                seriesRelation.setSeriesId(seriesId);
+                seriesBrandRelationService.save(seriesRelation);
+            }
+        }
+        if (brandId != null && makerId != null) {
+            BrandMakerRelation makerRelation = brandMakerRelationService.getOne(new QueryWrapper<BrandMakerRelation>()
+                    .eq("brand_id", brandId)
+                    .eq("maker_id", makerId)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .last("LIMIT 1"));
+            if (makerRelation == null) {
+                makerRelation = new BrandMakerRelation();
+                makerRelation.setBrandId(brandId);
+                makerRelation.setMakerId(makerId);
+                brandMakerRelationService.save(makerRelation);
+            }
+        }
+    }
+
+    private void cleanupCascadingRelations(Long brandId, Long seriesId, Long makerId) {
+        if (brandId != null && seriesId != null && !existsGoodsWithSeriesBrand(brandId, seriesId)) {
+            seriesBrandRelationMapper.update(null, new UpdateWrapper<SeriesBrandRelation>()
+                    .eq("brand_id", brandId)
+                    .eq("series_id", seriesId)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .set("deleted", DeleteEnum.DELETED.getCode()));
+        }
+        if (brandId != null && makerId != null && !existsGoodsWithBrandMaker(brandId, makerId)) {
+            brandMakerRelationMapper.update(null, new UpdateWrapper<BrandMakerRelation>()
+                    .eq("brand_id", brandId)
+                    .eq("maker_id", makerId)
+                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                    .set("deleted", DeleteEnum.DELETED.getCode()));
+        }
+    }
+
+    private boolean existsGoodsWithSeriesBrand(Long brandId, Long seriesId) {
+        return this.count(new QueryWrapper<Goods>()
+                .eq("brand_id", brandId)
+                .eq("series_id", seriesId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())) > 0;
+    }
+
+    private boolean existsGoodsWithBrandMaker(Long brandId, Long makerId) {
+        return this.count(new QueryWrapper<Goods>()
+                .eq("brand_id", brandId)
+                .eq("maker_id", makerId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())) > 0;
     }
 
     private void validatePriceUpdateFields(java.math.BigDecimal updatePrice, LocalDateTime priceUpdateTime) {

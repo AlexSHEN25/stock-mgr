@@ -110,6 +110,38 @@ public class GoodsController {
         return vo;
     }
 
+    @GetMapping("/options/series")
+    public List<OptionVO> seriesOptions(@RequestParam("brandId") Long brandId) {
+        return toOptionList(seriesService.list(new QueryWrapper<Series>()
+                .eq("brand_id", brandId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .orderByAsc("id")));
+    }
+
+    @GetMapping("/options/brand")
+    public List<OptionVO> brandOptions(@RequestParam("seriesId") Long seriesId) {
+        Series series = seriesService.getByIdNotDeleted(seriesId);
+        if (series == null || series.getBrandId() == null) {
+            return List.of();
+        }
+        Brand brand = brandService.getByIdNotDeleted(series.getBrandId());
+        if (brand == null || !StatusEnum.NOMAL.getCode().equals(brand.getStatus())) {
+            return List.of();
+        }
+        return List.of(new OptionVO(brand.getId(), brand.getName()));
+    }
+
+    @GetMapping("/options/maker")
+    public List<OptionVO> makerOptions(@RequestParam("brandId") Long brandId) {
+        return toOptionList(makerService.list(new QueryWrapper<Maker>()
+                .inSql("id", "SELECT maker_id FROM t_brand_maker_relation"
+                        + " WHERE deleted = 0 AND brand_id = " + brandId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .orderByAsc("id")));
+    }
+
     private <T> List<OptionVO> toOptionList(List<T> entities) {
         return entities.stream().map(entity -> {
             if (entity instanceof Brand brand) {

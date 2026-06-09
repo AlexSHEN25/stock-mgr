@@ -132,8 +132,6 @@ VALUES
     (19,'価格履歴編集','DATA_PRICE_RECORD_WRITE','stock',2,4,'/api/priceRecord/**',14,'api','',1,0,1,1,NOW(),NOW()),
     (20,'請求書管理閲覧','DATA_REQUEST_FORM_READ','stock',2,4,'/api/requestForm/**',15,'api','',1,0,1,1,NOW(),NOW()),
     (21,'請求書管理編集','DATA_REQUEST_FORM_WRITE','stock',2,4,'/api/requestForm/**',16,'api','',1,0,1,1,NOW(),NOW()),
-    (22,'請求書明細閲覧','DATA_REQUEST_ITEM_READ','stock',2,4,'/api/requestItem/**',17,'api','',1,0,1,1,NOW(),NOW()),
-    (23,'請求書明細編集','DATA_REQUEST_ITEM_WRITE','stock',2,4,'/api/requestItem/**',18,'api','',1,0,1,1,NOW(),NOW()),
 
     (24,'顧客管理閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1,NOW(),NOW()),
     (25,'顧客管理編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1,NOW(),NOW()),
@@ -168,12 +166,10 @@ INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `c
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (19,1,19,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (20,1,20,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (21,1,21,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (22,1,22,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (23,1,23,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (24,1,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (25,1,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (26,1,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (27,1,27,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (22,1,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (23,1,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (24,1,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (25,1,27,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (30,2,4,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (31,2,5,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (32,2,6,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
@@ -184,8 +180,8 @@ INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `c
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (37,2,16,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (38,2,18,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (39,2,20,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (40,2,22,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (41,2,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (40,2,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (41,2,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (42,2,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (44,2,2,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (45,2,3,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
@@ -197,8 +193,7 @@ INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `c
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (51,2,17,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (52,2,19,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (53,2,21,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (54,2,23,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (55,2,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
+INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (54,2,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (56,2,30,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (57,2,31,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
 INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (58,2,32,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
@@ -251,7 +246,6 @@ WHERE r.code = 'ROLE_NORMAL_USER'
               p.path = '/api/stockOrder' OR p.path LIKE '/api/stockOrder/%'
               OR p.path = '/api/stockOrderItem' OR p.path LIKE '/api/stockOrderItem/%'
               OR p.path = '/api/requestForm' OR p.path LIKE '/api/requestForm/%'
-              OR p.path = '/api/requestItem' OR p.path LIKE '/api/requestItem/%'
               OR p.path = '/api/stock' OR p.path LIKE '/api/stock/%'
           )
       )

@@ -1,5 +1,6 @@
 package co.handk.backend.service;
 
+import co.handk.backend.entity.GroupStock;
 import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;

@@ -86,17 +86,6 @@ public class StockController {
         return stockService.page(query);
     }
 
-    @GetMapping("/self/page")
-    public PageResult<StockVO> pageSelf(@Valid StockQueryDTO query) {
-        return stockService.pageSelfStock(query);
-    }
-
-    @GetMapping("/group/page")
-    public PageResult<StockVO> pageGroup(@Valid StockQueryDTO query,
-                                         @RequestParam(value = "deptId", required = false) Long deptId) {
-        return stockService.pageGroupStock(query, deptId);
-    }
-
     @GetMapping("/group/available")
     public Integer groupAvailable(@RequestParam("goodsId") Long goodsId,
                                   @RequestParam("skuId") Long skuId,

@@ -69,14 +69,14 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             Map.entry("brand", "ブランド管理"),
             Map.entry("category", "カテゴリ管理"),
             Map.entry("series", "シリーズ管理"),
-            Map.entry("stock", "自社在庫管理"),
-            Map.entry("stockType", "在庫分類"),
+            Map.entry("stock", "在庫管理"),
+            Map.entry("stockType", "在庫区分"),
             Map.entry("stockOrder", "入出庫伝票"),
             Map.entry("stockOrderItem", "入出庫明細"),
             Map.entry("stockRecord", "在庫履歴"),
             Map.entry("priceRecord", "価格履歴"),
-            Map.entry("requestForm", "まとめ納品書"),
-            Map.entry("requestItem", "まとめ納品書明細"),
+            Map.entry("requestForm", "請求書管理"),
+            Map.entry("requestItem", "請求書明細"),
             Map.entry("customer", "顧客管理"),
             Map.entry("customerLevel", "顧客ランク管理"),
             Map.entry("config", "システム設定"),
@@ -185,7 +185,9 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         List<Permission> dataPermissions = getEnabledDataPermissions().stream()
                 .filter(permission -> permission.getPath() != null && !permission.getPath().isBlank())
                 .sorted(Comparator
-                        .comparing((Permission permission) -> permission.getSort() == null ? 0 : permission.getSort())
+                        .comparing((Permission permission) -> permission.getSort() == null ? Integer.MAX_VALUE : permission.getSort())
+                        .thenComparing(Permission::getUpdateTime, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Permission::getId, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(permission -> permission.getCode() == null ? "" : permission.getCode()))
                 .toList();
 
@@ -225,9 +227,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         scope.setMenus(menus.values().stream()
                 .filter(menu -> menu.getActions().isRead())
                 .filter(menu -> isVisibleMenuForUser(menu.getKey(), deptCode, superAdmin))
-                .sorted(Comparator
-                        .comparing((PermissionScopeVO.MenuPermissionVO menu) -> menu.getSort() == null ? 0 : menu.getSort())
-                        .thenComparing(PermissionScopeVO.MenuPermissionVO::getKey))
                 .toList());
         return scope;
     }
@@ -469,4 +468,5 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .collect(Collectors.toCollection(HashSet::new));
     }
 }
+
 

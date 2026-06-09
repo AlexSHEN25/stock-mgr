@@ -207,8 +207,6 @@ VALUES
     (19,'価格履歴編集','DATA_PRICE_RECORD_WRITE','stock',2,4,'/api/priceRecord/**',14,'api','',1,0,1,1,NOW(),NOW()),
     (20,'まとめ納品書閲覧','DATA_REQUEST_FORM_READ','stock',2,4,'/api/requestForm/**',15,'api','',1,0,1,1,NOW(),NOW()),
     (21,'まとめ納品書編集','DATA_REQUEST_FORM_WRITE','stock',2,4,'/api/requestForm/**',16,'api','',1,0,1,1,NOW(),NOW()),
-    (22,'まとめ納品書明細閲覧','DATA_REQUEST_ITEM_READ','stock',2,4,'/api/requestItem/**',17,'api','',1,0,1,1,NOW(),NOW()),
-    (23,'まとめ納品書明細編集','DATA_REQUEST_ITEM_WRITE','stock',2,4,'/api/requestItem/**',18,'api','',1,0,1,1,NOW(),NOW()),
 
     (24,'顧客管理閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1,NOW(),NOW()),
     (25,'顧客管理編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1,NOW(),NOW()),
@@ -245,12 +243,10 @@ INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `c
     (19,1,19,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
     (20,1,20,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
     (21,1,21,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (22,1,22,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (23,1,23,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (24,1,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (25,1,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (26,1,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (27,1,27,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
+    (22,1,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
+    (23,1,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
+    (24,1,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
+    (25,1,27,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
     (28,2,4,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
     (29,2,5,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
     (30,2,6,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
@@ -785,23 +781,36 @@ create TABLE `t_maker`
   COLLATE = utf8mb4_unicode_ci COMMENT = '厂家表';
 
 DROP TABLE IF EXISTS `t_brand_maker_relation`;
-CREATE TABLE t_brand_maker_relation
-(
-    `id`         BIGINT UNSIGNED  NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    brand_id     BIGINT UNSIGNED  NOT NULL COMMENT '品牌ID',
-    maker_id     BIGINT UNSIGNED  NOT NULL COMMENT '厂家ID',
-    deleted      TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
-    `created_by` BIGINT UNSIGNED           DEFAULT NULL COMMENT '创建人ID',
-    `updated_by` BIGINT UNSIGNED           DEFAULT NULL COMMENT '更新人ID',
-    create_time  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_brand_maker (brand_id, maker_id),
-    KEY idx_brand (brand_id),
-    KEY idx_maker (maker_id)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci COMMENT ='品牌厂家关联表';
+CREATE TABLE `t_brand_maker_relation` (
+      `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+      `brand_id` BIGINT UNSIGNED NOT NULL COMMENT '品牌ID',
+      `maker_id` BIGINT UNSIGNED NOT NULL COMMENT '厂家ID',
+      `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+      `created_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
+      `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
+      `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+      `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+      PRIMARY KEY (`id`),
+      UNIQUE KEY `uk_brand_maker` (`brand_id`, `maker_id`),
+      KEY `idx_brand` (`brand_id`),
+      KEY `idx_maker` (`maker_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌厂家关联表';
+
+DROP TABLE IF EXISTS `t_series_brand_relation`;
+CREATE TABLE `t_series_brand_relation` (
+        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+        `series_id` BIGINT UNSIGNED NOT NULL COMMENT '系列ID',
+        `brand_id` BIGINT UNSIGNED NOT NULL COMMENT '品牌ID',
+        `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+        `created_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
+        `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
+        `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `uk_series_brand` (`series_id`, `brand_id`),
+        KEY `idx_series` (`series_id`),
+        KEY `idx_brand` (`brand_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系列品牌关联表';
 
 
 DROP TABLE IF EXISTS `t_stock_type`;
