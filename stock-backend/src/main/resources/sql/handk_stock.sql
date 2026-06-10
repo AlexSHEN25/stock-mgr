@@ -838,8 +838,8 @@ create TABLE `t_request_form`
     `username`       VARCHAR(64)      NOT NULL COMMENT '用户名',
     `dept_id`        BIGINT UNSIGNED           DEFAULT NULL COMMENT '申请部门ID',
     `dept_name`      VARCHAR(100)              DEFAULT NULL COMMENT '申请部门名称',
-    `customer_id`    BIGINT UNSIGNED  NOT NULL COMMENT '客户ID',
-    `customer_name`  VARCHAR(255)     NOT NULL COMMENT '客户名称',
+    `customer_id`    BIGINT UNSIGNED           DEFAULT NULL COMMENT '客户ID',
+    `customer_name`  VARCHAR(255)              DEFAULT NULL COMMENT '客户名称',
     `warehouse_id`   BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '出库仓库ID',
     `source_order_id` BIGINT UNSIGNED           DEFAULT NULL COMMENT '出库单id',
     `total_qty`      INT(10)          NOT NULL DEFAULT 0 COMMENT '出库总数量',
@@ -904,6 +904,7 @@ create TABLE `t_request_item`
     `deposit_fee`     DECIMAL(18, 2)            DEFAULT NULL COMMENT '入金手续费',
     `unpaid_amt`      DECIMAL(18, 2)            DEFAULT NULL COMMENT '未入金额',
     `stock_record_id` BIGINT UNSIGNED           DEFAULT NULL COMMENT '库存流水ID',
+    `state`           TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '明细状态:0新增1删除',
     `remark`          VARCHAR(255)              DEFAULT NULL COMMENT '备注',
     `deleted`         TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
     `created_by`      BIGINT UNSIGNED           DEFAULT NULL COMMENT '创建人ID',
@@ -1039,7 +1040,7 @@ VALUES ('request.form.template.default', 'request', 'Default request template', 
         'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1),
        ('perm.group.menu.json', 'permission', 'Group menu scope json',
         'Menu codes visible to each group department code', 'json',
-        '{"A":["selfStock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["selfStock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["selfStock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',
+        '{"A":["stock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["stock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["stock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',
         NULL, 1, 1);
 
 INSERT INTO `t_config` (`name`, `group`, `title`, `tip`, `type`, `value`, `content`, `created_by`, `updated_by`)
@@ -1047,7 +1048,7 @@ VALUES('stock.group.codes', 'stock', 'Stock group codes',
        'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1),
       ('perm.group.menu.json', 'permission', 'Group menu scope json',
        'Menu codes visible to each group department code', 'json',
-       '{"A":["selfStock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["selfStock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["selfStock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',
+       '{"A":["stock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["stock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["stock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',
        NULL, 1, 1);
 
 
@@ -1080,4 +1081,3 @@ create TABLE `t_operate_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='操作日志表';
-

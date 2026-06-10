@@ -401,6 +401,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         form.setUsername(user == null ? null : user.getUsername());
         form.setDeptId(user == null ? null : user.getDeptId());
         form.setDeptName(dept == null ? null : dept.getName());
+        form.setCustomerId(outboundOrder.getCustomerId());
+        form.setCustomerName(outboundOrder.getCustomerName());
         form.setWarehouseId(outboundOrder.getWarehouseId());
         form.setSourceOrderId(outboundOrder.getId());
         form.setState(StockBizConstant.REQUEST_STATE_CREATED);
@@ -486,6 +488,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             form.setUsername(user == null ? outboundOrder.getRequesterName() : user.getUsername());
             form.setDeptId(user == null ? null : user.getDeptId());
             form.setDeptName(dept == null ? null : dept.getName());
+            form.setCustomerId(outboundOrder.getCustomerId());
+            form.setCustomerName(outboundOrder.getCustomerName());
             form.setWarehouseId(outboundOrder.getWarehouseId());
             form.setSourceOrderId(outboundOrder.getId());
             form.setState(StockBizConstant.REQUEST_STATE_CREATED);

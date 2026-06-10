@@ -154,6 +154,12 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 codes.add(SecurityConstant.DATA_ALL_WRITE);
             } else if (codes.isEmpty()) {
                 codes = getNormalUserPermissionCodes();
+            } else {
+                codes = codes.stream()
+                        .filter(code -> !code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)
+                                || SecurityConstant.isNormalUserWriteApiPath(permissionPathByCode(code)))
+                        .collect(Collectors.toCollection(HashSet::new));
+                codes.add(SecurityConstant.ROLE_NORMAL_USER);
             }
             return codes;
         } catch (Exception ex) {
@@ -311,6 +317,41 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         return MENU_KEY_ALIASES.getOrDefault(key, key);
     }
 
+    private String resolveStockMenuKey(String path) {
+        if (path == null) {
+            return "stock";
+        }
+        String normalized = path.toLowerCase();
+        if (normalized.contains("self_stock") || normalized.contains("selfstock")) {
+            return "stock";
+        }
+        if (normalized.contains("stock_a") || normalized.contains("stocka")) {
+            return "stockA";
+        }
+        if (normalized.contains("stock_b") || normalized.contains("stockb")) {
+            return "stockB";
+        }
+        if (normalized.contains("stock_c") || normalized.contains("stockc")) {
+            return "stockC";
+        }
+        if (normalized.contains("stockorderitem")) {
+            return "stockOrderItem";
+        }
+        if (normalized.contains("stockorder")) {
+            return "stockOrder";
+        }
+        if (normalized.contains("stocktype")) {
+            return "stockType";
+        }
+        if (normalized.contains("stockrecord")) {
+            return "stockRecord";
+        }
+        if (normalized.contains("pricerecord")) {
+            return "priceRecord";
+        }
+        return "stock";
+    }
+
     private String resolveMenuLabel(Permission permission) {
         String moduleKey = resolveModuleKey(permission.getPath());
         String fixedLabel = MENU_LABEL_BY_MODULE.get(moduleKey);
@@ -368,6 +409,19 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         }
         return code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)
                 && SecurityConstant.isNormalUserWriteApiPath(permission.getPath());
+    }
+
+    private String permissionPathByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        Permission permission = permissionMapper.selectOne(new QueryWrapper<Permission>()
+                .select("path")
+                .eq("code", code)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .last("LIMIT 1"));
+        return permission == null ? null : permission.getPath();
     }
 
     private boolean isVisibleMenuForUser(String moduleKey, String deptCode, boolean superAdmin) {
@@ -468,4 +522,3 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .collect(Collectors.toCollection(HashSet::new));
     }
 }
-
