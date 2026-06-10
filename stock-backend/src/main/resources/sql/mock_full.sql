@@ -66,7 +66,9 @@ INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, 
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (5,'request.form.template.B','request','Request template B','Template used by department code B','file','template/request_form_template_B.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (6,'request.form.template.C','request','Request template C','Template used by department code C','file','template/request_form_template_C.xlsx',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (7,'stock.group.codes','stock','Stock group codes','Department codes allowed to own group stock','string','A,B,C',NULL,0,1,1,NOW(),NOW());
-INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.json','permission','Group menu scope json','Menu codes visible to each group department code','json','{"A":["stock","stockA","stockOrder","stockType","stockRecord","priceRecord"],"B":["stock","stockB","stockOrder","stockType","stockRecord","priceRecord"],"C":["stock","stockC","stockOrder","stockType","stockRecord","priceRecord"]}',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (8,'perm.group.menu.A','permission','Group A menu scope','Menu codes visible to department A','string','stock,stockA,stockOrder,stockType,stockRecord,priceRecord',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (9,'perm.group.menu.B','permission','Group B menu scope','Menu codes visible to department B','string','stock,stockB,stockOrder,stockType,stockRecord,priceRecord',NULL,0,1,1,NOW(),NOW());
+INSERT INTO `t_config` (`id`, `name`, `group`, `title`, `tip`, `type`, `value`, `content`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (10,'perm.group.menu.C','permission','Group C menu scope','Menu codes visible to department C','string','stock,stockC,stockOrder,stockType,stockRecord,priceRecord',NULL,0,1,1,NOW(),NOW());
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (1,'三悦',1,0,1,1,'2026-06-02 12:40:01','2026-06-02 12:40:01');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (2,'二唐',1,0,1,1,'2026-06-02 12:40:12','2026-06-02 12:40:12');
 INSERT INTO `t_maker` (`id`, `name`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES (3,'アシタ　二唐',1,0,1,1,'2026-06-02 12:40:18','2026-06-02 12:40:18');
@@ -276,7 +278,7 @@ VALUES
     (14,'ブランド管理','MENU_BRAND','goodsInfo',1,2,'/brand',3,'brand','brand/index',1,0,1,1,NOW(),NOW()),
     (15,'カテゴリ管理','MENU_CATEGORY','goodsInfo',1,2,'/category',4,'category','category/index',1,0,1,1,NOW(),NOW()),
     (16,'シリーズ管理','MENU_SERIES','goodsInfo',1,2,'/series',5,'series','series/index',1,0,1,1,NOW(),NOW()),
-    (17,'自社在庫管理','MENU_SELF_STOCK','stock',1,3,'/stock/self',1,'inventory','stock/self',1,0,1,1,NOW(),NOW()),
+    (17,'在庫管理','MENU_STOCK_SELF','stock',1,3,'/stock/self',1,'inventory','stock/self',1,0,1,1,NOW(),NOW()),
     (18,'A組在庫管理','MENU_STOCK_A','stock',1,3,'/stock/group/a',2,'inventory','stock/group',1,0,1,1,NOW(),NOW()),
     (19,'B組在庫管理','MENU_STOCK_B','stock',1,3,'/stock/group/b',3,'inventory','stock/group',1,0,1,1,NOW(),NOW()),
     (20,'C組在庫管理','MENU_STOCK_C','stock',1,3,'/stock/group/c',4,'inventory','stock/group',1,0,1,1,NOW(),NOW()),
@@ -294,8 +296,8 @@ VALUES
     (32,'操作ログ','MENU_OPERATE_LOG','system',1,6,'/operateLog',3,'log','operateLog/index',1,0,1,1,NOW(),NOW()),
     (33,'在庫管理閲覧','DATA_STOCK_READ','stock',2,3,'/api/stock/**',1,'api','',1,0,1,1,NOW(),NOW()),
     (34,'在庫管理編集','DATA_STOCK_WRITE','stock',2,3,'/api/stock/**',2,'api','',1,0,1,1,NOW(),NOW()),
-    (35,'自社在庫閲覧','DATA_SELF_STOCK_READ','stock',2,17,'/api/stock/page',1,'api','',1,0,1,1,NOW(),NOW()),
-    (36,'自社在庫編集','DATA_SELF_STOCK_WRITE','stock',2,17,'/api/stock/**',2,'api','',1,0,1,1,NOW(),NOW()),
+    (35,'在庫閲覧','DATA_STOCK_SELF_READ','stock',2,17,'/api/stock/page',1,'api','',1,0,1,1,NOW(),NOW()),
+    (36,'在庫編集','DATA_STOCK_SELF_WRITE','stock',2,17,'/api/stock/**',2,'api','',1,0,1,1,NOW(),NOW()),
     (37,'A組在庫閲覧','DATA_STOCK_A_READ','stock',2,18,'/api/stock/page',1,'api','',1,0,1,1,NOW(),NOW()),
     (38,'A組在庫編集','DATA_STOCK_A_WRITE','stock',2,18,'/api/stock/**',2,'api','',1,0,1,1,NOW(),NOW()),
     (39,'B組在庫閲覧','DATA_STOCK_B_READ','stock',2,19,'/api/stock/page',1,'api','',1,0,1,1,NOW(),NOW()),
@@ -349,3 +351,85 @@ VALUES
 
 INSERT INTO `t_role_permission` ( `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
 values ( 1, 1, 0, 1, 1, NOW(), NOW());
+
+
+
+INSERT INTO t_role_permission
+(id, role_id, permission_id, deleted, created_by, updated_by, create_time, update_time)
+VALUES
+    (1, 1, 1, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (2, 1, 2, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (3, 1, 3, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (4, 1, 4, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (5, 1, 5, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (6, 1, 6, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (7, 1, 7, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (8, 1, 8, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (9, 1, 9, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (10, 1, 10, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (11, 1, 11, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (12, 1, 12, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (13, 1, 13, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (14, 1, 14, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (15, 1, 15, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (16, 1, 16, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (17, 1, 17, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (18, 1, 18, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (19, 1, 19, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (20, 1, 20, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (21, 1, 21, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (22, 1, 22, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (23, 1, 23, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (24, 1, 24, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (25, 1, 25, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (26, 1, 26, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (27, 1, 27, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (28, 2, 4, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (29, 2, 5, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (30, 2, 6, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (31, 2, 8, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (32, 2, 10, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (33, 2, 12, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (34, 2, 14, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (35, 2, 16, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (36, 2, 18, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (37, 2, 20, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (38, 2, 22, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (39, 2, 24, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (40, 2, 26, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (41, 2, 2, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (42, 2, 3, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (43, 2, 7, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (44, 2, 9, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (45, 2, 11, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (46, 2, 13, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (47, 2, 15, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (49, 2, 19, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (50, 2, 21, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (51, 2, 23, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (52, 2, 25, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (53, 2, 27, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (54, 2, 28, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (55, 2, 29, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (56, 2, 30, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (57, 2, 31, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (58, 2, 32, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (59, 2, 33, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (60, 2, 34, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
+    (61, 2, 37, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (62, 2, 39, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (63, 2, 41, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (64, 2, 43, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (65, 2, 45, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (66, 2, 47, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (67, 2, 49, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (68, 2, 51, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (69, 2, 53, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (70, 2, 55, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (71, 2, 57, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (72, 2, 59, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (73, 2, 63, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (74, 2, 67, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (75, 2, 73, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (76, 2, 75, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53'),
+    (77, 2, 77, 0, 1, 1, '2026-06-10 13:32:53', '2026-06-10 13:32:53');
