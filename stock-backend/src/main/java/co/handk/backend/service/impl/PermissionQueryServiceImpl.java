@@ -109,6 +109,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         try {
             boolean superAdmin = isSuperAdmin(userId);
             List<Long> roleIds = getRoleIds(userId);
+            log.debug("permission codes lookup start, userId={}, superAdmin={}, roleIds={}", userId, superAdmin, roleIds);
             if (roleIds.isEmpty()) {
                 if (superAdmin) {
                     Set<String> adminCodes = new HashSet<>();
@@ -136,6 +137,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                     .map(obj -> ((Number) obj).longValue())
                     .distinct()
                     .toList();
+            log.debug("permission codes role permissions, userId={}, roleIds={}, permissionIds={}", userId, roleIds, permissionIds);
             QueryWrapper<Permission> permissionQuery = new QueryWrapper<Permission>()
                     .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .eq("status", StatusEnum.NOMAL.getCode());
@@ -161,6 +163,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                         .collect(Collectors.toCollection(HashSet::new));
                 codes.add(SecurityConstant.ROLE_NORMAL_USER);
             }
+            log.debug("permission codes resolved, userId={}, codes={}", userId, codes);
             return codes;
         } catch (Exception ex) {
             log.error("getPermissionCodes query failed, userId={}", userId, ex);
@@ -209,7 +212,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 item.setLabel(resolveMenuLabel(permission));
                 item.setModule(permission.getModule());
                 item.setPath(permission.getPath());
-                item.setDataScope(resolveDataScope(key, allDataWrite, codes));
+                item.setDataScope(resolveDataScope(key, deptCode, allDataWrite, codes));
                 item.setSort(permission.getSort());
                 return item;
             });
@@ -227,7 +230,7 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 actions.setDelete(true);
                 actions.setBatchDelete(true);
                 actions.setInlineEdit(true);
-                menu.setDataScope(resolveDataScope(key, allDataWrite, codes));
+                menu.setDataScope(resolveDataScope(key, deptCode, allDataWrite, codes));
             }
         }
         scope.setMenus(menus.values().stream()
@@ -373,9 +376,13 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .trim();
     }
 
-    private String resolveDataScope(String moduleKey, boolean allDataWrite, Set<String> codes) {
+    private String resolveDataScope(String moduleKey, String deptCode, boolean allDataWrite, Set<String> codes) {
         if (allDataWrite) {
             return DATA_SCOPE_ALL;
+        }
+        if (("stock".equals(moduleKey) || isOwnGroupStockModule(moduleKey, deptCode))
+                && hasWriteCode(moduleKey, codes)) {
+            return DATA_SCOPE_OWN;
         }
         if (NORMAL_USER_OWN_WRITE_MODULES.contains(moduleKey) && hasWriteCode(moduleKey, codes)) {
             return DATA_SCOPE_OWN;
@@ -384,6 +391,19 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             return DATA_SCOPE_ALL;
         }
         return DATA_SCOPE_READONLY;
+    }
+
+    private boolean isOwnGroupStockModule(String moduleKey, String deptCode) {
+        if (moduleKey == null || deptCode == null || deptCode.isBlank()) {
+            return false;
+        }
+        String normalizedDeptCode = deptCode.trim().toUpperCase();
+        return switch (moduleKey) {
+            case "stockA" -> "A".equals(normalizedDeptCode);
+            case "stockB" -> "B".equals(normalizedDeptCode);
+            case "stockC" -> "C".equals(normalizedDeptCode);
+            default -> false;
+        };
     }
 
     private boolean hasWriteCode(String moduleKey, Set<String> codes) {
