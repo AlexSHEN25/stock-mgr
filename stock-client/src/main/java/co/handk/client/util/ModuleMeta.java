@@ -379,8 +379,8 @@ public final class ModuleMeta {
                 "sort", "version", "createdBy", "updatedBy", "createTime", "updateTime"
         ));
 
-        ACTION_POLICIES.put(MODULE_STOCK_RECORD, new ModuleActionPolicy(false, false, false, false, false));
-        ACTION_POLICIES.put(MODULE_PRICE_RECORD, new ModuleActionPolicy(false, false, false, false, false));
+        ACTION_POLICIES.put(MODULE_STOCK_RECORD, new ModuleActionPolicy(false, false, false, true, true));
+        ACTION_POLICIES.put(MODULE_PRICE_RECORD, new ModuleActionPolicy(false, false, false, true, true));
         ACTION_POLICIES.put(MODULE_OPERATE_LOG, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_MESSAGE, new ModuleActionPolicy(true, true, true, true, true));
         ACTION_POLICIES.put(GOODS, new ModuleActionPolicy(true, false, true, true, true));
@@ -609,6 +609,9 @@ public final class ModuleMeta {
     }
 
     public static boolean canWriteByPermission(String moduleKey) {
+        if (MODULE_STOCK_RECORD.equals(moduleKey) || MODULE_PRICE_RECORD.equals(moduleKey)) {
+            return false;
+        }
         if (Session.hasPermission("DATA_ALL_WRITE")) {
             return true;
         }

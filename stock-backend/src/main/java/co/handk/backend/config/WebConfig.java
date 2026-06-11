@@ -169,7 +169,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addFormatters(FormatterRegistry registry) {
         registry.addConverter(String.class, StatusEnum.class, source -> {
-            if (source == null || source.isBlank()) {
+            if (source.isBlank()) {
                 return null;
             }
             try {
@@ -179,7 +179,7 @@ public class WebConfig implements WebMvcConfigurer {
             }
         });
         registry.addConverter(String.class, DeleteEnum.class, source -> {
-            if (source == null || source.isBlank()) {
+            if (source.isBlank()) {
                 return null;
             }
             try {

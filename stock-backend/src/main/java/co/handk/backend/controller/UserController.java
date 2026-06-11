@@ -116,6 +116,7 @@ public class UserController {
      * Current login user's permission codes.
      */
     @GetMapping("/permissions")
+    @Deprecated(forRemoval = true)
     public Set<String> permissions() {
         Long userId = UserContext.getUserIdOrDefault();
         return permissionQueryService.getPermissionCodes(userId);

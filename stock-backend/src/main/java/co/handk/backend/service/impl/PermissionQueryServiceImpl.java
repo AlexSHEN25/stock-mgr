@@ -14,15 +14,11 @@ import co.handk.backend.mapper.RolePermissionMapper;
 import co.handk.backend.mapper.UserMapper;
 import co.handk.backend.mapper.UserRoleMapper;
 import co.handk.backend.service.PermissionQueryService;
-import co.handk.backend.service.ConfigService;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.PermissionTypeEnum;
 import co.handk.common.enums.StatusEnum;
-import co.handk.backend.entity.Config;
 import co.handk.common.model.vo.PermissionScopeVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +26,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,54 +39,14 @@ import java.util.stream.Collectors;
 public class PermissionQueryServiceImpl implements PermissionQueryService {
     private static final String DATA_SCOPE_ALL = "ALL";
     private static final String DATA_SCOPE_OWN = "OWN";
+    private static final String DATA_SCOPE_GROUP = "GROUP";
     private static final String DATA_SCOPE_READONLY = "READONLY";
-    private static final String GROUP_CODE_CONFIG = "stock.group.codes";
-    private static final String GROUP_MENU_JSON_CONFIG = "perm.group.menu.json";
-    private static final Map<String, String> MENU_KEY_ALIASES = Map.of(
-            "stockOrderItem", "stockOrder"
-    );
-    private static final Set<String> NORMAL_USER_OWN_WRITE_MODULES = Set.of(
-            "stockOrder",
-            "stockOrderItem",
-            "requestForm",
-            "requestItem",
-            "customer"
-    );
-    private static final Set<String> NORMAL_USER_ALL_WRITE_MODULES = Set.of("customerLevel");
-    private static final Map<String, String> MENU_LABEL_BY_MODULE = Map.ofEntries(
-            Map.entry("user", "ユーザー管理"),
-            Map.entry("dept", "部署管理"),
-            Map.entry("warehouse", "倉庫管理"),
-            Map.entry("role", "ロール管理"),
-            Map.entry("permission", "権限管理"),
-            Map.entry("goods", "商品管理"),
-            Map.entry("maker", "メーカー管理"),
-            Map.entry("brand", "ブランド管理"),
-            Map.entry("category", "カテゴリ管理"),
-            Map.entry("series", "シリーズ管理"),
-            Map.entry("stock", "在庫管理"),
-            Map.entry("stockType", "在庫区分"),
-            Map.entry("stockOrder", "入出庫伝票"),
-            Map.entry("stockOrderItem", "入出庫明細"),
-            Map.entry("stockRecord", "在庫履歴"),
-            Map.entry("priceRecord", "価格履歴"),
-            Map.entry("requestForm", "請求書管理"),
-            Map.entry("requestItem", "請求書明細"),
-            Map.entry("customer", "顧客管理"),
-            Map.entry("customerLevel", "顧客ランク管理"),
-            Map.entry("config", "システム設定"),
-            Map.entry("message", "メッセージ管理"),
-            Map.entry("operateLog", "操作ログ")
-    );
-
     private final UserRoleMapper userRoleMapper;
     private final RoleMapper roleMapper;
     private final RolePermissionMapper rolePermissionMapper;
     private final PermissionMapper permissionMapper;
     private final UserMapper userMapper;
     private final DeptMapper deptMapper;
-    private final ConfigService configService;
-    private final ObjectMapper objectMapper;
 
     @Override
     public boolean isSuperAdmin(Long userId) {
@@ -107,25 +62,14 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
     @Override
     public Set<String> getPermissionCodes(Long userId) {
         try {
-            boolean superAdmin = isSuperAdmin(userId);
-            List<Long> roleIds = getRoleIds(userId);
-            log.debug("permission codes lookup start, userId={}, superAdmin={}, roleIds={}", userId, superAdmin, roleIds);
+            List<Role> roles = getRoles(userId);
+            List<Long> roleIds = roles.stream().map(Role::getId).toList();
+            Set<String> codes = roles.stream()
+                    .map(Role::getCode)
+                    .filter(code -> code != null && !code.isBlank())
+                    .collect(Collectors.toCollection(HashSet::new));
             if (roleIds.isEmpty()) {
-                if (superAdmin) {
-                    Set<String> adminCodes = new HashSet<>();
-                    adminCodes.add(SecurityConstant.ROLE_SUPER_ADMIN);
-                    adminCodes.add(SecurityConstant.DATA_ALL_WRITE);
-                    permissionMapper.selectList(
-                                    new QueryWrapper<Permission>()
-                                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                                            .eq("status", StatusEnum.NOMAL.getCode())
-                            ).stream()
-                            .map(Permission::getCode)
-                            .filter(code -> code != null && !code.isBlank())
-                            .forEach(adminCodes::add);
-                    return adminCodes;
-                }
-                return getNormalUserPermissionCodes();
+                return codes;
             }
             List<Object> permissionIdObjs = rolePermissionMapper.selectObjs(
                     new QueryWrapper<RolePermission>()
@@ -137,32 +81,17 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                     .map(obj -> ((Number) obj).longValue())
                     .distinct()
                     .toList();
-            log.debug("permission codes role permissions, userId={}, roleIds={}, permissionIds={}", userId, roleIds, permissionIds);
-            QueryWrapper<Permission> permissionQuery = new QueryWrapper<Permission>()
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                    .eq("status", StatusEnum.NOMAL.getCode());
-            if (!superAdmin) {
-                if (permissionIds.isEmpty()) {
-                    return getNormalUserPermissionCodes();
-                }
-                permissionQuery.in("id", permissionIds);
+            if (permissionIds.isEmpty()) {
+                return codes;
             }
-            Set<String> codes = permissionMapper.selectList(permissionQuery).stream()
+            permissionMapper.selectList(new QueryWrapper<Permission>()
+                            .in("id", permissionIds)
+                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                            .eq("status", StatusEnum.NOMAL.getCode()))
+                    .stream()
                     .map(Permission::getCode)
                     .filter(code -> code != null && !code.isBlank())
-                    .collect(Collectors.toSet());
-            if (superAdmin) {
-                codes.add(SecurityConstant.ROLE_SUPER_ADMIN);
-                codes.add(SecurityConstant.DATA_ALL_WRITE);
-            } else if (codes.isEmpty()) {
-                codes = getNormalUserPermissionCodes();
-            } else {
-                codes = codes.stream()
-                        .filter(code -> !code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)
-                                || SecurityConstant.isNormalUserWriteApiPath(permissionPathByCode(code)))
-                        .collect(Collectors.toCollection(HashSet::new));
-                codes.add(SecurityConstant.ROLE_NORMAL_USER);
-            }
+                    .forEach(codes::add);
             log.debug("permission codes resolved, userId={}, codes={}", userId, codes);
             return codes;
         } catch (Exception ex) {
@@ -191,6 +120,10 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .collect(Collectors.toCollection(HashSet::new)));
 
         Map<String, PermissionScopeVO.MenuPermissionVO> menus = new LinkedHashMap<>();
+        Map<Long, PermissionScopeVO.MenuPermissionVO> treeNodes = new LinkedHashMap<>();
+        Map<Long, Permission> menuPermissionsById = getEnabledMenuPermissions().stream()
+                .filter(permission -> permission.getId() != null)
+                .collect(Collectors.toMap(Permission::getId, permission -> permission));
         List<Permission> dataPermissions = getEnabledDataPermissions().stream()
                 .filter(permission -> permission.getPath() != null && !permission.getPath().isBlank())
                 .sorted(Comparator
@@ -201,7 +134,11 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .toList();
 
         for (Permission permission : dataPermissions) {
-            String key = resolveMenuKey(permission.getPath());
+            Permission parentMenu = menuPermissionsById.get(permission.getParentId());
+            if (parentMenu == null || parentMenu.getCode() == null || !codes.contains(parentMenu.getCode())) {
+                continue;
+            }
+            String key = resolveMenuKey(parentMenu.getPath());
             String code = permission.getCode();
             if (key.isBlank() || code == null || code.isBlank()) {
                 continue;
@@ -209,11 +146,13 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             PermissionScopeVO.MenuPermissionVO menu = menus.computeIfAbsent(key, ignored -> {
                 PermissionScopeVO.MenuPermissionVO item = new PermissionScopeVO.MenuPermissionVO();
                 item.setKey(key);
-                item.setLabel(resolveMenuLabel(permission));
-                item.setModule(permission.getModule());
-                item.setPath(permission.getPath());
-                item.setDataScope(resolveDataScope(key, deptCode, allDataWrite, codes));
-                item.setSort(permission.getSort());
+                item.setLabel(parentMenu.getName());
+                item.setModule(parentMenu.getModule());
+                item.setPath(parentMenu.getPath());
+                item.setDataScope(DATA_SCOPE_READONLY);
+                item.setSort(parentMenu.getSort());
+                item.setId(parentMenu.getId());
+                item.setParentId(parentMenu.getParentId());
                 return item;
             });
             if (menu.getSort() == null || (permission.getSort() != null && permission.getSort() < menu.getSort())) {
@@ -230,12 +169,49 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 actions.setDelete(true);
                 actions.setBatchDelete(true);
                 actions.setInlineEdit(true);
-                menu.setDataScope(resolveDataScope(key, deptCode, allDataWrite, codes));
+            }
+            menu.setDataScope(resolveDataScope(parentMenu.getPath(), deptCode, allDataWrite, actions.isEdit()));
+            menu.setVisible(actions.isRead());
+
+            if (parentMenu.getId() != null) {
+                PermissionScopeVO.MenuPermissionVO treeNode = treeNodes.computeIfAbsent(parentMenu.getId(), ignored -> {
+                    PermissionScopeVO.MenuPermissionVO node = new PermissionScopeVO.MenuPermissionVO();
+                    node.setId(parentMenu.getId());
+                    node.setParentId(parentMenu.getParentId());
+                    node.setKey(key);
+                    node.setLabel(parentMenu.getName());
+                    node.setModule(parentMenu.getModule());
+                    node.setPath(parentMenu.getPath());
+                    node.setDataScope(DATA_SCOPE_READONLY);
+                    node.setSort(parentMenu.getSort());
+                    return node;
+                });
+                treeNode.setVisible(menu.isVisible());
+                treeNode.setDataScope(menu.getDataScope());
+                treeNode.getActions().setRead(actions.isRead());
+                treeNode.getActions().setCreate(actions.isCreate());
+                treeNode.getActions().setEdit(actions.isEdit());
+                treeNode.getActions().setDelete(actions.isDelete());
+                treeNode.getActions().setBatchDelete(actions.isBatchDelete());
+                treeNode.getActions().setInlineEdit(actions.isInlineEdit());
             }
         }
         scope.setMenus(menus.values().stream()
                 .filter(menu -> menu.getActions().isRead())
-                .filter(menu -> isVisibleMenuForUser(menu.getKey(), deptCode, superAdmin))
+                .toList());
+        List<PermissionScopeVO.MenuPermissionVO> roots = new ArrayList<>();
+        for (PermissionScopeVO.MenuPermissionVO node : treeNodes.values()) {
+            Long parentId = node.getParentId();
+            if (parentId != null && parentId > 0 && treeNodes.containsKey(parentId)) {
+                treeNodes.get(parentId).getChildren().add(node);
+            } else {
+                roots.add(node);
+            }
+        }
+        scope.setPermissionTree(roots.stream()
+                .sorted(Comparator
+                        .comparing((PermissionScopeVO.MenuPermissionVO menu) -> menu.getSort() == null ? Integer.MAX_VALUE : menu.getSort())
+                        .thenComparing(menu -> menu.getId() == null ? Long.MAX_VALUE : menu.getId()))
                 .toList());
         return scope;
     }
@@ -251,6 +227,31 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             );
         } catch (Exception ex) {
             log.error("getEnabledDataPermissions query failed", ex);
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public Set<String> getStockGroupCodes() {
+        return getEnabledMenuPermissions().stream()
+                .map(Permission::getPath)
+                .filter(path -> path != null && path.matches("(?i)^/stock/group/[^/]+/?$"))
+                .map(path -> path.replaceAll("/+$", ""))
+                .map(path -> path.substring(path.lastIndexOf('/') + 1).trim().toUpperCase())
+                .filter(code -> !code.isBlank())
+                .collect(Collectors.toSet());
+    }
+
+    private List<Permission> getEnabledMenuPermissions() {
+        try {
+            return permissionMapper.selectList(
+                    new QueryWrapper<Permission>()
+                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                            .eq("status", StatusEnum.NOMAL.getCode())
+                            .ne("type", PermissionTypeEnum.DATA.getCode())
+            );
+        } catch (Exception ex) {
+            log.error("getEnabledMenuPermissions query failed", ex);
             return Collections.emptyList();
         }
     }
@@ -284,183 +285,48 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 .toList();
     }
 
-    private Set<String> getNormalUserPermissionCodes() {
-        Set<String> codes = permissionMapper.selectList(
-                        new QueryWrapper<Permission>()
-                                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                                .eq("status", StatusEnum.NOMAL.getCode())
-                ).stream()
-                .filter(this::isNormalUserPermission)
-                .map(Permission::getCode)
-                .filter(code -> code != null && !code.isBlank())
-                .collect(Collectors.toCollection(HashSet::new));
-        codes.add(SecurityConstant.ROLE_NORMAL_USER);
-        return codes;
-    }
-
-    private String resolveModuleKey(String path) {
+    private String resolveMenuKey(String path) {
         if (path == null || path.isBlank()) {
             return "";
         }
-        String value = path.trim();
-        if (value.startsWith(SecurityConstant.API_PREFIX)) {
-            value = value.substring(SecurityConstant.API_PREFIX.length());
-        } else if (value.startsWith("/")) {
-            value = value.substring(1);
+        String[] segments = java.util.Arrays.stream(path.trim().split("/"))
+                .filter(segment -> !segment.isBlank())
+                .toArray(String[]::new);
+        if (segments.length == 0) {
+            return "";
         }
-        int slash = value.indexOf('/');
-        if (slash >= 0) {
-            value = value.substring(0, slash);
+        StringBuilder key = new StringBuilder(segments[0]);
+        int start = segments.length > 2 && "group".equalsIgnoreCase(segments[1]) ? 2 : 1;
+        for (int index = start; index < segments.length; index++) {
+            String segment = segments[index].replace("*", "").trim();
+            if (!segment.isBlank()) {
+                key.append(Character.toUpperCase(segment.charAt(0))).append(segment.substring(1));
+            }
         }
-        return value.replace("*", "").trim();
+        if (segments.length > 2 && "group".equalsIgnoreCase(segments[1])) {
+            key.insert(segments[0].length(), "Group");
+        }
+        return key.toString();
     }
 
-    private String resolveMenuKey(String path) {
-        String key = resolveModuleKey(path);
-        return MENU_KEY_ALIASES.getOrDefault(key, key);
-    }
-
-    private String resolveStockMenuKey(String path) {
-        if (path == null) {
-            return "stock";
-        }
-        String normalized = path.toLowerCase();
-        if (normalized.contains("self_stock") || normalized.contains("selfstock")) {
-            return "stock";
-        }
-        if (normalized.contains("stock_a") || normalized.contains("stocka")) {
-            return "stockA";
-        }
-        if (normalized.contains("stock_b") || normalized.contains("stockb")) {
-            return "stockB";
-        }
-        if (normalized.contains("stock_c") || normalized.contains("stockc")) {
-            return "stockC";
-        }
-        if (normalized.contains("stockorderitem")) {
-            return "stockOrderItem";
-        }
-        if (normalized.contains("stockorder")) {
-            return "stockOrder";
-        }
-        if (normalized.contains("stocktype")) {
-            return "stockType";
-        }
-        if (normalized.contains("stockrecord")) {
-            return "stockRecord";
-        }
-        if (normalized.contains("pricerecord")) {
-            return "priceRecord";
-        }
-        return "stock";
-    }
-
-    private String resolveMenuLabel(Permission permission) {
-        String moduleKey = resolveModuleKey(permission.getPath());
-        String fixedLabel = MENU_LABEL_BY_MODULE.get(moduleKey);
-        if (fixedLabel != null && !fixedLabel.isBlank()) {
-            return fixedLabel;
-        }
-        String name = permission.getName();
-        if (name == null || name.isBlank()) {
-            return moduleKey;
-        }
-        return name
-                .replace("閲覧", "")
-                .replace("編集", "")
-                .replace("参照", "")
-                .replace("更新", "")
-                .replace("読取", "")
-                .replace("書込", "")
-                .replaceAll("[-・\\s]+$", "")
-                .trim();
-    }
-
-    private String resolveDataScope(String moduleKey, String deptCode, boolean allDataWrite, Set<String> codes) {
+    private String resolveDataScope(String menuPath, String deptCode, boolean allDataWrite, boolean writable) {
         if (allDataWrite) {
             return DATA_SCOPE_ALL;
         }
-        if (("stock".equals(moduleKey) || isOwnGroupStockModule(moduleKey, deptCode))
-                && hasWriteCode(moduleKey, codes)) {
+        if (!writable) {
+            return DATA_SCOPE_READONLY;
+        }
+        String normalizedPath = menuPath == null ? "" : menuPath.trim().replaceAll("/+$", "");
+        if ("/stock/self".equalsIgnoreCase(normalizedPath)) {
             return DATA_SCOPE_OWN;
         }
-        if (NORMAL_USER_OWN_WRITE_MODULES.contains(moduleKey) && hasWriteCode(moduleKey, codes)) {
-            return DATA_SCOPE_OWN;
+        String groupPrefix = "/stock/group/";
+        if (normalizedPath.regionMatches(true, 0, groupPrefix, 0, groupPrefix.length())
+                && deptCode != null
+                && normalizedPath.substring(groupPrefix.length()).equalsIgnoreCase(deptCode.trim())) {
+            return DATA_SCOPE_GROUP;
         }
-        if (NORMAL_USER_ALL_WRITE_MODULES.contains(moduleKey) && hasWriteCode(moduleKey, codes)) {
-            return DATA_SCOPE_ALL;
-        }
-        return DATA_SCOPE_READONLY;
-    }
-
-    private boolean isOwnGroupStockModule(String moduleKey, String deptCode) {
-        if (moduleKey == null || deptCode == null || deptCode.isBlank()) {
-            return false;
-        }
-        String normalizedDeptCode = deptCode.trim().toUpperCase();
-        return switch (moduleKey) {
-            case "stockA" -> "A".equals(normalizedDeptCode);
-            case "stockB" -> "B".equals(normalizedDeptCode);
-            case "stockC" -> "C".equals(normalizedDeptCode);
-            default -> false;
-        };
-    }
-
-    private boolean hasWriteCode(String moduleKey, Set<String> codes) {
-        String expected = "DATA_" + moduleKey.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase()
-                + SecurityConstant.PERMISSION_SUFFIX_WRITE;
-        return codes != null && codes.contains(expected);
-    }
-
-    private boolean isNormalUserPermission(Permission permission) {
-        if (permission == null) {
-            return false;
-        }
-        Integer type = permission.getType();
-        if (!PermissionTypeEnum.DATA.getCode().equals(type)) {
-            return true;
-        }
-        String code = permission.getCode();
-        if (code == null || code.isBlank()) {
-            return false;
-        }
-        if (code.endsWith(SecurityConstant.PERMISSION_SUFFIX_READ)) {
-            return true;
-        }
-        return code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)
-                && SecurityConstant.isNormalUserWriteApiPath(permission.getPath());
-    }
-
-    private String permissionPathByCode(String code) {
-        if (code == null || code.isBlank()) {
-            return null;
-        }
-        Permission permission = permissionMapper.selectOne(new QueryWrapper<Permission>()
-                .select("path")
-                .eq("code", code)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .eq("status", StatusEnum.NOMAL.getCode())
-                .last("LIMIT 1"));
-        return permission == null ? null : permission.getPath();
-    }
-
-    private boolean isVisibleMenuForUser(String moduleKey, String deptCode, boolean superAdmin) {
-        if (superAdmin) {
-            return true;
-        }
-        if (deptCode == null || deptCode.isBlank()) {
-            return true;
-        }
-        String normalizedDeptCode = deptCode.trim().toUpperCase();
-        if (!isConfiguredGroupDept(normalizedDeptCode)) {
-            return true;
-        }
-        Set<String> configuredMenuCodes = getGroupMenuCodes(normalizedDeptCode);
-        if (configuredMenuCodes.isEmpty()) {
-            log.warn("group menu config missing or empty, deptCode={}, allow menu by default", normalizedDeptCode);
-            return true;
-        }
-        return configuredMenuCodes.contains(moduleKey);
+        return DATA_SCOPE_OWN;
     }
 
     private String resolveDeptCode(Long userId) {
@@ -475,70 +341,4 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         return dept == null ? null : dept.getCode();
     }
 
-    private boolean isConfiguredGroupDept(String deptCode) {
-        return getConfiguredGroupDeptCodes().contains(deptCode);
-    }
-
-    private Set<String> getConfiguredGroupDeptCodes() {
-        return parseCsvConfig(GROUP_CODE_CONFIG);
-    }
-
-    private Set<String> getGroupMenuCodes(String deptCode) {
-        Map<String, Set<String>> configured = parseGroupMenuJsonConfig();
-        Set<String> codes = configured.get(deptCode.toUpperCase());
-        return codes == null ? Collections.emptySet() : codes;
-    }
-
-    private Map<String, Set<String>> parseGroupMenuJsonConfig() {
-        Config config = configService.getOne(new QueryWrapper<Config>()
-                .select("value")
-                .eq("name", GROUP_MENU_JSON_CONFIG)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .last("LIMIT 1"));
-        if (config == null || config.getValue() == null || config.getValue().isBlank()) {
-            return Collections.emptyMap();
-        }
-        try {
-            Map<String, List<String>> raw = objectMapper.readValue(
-                    config.getValue(), new TypeReference<Map<String, List<String>>>() {
-                    });
-            Map<String, Set<String>> result = new LinkedHashMap<>();
-            if (raw != null) {
-                for (Map.Entry<String, List<String>> entry : raw.entrySet()) {
-                    if (entry.getKey() == null || entry.getValue() == null) {
-                        continue;
-                    }
-                    Set<String> menuCodes = entry.getValue().stream()
-                            .filter(value -> value != null && !value.isBlank())
-                            .map(String::trim)
-                            .collect(Collectors.toCollection(LinkedHashSet::new));
-                    if (!menuCodes.isEmpty()) {
-                        result.put(entry.getKey().trim().toUpperCase(), menuCodes);
-                    }
-                }
-            }
-            return result;
-        } catch (Exception ex) {
-            log.warn("parse group menu json config failed, configName={}", GROUP_MENU_JSON_CONFIG, ex);
-            return Collections.emptyMap();
-        }
-    }
-
-    private Set<String> parseCsvConfig(String name) {
-        if (name == null || name.isBlank()) {
-            return Collections.emptySet();
-        }
-        Config config = configService.getOne(new QueryWrapper<Config>()
-                .select("value")
-                .eq("name", name)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .last("LIMIT 1"));
-        if (config == null || config.getValue() == null || config.getValue().isBlank()) {
-            return Collections.emptySet();
-        }
-        return java.util.Arrays.stream(config.getValue().split(","))
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .collect(Collectors.toCollection(HashSet::new));
-    }
 }

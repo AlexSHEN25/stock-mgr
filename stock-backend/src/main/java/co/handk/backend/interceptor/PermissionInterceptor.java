@@ -45,9 +45,6 @@ public class PermissionInterceptor implements HandlerInterceptor {
         if (isAllowedSelfContextRead(uri, request.getMethod())) {
             return true;
         }
-        if (isNonAdminWriteAllowedByWhitelist(uri, request.getMethod())) {
-            return true;
-        }
         String requiredCode = resolveRequiredPermission(uri, request.getMethod());
         if (requiredCode == null) {
             if (!isReadRequest(uri, request.getMethod()) && isProtectedApi(uri) && !isAllowedAccountWrite(uri)) {
@@ -107,24 +104,6 @@ public class PermissionInterceptor implements HandlerInterceptor {
                 && (path.endsWith("/page") || path.endsWith("/list"));
     }
 
-    private boolean isNonAdminWriteAllowedByWhitelist(String uri, String method) {
-        if (uri == null) {
-            return false;
-        }
-        String normalizedMethod = method == null ? EMPTY : method.toUpperCase(Locale.ROOT);
-        if (!isWriteMethod(normalizedMethod)) {
-            return false;
-        }
-        return SecurityConstant.isNormalUserWriteApiPath(uri);
-    }
-
-    private boolean isWriteMethod(String method) {
-        String normalizedMethod = method == null ? EMPTY : method.toUpperCase(Locale.ROOT);
-        return !HttpMethod.GET.matches(normalizedMethod)
-                && !HttpMethod.HEAD.matches(normalizedMethod)
-                && !HttpMethod.OPTIONS.matches(normalizedMethod);
-    }
-
     private boolean isProtectedApi(String uri) {
         return uri != null && (uri.startsWith(SecurityConstant.API_PREFIX) || uri.startsWith("/"));
     }
@@ -152,7 +131,6 @@ public class PermissionInterceptor implements HandlerInterceptor {
                 ? uri.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX)
                 : uri;
         return "/user/permission-scope".equals(path)
-                || "/user/permissions".equals(path)
                 || "/user/profile".equals(path)
                 || "/user/me".equals(path);
     }

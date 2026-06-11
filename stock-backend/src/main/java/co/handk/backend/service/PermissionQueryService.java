@@ -15,4 +15,6 @@ public interface PermissionQueryService {
     PermissionScopeVO getPermissionScope(Long userId);
 
     List<Permission> getEnabledDataPermissions();
+
+    Set<String> getStockGroupCodes();
 }

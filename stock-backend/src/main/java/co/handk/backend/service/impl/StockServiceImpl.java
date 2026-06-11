@@ -41,7 +41,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private static final int MESSAGE_IS_UNREAD = 0;
     private static final int MESSAGE_STATE_SENT = 1;
     private static final int LOW_STOCK_THRESHOLD = 10;
-    private static final String GROUP_CODES_CONFIG = "stock.group.codes";
 
     @Autowired
     private GoodsService goodsService;
@@ -69,8 +68,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private DeptService deptService;
     @Autowired
     private CustomerService customerService;
-    @Autowired
-    private ConfigService configService;
     @Autowired
     private WarehouseService warehouseService;
     @Autowired
@@ -375,18 +372,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     private boolean isConfiguredGroupCode(String deptCode) {
-        Config config = configService.getOne(new QueryWrapper<Config>()
-                .eq("name", GROUP_CODES_CONFIG)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .last("LIMIT 1"));
-        String value = config == null || config.getValue() == null || config.getValue().isBlank()
-                ? "A,B,C" : config.getValue();
-        for (String code : value.split("[,，\\s\\n\\r]+")) {
-            if (deptCode != null && deptCode.trim().equalsIgnoreCase(code.trim())) {
-                return true;
-            }
-        }
-        return false;
+        return deptCode != null
+                && permissionQueryService.getStockGroupCodes().contains(deptCode.trim().toUpperCase());
     }
 
     @Override

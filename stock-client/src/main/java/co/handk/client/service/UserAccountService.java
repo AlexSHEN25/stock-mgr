@@ -23,25 +23,36 @@ public class UserAccountService {
     }
 
     public Set<String> permissions() throws Exception {
-        String res = ApiClient.get(ApiPath.USER_PERMISSIONS, Map.of());
-        JSONArray array = parsePermissionArray(res);
+        String res = ApiClient.get(ApiPath.USER_PERMISSION_SCOPE, Map.of());
         Set<String> codes = new HashSet<>();
-        for (int i = 0; i < array.length(); i++) {
-            String code = array.optString(i, "");
-            if (!code.isBlank()) {
-                codes.add(code);
+        JSONObject scope = new JSONObject(res);
+        JSONArray menuCodes = scope.optJSONArray("menuCodes");
+        if (menuCodes != null) {
+            for (int i = 0; i < menuCodes.length(); i++) {
+                String code = menuCodes.optString(i, "");
+                if (!code.isBlank()) {
+                    codes.add(code);
+                }
+            }
+        }
+        JSONArray permissionCodes = scope.optJSONArray("permissionCodes");
+        if (permissionCodes != null) {
+            for (int i = 0; i < permissionCodes.length(); i++) {
+                String code = permissionCodes.optString(i, "");
+                if (!code.isBlank()) {
+                    codes.add(code);
+                }
+            }
+        }
+        JSONArray roleCodes = scope.optJSONArray("roleCodes");
+        if (roleCodes != null) {
+            for (int i = 0; i < roleCodes.length(); i++) {
+                String code = roleCodes.optString(i, "");
+                if (!code.isBlank()) {
+                    codes.add(code);
+                }
             }
         }
         return codes;
-    }
-
-    private JSONArray parsePermissionArray(String response) {
-        String body = response == null ? "" : response.trim();
-        if (body.startsWith("[")) {
-            return new JSONArray(body);
-        }
-        JSONObject json = new JSONObject(body);
-        JSONArray data = json.optJSONArray("data");
-        return data == null ? new JSONArray() : data;
     }
 }

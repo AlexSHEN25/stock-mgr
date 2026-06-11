@@ -23,14 +23,20 @@ public class PermissionScopeVO implements Serializable {
 
     private List<MenuPermissionVO> menus = new ArrayList<>();
 
+    private List<MenuPermissionVO> permissionTree = new ArrayList<>();
+
     @Data
     public static class MenuPermissionVO implements Serializable {
         private String key;
         private String label;
         private String module;
         private String path;
+        private boolean visible;
         private String dataScope;
         private Integer sort;
+        private Long id;
+        private Long parentId;
+        private List<MenuPermissionVO> children = new ArrayList<>();
         private ActionPermissionVO actions = new ActionPermissionVO();
     }
 

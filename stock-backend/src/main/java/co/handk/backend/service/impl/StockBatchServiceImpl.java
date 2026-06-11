@@ -1,6 +1,5 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.entity.Config;
 import co.handk.backend.entity.Dept;
 import co.handk.backend.entity.GroupStock;
 import co.handk.backend.entity.Stock;
@@ -10,8 +9,8 @@ import co.handk.backend.entity.StockOrderItem;
 import co.handk.backend.mapper.GroupStockMapper;
 import co.handk.backend.mapper.StockBatchMapper;
 import co.handk.backend.mapper.StockMapper;
-import co.handk.backend.service.ConfigService;
 import co.handk.backend.service.DeptService;
+import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockBatchService;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
@@ -22,22 +21,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class StockBatchServiceImpl implements StockBatchService {
-    private static final String GROUP_CODES_CONFIG = "stock.group.codes";
-
     private final StockBatchMapper stockBatchMapper;
     private final GroupStockMapper groupStockMapper;
     private final StockMapper stockMapper;
-    private final ConfigService configService;
+    private final PermissionQueryService permissionQueryService;
     private final DeptService deptService;
 
     @Override
@@ -269,16 +264,7 @@ public class StockBatchServiceImpl implements StockBatchService {
     }
 
     private Set<String> allowedGroupCodes() {
-        Config config = configService.getOne(new QueryWrapper<Config>()
-                .eq("name", GROUP_CODES_CONFIG)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .last("LIMIT 1"));
-        String value = config == null ? "A,B,C" : config.getValue();
-        return Arrays.stream(value.split("[,，\\s\\r\\n]+"))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(String::toUpperCase)
-                .collect(Collectors.toSet());
+        return permissionQueryService.getStockGroupCodes();
     }
 
     private IllegalStateException changed() {
