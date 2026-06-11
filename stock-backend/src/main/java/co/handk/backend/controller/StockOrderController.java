@@ -53,5 +53,32 @@ public class StockOrderController {
     public PageResult<StockOrderVO> page(@Valid StockOrderQueryDTO query) {
         return stockOrderService.page(query);
     }
+
+    /**
+     * Customer-dimension order query alias.
+     */
+    @GetMapping("/customer/page")
+    public PageResult<StockOrderVO> customerPage(@Valid StockOrderQueryDTO query) {
+        if (query.getOutboundMode() == null || query.getOutboundMode().isBlank()) {
+            query.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_CUSTOMER);
+        }
+        return stockOrderService.page(query);
+    }
+
+    /**
+     * Customer-dimension order detail alias.
+     */
+    @GetMapping("/customer/{id}")
+    public StockOrderVO customerGet(@PathVariable("id") @NotNull Long id) {
+        return stockOrderService.getVOById(id);
+    }
+
+    /**
+     * Customer-dimension order update alias.
+     */
+    @PutMapping("/customer")
+    public Boolean customerUpdate(@RequestBody @NotNull @Valid UpdateStockOrderDTO dto) {
+        return stockOrderService.updateByDto(dto);
+    }
 }
 

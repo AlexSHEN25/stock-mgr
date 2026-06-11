@@ -28,4 +28,10 @@ public class StockOrderQueryDTO extends PageQuery {
     private LocalDateTime approveTime;
     private LocalDate bizDate;
     private LocalDateTime finishTime;
+    private String outboundMode;
+    private Long customerId;
+    private String customerName;
+    private Long deptId;
+    private String deptCode;
+    private LocalDateTime saleDeadline;
 }

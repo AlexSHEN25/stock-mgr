@@ -37,6 +37,8 @@ public class StockOperateDTO {
 
     private Long deptId;
 
+    private String groupCode;
+
     private String outboundMode;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

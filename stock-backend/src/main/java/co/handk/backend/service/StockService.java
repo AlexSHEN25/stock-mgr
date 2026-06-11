@@ -3,6 +3,11 @@ package co.handk.backend.service;
 import co.handk.backend.entity.Stock;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
+import co.handk.common.model.dto.query.CustomerStockQueryDTO;
+import co.handk.common.model.PageResult;
+import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
+import co.handk.common.model.vo.CustomerGoodsStockVO;
+import co.handk.common.model.vo.CustomerStockSummaryVO;
 import co.handk.common.model.vo.StockVO;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -20,5 +25,11 @@ public interface StockService extends BaseService<Stock, StockVO> {
     Boolean approveOrder(Long orderId, Boolean approved, String approveRemark);
 
     Integer getMyGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId);
+
+    PageResult<CustomerStockSummaryVO> pageCustomerStock(CustomerStockQueryDTO query);
+
+    PageResult<CustomerGoodsStockVO> pageCustomerGoodsStock(CustomerStockQueryDTO query);
+
+    PageResult<CustomerGoodsStockDetailVO> pageCustomerGoodsStockDetails(CustomerStockQueryDTO query);
 
 }

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="co.handk.backend.mapper.StockRecordMapper">
+
+    <sql id="customerStockWhere">
+        sr.deleted = 0
+        AND sr.order_type = 2
+        AND sr.outbound_mode = 'GROUP_CUSTOMER'
+        AND sr.customer_id IS NOT NULL
+        <if test="deptId != null">AND sr.dept_id = #{deptId}</if>
+        <if test="query.groupCode != null and query.groupCode != ''">
+            AND UPPER(sr.dept_code) = UPPER(#{query.groupCode})
+        </if>
+        <if test="ownerUserId != null">
+            AND EXISTS (
+                SELECT 1
+                FROM t_customer c
+                WHERE c.id = sr.customer_id
+                  AND c.deleted = 0
+                  AND c.owner_user_id = #{ownerUserId}
+            )
+        </if>
+        <if test="query.customerId != null">AND sr.customer_id = #{query.customerId}</if>
+        <if test="query.customerName != null and query.customerName != ''">
+            AND sr.customer_name LIKE CONCAT('%', #{query.customerName}, '%')
+        </if>
+        <if test="query.goodsId != null">AND sr.goods_id = #{query.goodsId}</if>
+        <if test="query.goodsName != null and query.goodsName != ''">
+            AND sr.goods_name LIKE CONCAT('%', #{query.goodsName}, '%')
+        </if>
+        <if test="query.skuId != null">AND sr.sku_id = #{query.skuId}</if>
+        <if test="query.skuCode != null and query.skuCode != ''">
+            AND sr.sku_code LIKE CONCAT('%', #{query.skuCode}, '%')
+        </if>
+        <if test="query.stockTypeId != null">AND sr.stock_type_id = #{query.stockTypeId}</if>
+        <if test="query.startDate != null">AND sr.biz_date <![CDATA[ >= ]]> #{query.startDate}</if>
+        <if test="query.endDate != null">AND sr.biz_date <![CDATA[ <= ]]> #{query.endDate}</if>
+    </sql>
+
+    <select id="countCustomerSummaries" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT sr.customer_id, sr.dept_id
+            FROM t_stock_record sr
+            WHERE <include refid="customerStockWhere"/>
+            GROUP BY sr.customer_id, sr.dept_id
+        ) summary
+    </select>
+
+    <select id="selectCustomerSummaries"
+            resultType="co.handk.common.model.vo.CustomerStockSummaryVO">
+        SELECT sr.customer_id AS customerId,
+               MAX(sr.customer_name) AS customerName,
+               sr.dept_id AS deptId,
+               MAX(sr.dept_code) AS groupCode,
+               COUNT(DISTINCT CONCAT(sr.goods_id, ':', COALESCE(sr.sku_id, 0))) AS goodsKinds,
+               SUM(sr.change_qty) AS totalQuantity,
+               MAX(sr.biz_date) AS lastOutboundDate
+        FROM t_stock_record sr
+        WHERE <include refid="customerStockWhere"/>
+        GROUP BY sr.customer_id, sr.dept_id
+        ORDER BY lastOutboundDate DESC, customerId DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countCustomerGoods" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT sr.customer_id, sr.dept_id, sr.goods_id, sr.sku_id, sr.stock_type_id
+            FROM t_stock_record sr
+            WHERE <include refid="customerStockWhere"/>
+            GROUP BY sr.customer_id, sr.dept_id, sr.goods_id, sr.sku_id, sr.stock_type_id
+        ) goods_summary
+    </select>
+
+    <select id="selectCustomerGoods"
+            resultType="co.handk.common.model.vo.CustomerGoodsStockVO">
+        SELECT sr.customer_id AS customerId,
+               MAX(sr.customer_name) AS customerName,
+               sr.dept_id AS deptId,
+               MAX(sr.dept_code) AS groupCode,
+               sr.goods_id AS goodsId,
+               MAX(sr.goods_name) AS goodsName,
+               sr.sku_id AS skuId,
+               MAX(sr.sku_code) AS skuCode,
+               sr.stock_type_id AS stockTypeId,
+               MAX(sr.stock_type_name) AS stockTypeName,
+               SUM(sr.change_qty) AS quantity,
+               MAX(sr.biz_date) AS lastOutboundDate
+        FROM t_stock_record sr
+        WHERE <include refid="customerStockWhere"/>
+        GROUP BY sr.customer_id, sr.dept_id, sr.goods_id, sr.sku_id, sr.stock_type_id
+        ORDER BY lastOutboundDate DESC, goodsId DESC, skuId DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countCustomerGoodsDetails" resultType="long">
+        SELECT COUNT(*)
+        FROM t_stock_record sr
+        WHERE <include refid="customerStockWhere"/>
+    </select>
+
+    <select id="selectCustomerGoodsDetails"
+            resultType="co.handk.common.model.vo.CustomerGoodsStockDetailVO">
+        SELECT sr.id AS recordId,
+               sr.biz_no AS bizNo,
+               sr.order_id AS orderId,
+               sr.order_item_id AS orderItemId,
+               sr.customer_id AS customerId,
+               sr.customer_name AS customerName,
+               sr.dept_id AS deptId,
+               sr.dept_code AS groupCode,
+               sr.goods_id AS goodsId,
+               sr.goods_name AS goodsName,
+               sr.sku_id AS skuId,
+               sr.sku_code AS skuCode,
+               sr.stock_type_id AS stockTypeId,
+               sr.stock_type_name AS stockTypeName,
+               sr.change_qty AS quantity,
+               sr.biz_date AS outboundDate,
+               sr.operator_id AS operatorId,
+               sr.operator_name AS operatorName
+        FROM t_stock_record sr
+        WHERE <include refid="customerStockWhere"/>
+        ORDER BY sr.biz_date DESC, sr.id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+</mapper>

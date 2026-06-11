@@ -73,6 +73,11 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     @Override
     protected <Q> QueryWrapper<StockOrder> buildWrapper(Q dto) {
         QueryWrapper<StockOrder> wrapper = super.buildWrapper(dto);
+        if (dto instanceof co.handk.common.model.dto.query.StockOrderQueryDTO query) {
+            if (query.getOutboundMode() != null && !query.getOutboundMode().isBlank()) {
+                wrapper.eq("outbound_mode", query.getOutboundMode().trim());
+            }
+        }
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
             wrapper.and(w -> w.eq("requester_id", userId).or().eq("operator_id", userId));

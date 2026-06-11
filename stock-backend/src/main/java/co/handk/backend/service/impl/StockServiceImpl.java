@@ -3,6 +3,7 @@ package co.handk.backend.service.impl;
 import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.*;
 import co.handk.backend.mapper.StockMapper;
+import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.*;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
@@ -16,8 +17,12 @@ import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
+import co.handk.common.model.dto.query.CustomerStockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
+import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
+import co.handk.common.model.vo.CustomerGoodsStockVO;
+import co.handk.common.model.vo.CustomerStockSummaryVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -74,6 +79,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private RequestFormService requestFormService;
     @Autowired
     private StringRedisUtil stringRedisUtil;
+    @Autowired
+    private StockRecordMapper stockRecordMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -214,6 +221,61 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 dept.getId(), goodsId, skuId, warehouseId, stockTypeId);
     }
 
+    @Override
+    public PageResult<CustomerStockSummaryVO> pageCustomerStock(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerStockAccess(query);
+        long total = stockRecordMapper.countCustomerSummaries(query, access.deptId(), access.ownerUserId());
+        List<CustomerStockSummaryVO> records = total == 0
+                ? List.of()
+                : stockRecordMapper.selectCustomerSummaries(
+                        query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), records);
+    }
+
+    @Override
+    public PageResult<CustomerGoodsStockVO> pageCustomerGoodsStock(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerStockAccess(query);
+        long total = stockRecordMapper.countCustomerGoods(query, access.deptId(), access.ownerUserId());
+        List<CustomerGoodsStockVO> records = total == 0
+                ? List.of()
+                : stockRecordMapper.selectCustomerGoods(
+                        query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), records);
+    }
+
+    @Override
+    public PageResult<CustomerGoodsStockDetailVO> pageCustomerGoodsStockDetails(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerStockAccess(query);
+        long total = stockRecordMapper.countCustomerGoodsDetails(query, access.deptId(), access.ownerUserId());
+        List<CustomerGoodsStockDetailVO> records = total == 0
+                ? List.of()
+                : stockRecordMapper.selectCustomerGoodsDetails(
+                        query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), records);
+    }
+
+    private CustomerStockAccess resolveCustomerStockAccess(CustomerStockQueryDTO query) {
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return new CustomerStockAccess(null, null);
+        }
+        Long deptId = currentDeptId();
+        if (deptId == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "current user department is required");
+        }
+        query.setGroupCode(null);
+        return new CustomerStockAccess(deptId, userId);
+    }
+
+    private long pageOffset(CustomerStockQueryDTO query) {
+        return (query.getPageNum() - 1L) * query.getPageSize();
+    }
+
+    private record CustomerStockAccess(Long deptId, Long ownerUserId) {
+    }
+
     private Long currentDeptId() {
         User user = userService.getByIdNotDeleted(UserContext.getUserIdOrDefault());
         return user == null ? null : user.getDeptId();
@@ -242,14 +304,20 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
             return requested;
         }
+        if (admin) {
+            return null;
+        }
         return resolveAccessibleGroupDept(null);
     }
 
     private QueryWrapper<Stock> buildGroupStockPageWrapper(StockQueryDTO query, Dept dept) {
+        String groupStockSql = "SELECT stock_id FROM t_group_stock"
+                + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE;
+        if (dept != null) {
+            groupStockSql += " AND dept_id = " + dept.getId();
+        }
         QueryWrapper<Stock> wrapper = buildWrapper(query)
-                .inSql("id", "SELECT stock_id FROM t_group_stock"
-                        + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
-                        + " AND dept_id = " + dept.getId())
+                .inSql("id", groupStockSql)
                 .orderByDesc("update_time");
         return wrapper;
     }
@@ -300,12 +368,12 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                         "only administrators can allocate self stock to a group");
             }
-            dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId()).getId());
+            dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId(), dto.getGroupCode()).getId());
             return;
         }
 
         if (StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(mode)) {
-            dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId()).getId());
+            dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId(), dto.getGroupCode()).getId());
             return;
         }
 
@@ -343,12 +411,23 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     private Dept resolveAccessibleGroupDept(Long requestedDeptId) {
+        return resolveAccessibleGroupDept(requestedDeptId, null);
+    }
+
+    private Dept resolveAccessibleGroupDept(Long requestedDeptId, String requestedGroupCode) {
         Long userId = UserContext.getUserIdOrDefault();
         boolean admin = permissionQueryService.isSuperAdmin(userId);
         Long userDeptId = currentDeptId();
         Long targetDeptId;
         if (admin) {
             targetDeptId = requestedDeptId;
+            if (targetDeptId == null && requestedGroupCode != null && !requestedGroupCode.isBlank()) {
+                Dept requestedDept = deptService.getOne(new QueryWrapper<Dept>()
+                        .eq("code", requestedGroupCode.trim())
+                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                        .last("LIMIT 1"));
+                targetDeptId = requestedDept == null ? null : requestedDept.getId();
+            }
         } else {
             if (requestedDeptId != null && !requestedDeptId.equals(userDeptId)) {
                 throw new co.handk.backend.exception.BusinessException(
@@ -360,7 +439,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (targetDeptId == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "a stock group department is required");
+                    admin
+                            ? "target deptId or groupCode is required for stock group operation"
+                            : "current user is not assigned to a department");
         }
         Dept dept = deptService.getByIdNotDeleted(targetDeptId);
         if (dept == null || dept.getCode() == null || !isConfiguredGroupCode(dept.getCode())) {

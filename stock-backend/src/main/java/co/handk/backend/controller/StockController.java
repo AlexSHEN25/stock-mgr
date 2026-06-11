@@ -1,13 +1,18 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.service.StockService;
+import co.handk.backend.exception.BusinessException;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
+import co.handk.common.model.dto.query.CustomerStockQueryDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
+import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
+import co.handk.common.model.vo.CustomerGoodsStockVO;
+import co.handk.common.model.vo.CustomerStockSummaryVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +57,32 @@ public class StockController {
         return stockService.outbound(dto);
     }
 
+    /**
+     * Customer-dimension outbound entry from self stock / goods management.
+     */
+    @PostMapping("/customer/outbound")
+    public Long customerOutbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+        dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_CUSTOMER);
+        if (dto.getCustomerId() == null) {
+            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "customerId is required");
+        }
+        return stockService.outbound(dto);
+    }
+
+    /**
+     * Customer-dimension outbound entry from group stock.
+     */
+    @PostMapping("/group/customer/outbound")
+    public Long groupCustomerOutbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+        dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER);
+        if (dto.getCustomerId() == null) {
+            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "customerId is required");
+        }
+        return stockService.outbound(dto);
+    }
+
     @PostMapping("/submit")
     public Long submit(@RequestBody @NotNull @Valid StockOrderSubmitDTO dto) {
         return stockService.submitOrder(dto);
@@ -92,5 +123,20 @@ public class StockController {
                                   @RequestParam("warehouseId") Long warehouseId,
                                   @RequestParam(value = "stockTypeId", required = false) Long stockTypeId) {
         return stockService.getMyGroupAvailableQty(goodsId, skuId, warehouseId, stockTypeId);
+    }
+
+    @GetMapping("/customer/page")
+    public PageResult<CustomerStockSummaryVO> customerPage(@Valid CustomerStockQueryDTO query) {
+        return stockService.pageCustomerStock(query);
+    }
+
+    @GetMapping("/customer/goods/page")
+    public PageResult<CustomerGoodsStockVO> customerGoodsPage(@Valid CustomerStockQueryDTO query) {
+        return stockService.pageCustomerGoodsStock(query);
+    }
+
+    @GetMapping("/customer/goods/detail/page")
+    public PageResult<CustomerGoodsStockDetailVO> customerGoodsDetailPage(@Valid CustomerStockQueryDTO query) {
+        return stockService.pageCustomerGoodsStockDetails(query);
     }
 }

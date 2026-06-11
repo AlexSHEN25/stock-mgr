@@ -41,4 +41,11 @@ public class UpdateStockOrderDTO {
     private LocalDate bizDate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime finishTime;
+    private String outboundMode;
+    private Long customerId;
+    private String customerName;
+    private Long deptId;
+    private String deptCode;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime saleDeadline;
 }
