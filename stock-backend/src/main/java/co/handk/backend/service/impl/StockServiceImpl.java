@@ -418,18 +418,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Long userId = UserContext.getUserIdOrDefault();
         boolean admin = permissionQueryService.isSuperAdmin(userId);
         Long userDeptId = currentDeptId();
-        Long targetDeptId;
+        Dept requestedGroupDept = findEnabledDeptByCode(requestedGroupCode);
+        Long targetDeptId = requestedGroupDept != null
+                ? requestedGroupDept.getId()
+                : requestedDeptId;
         if (admin) {
-            targetDeptId = requestedDeptId;
-            if (targetDeptId == null && requestedGroupCode != null && !requestedGroupCode.isBlank()) {
-                Dept requestedDept = deptService.getOne(new QueryWrapper<Dept>()
-                        .eq("code", requestedGroupCode.trim())
-                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                        .last("LIMIT 1"));
-                targetDeptId = requestedDept == null ? null : requestedDept.getId();
-            }
+            // Administrators may target any enabled stock-group department.
         } else {
-            if (requestedDeptId != null && !requestedDeptId.equals(userDeptId)) {
+            if (targetDeptId != null && !targetDeptId.equals(userDeptId)) {
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                         "users can only operate stock for their own department");
@@ -450,6 +446,17 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     "department is not configured as stock group: " + (dept == null ? "null" : dept.getCode()));
         }
         return dept;
+    }
+
+    private Dept findEnabledDeptByCode(String groupCode) {
+        if (groupCode == null || groupCode.isBlank()) {
+            return null;
+        }
+        return deptService.getOne(new QueryWrapper<Dept>()
+                .apply("UPPER(code) = {0}", groupCode.trim().toUpperCase())
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
     }
 
     private boolean isConfiguredGroupCode(String deptCode) {

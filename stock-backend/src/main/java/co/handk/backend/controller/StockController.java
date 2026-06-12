@@ -75,11 +75,13 @@ public class StockController {
      */
     @PostMapping("/group/customer/outbound")
     public Long groupCustomerOutbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
-        dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER);
         if (dto.getCustomerId() == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "customerId is required");
+            // Backward compatibility: the web client previously sent group allocation
+            // requests to this endpoint. A target group without a customer is allocation.
+            dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE);
+            return stockService.outbound(dto);
         }
+        dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER);
         return stockService.outbound(dto);
     }
 
