@@ -209,7 +209,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if ("group".equals(scope)) {
             Dept dept = resolveGroupDeptForScope(query.getGroupCode());
             QueryWrapper<Stock> wrapper = buildGroupStockPageWrapper(query, dept);
-            return pageStockWithWrapper(query, wrapper);
+            return pageGroupStockWithWrapper(query, wrapper, dept);
         }
         return super.page(query);
     }
@@ -320,7 +320,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private QueryWrapper<Stock> buildGroupStockPageWrapper(StockQueryDTO query, Dept dept) {
         String groupStockSql = "SELECT stock_id FROM t_group_stock"
-                + " WHERE deleted = 0 AND state = " + StockBizConstant.BATCH_STATE_ACTIVE;
+                + " WHERE deleted = 0"
+                + " AND current_qty > 0"
+                + " AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
+                + " AND (sale_deadline IS NULL OR sale_deadline >= NOW())";
         if (dept != null) {
             groupStockSql += " AND dept_id = " + dept.getId();
         }
@@ -330,15 +333,29 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return wrapper;
     }
 
-    private PageResult<StockVO> pageStockWithWrapper(StockQueryDTO query, QueryWrapper<Stock> wrapper) {
+    private PageResult<StockVO> pageGroupStockWithWrapper(
+            StockQueryDTO query, QueryWrapper<Stock> wrapper, Dept dept) {
         Page<Stock> page = new Page<>(query.getPageNum(), query.getPageSize());
         Page<Stock> result = this.page(page, wrapper);
         List<StockVO> records = result.getRecords().stream()
                 .map(this::toVO)
+                .peek(vo -> fillGroupStockScope(vo, dept))
                 .peek(this::fillStatusDesc)
                 .toList();
         fillStockJoins(records);
         return PageResult.build(result.getTotal(), result.getCurrent(), result.getSize(), records);
+    }
+
+    private void fillGroupStockScope(StockVO vo, Dept dept) {
+        Long deptId = dept == null ? null : dept.getId();
+        vo.setDeptId(deptId);
+        vo.setGroupCode(dept == null ? null : dept.getCode());
+        vo.setCurrentQty(stockBatchService.getGroupAvailableQty(
+                deptId,
+                Long.valueOf(vo.getGoodsId()),
+                vo.getSkuId(),
+                Long.valueOf(vo.getWarehouseId()),
+                vo.getStockTypeId()));
     }
 
     private void fillStockJoins(List<StockVO> records) {

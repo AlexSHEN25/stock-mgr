@@ -17,6 +17,8 @@ public class StockVO extends BaseVO {
     private Integer warehouseId;
     @JoinValue(sourceField = "warehouseId", serviceBean = "warehouseServiceImpl", targetField = "name")
     private String warehouseName;
+    private Long deptId;
+    private String groupCode;
     private Integer currentQty;
     private Integer groupAQty;
     private Integer groupBQty;
