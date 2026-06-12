@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class StockOperateDTO {
@@ -38,6 +39,16 @@ public class StockOperateDTO {
     private Long deptId;
 
     private String groupCode;
+
+    private String deptCode;
+
+    private Integer groupAQty;
+
+    private Integer groupBQty;
+
+    private Integer groupCQty;
+
+    private List<StockGroupAllocationItemDTO> allocations;
 
     private String outboundMode;
 

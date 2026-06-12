@@ -5,6 +5,7 @@ import co.handk.backend.exception.BusinessException;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.StockOperateDTO;
+import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -54,6 +56,10 @@ public class StockController {
 
     @PostMapping("/outbound")
     public Long outbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+        Long legacyAllocationOrderId = tryHandleLegacyGroupAllocation(dto);
+        if (legacyAllocationOrderId != null) {
+            return legacyAllocationOrderId;
+        }
         return stockService.outbound(dto);
     }
 
@@ -78,11 +84,20 @@ public class StockController {
         if (dto.getCustomerId() == null) {
             // Backward compatibility: the web client previously sent group allocation
             // requests to this endpoint. A target group without a customer is allocation.
+            Long legacyAllocationOrderId = tryHandleLegacyGroupAllocation(dto);
+            if (legacyAllocationOrderId != null) {
+                return legacyAllocationOrderId;
+            }
             dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE);
             return stockService.outbound(dto);
         }
         dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER);
         return stockService.outbound(dto);
+    }
+
+    @PostMapping("/group/allocate")
+    public List<Long> allocateToGroups(@RequestBody @NotNull @Valid StockGroupAllocateDTO dto) {
+        return stockService.allocateToGroups(dto);
     }
 
     @PostMapping("/submit")
@@ -143,5 +158,48 @@ public class StockController {
     @GetMapping("/customer/goods/detail/page")
     public PageResult<CustomerGoodsStockDetailVO> customerGoodsDetailPage(@Valid CustomerStockQueryDTO query) {
         return stockService.pageCustomerGoodsStockDetails(query);
+    }
+
+    private Long tryHandleLegacyGroupAllocation(StockOperateDTO dto) {
+        List<co.handk.common.model.dto.create.StockGroupAllocationItemDTO> allocations = new ArrayList<>();
+        if (dto.getAllocations() != null) {
+            for (co.handk.common.model.dto.create.StockGroupAllocationItemDTO item : dto.getAllocations()) {
+                if (item == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                    continue;
+                }
+                allocations.add(item);
+            }
+        }
+        appendAllocation(allocations, "A", dto.getGroupAQty());
+        appendAllocation(allocations, "B", dto.getGroupBQty());
+        appendAllocation(allocations, "C", dto.getGroupCQty());
+        if (allocations.isEmpty()) {
+            return null;
+        }
+        StockGroupAllocateDTO allocateDTO = new StockGroupAllocateDTO();
+        allocateDTO.setStockId(dto.getStockId());
+        allocateDTO.setGoodsId(dto.getGoodsId());
+        allocateDTO.setSkuId(dto.getSkuId());
+        allocateDTO.setWarehouseId(dto.getWarehouseId());
+        allocateDTO.setStockTypeId(dto.getStockTypeId());
+        allocateDTO.setAllocations(allocations);
+        allocateDTO.setSaleDeadline(dto.getSaleDeadline());
+        allocateDTO.setRemark(dto.getRemark());
+        List<Long> orderIds = stockService.allocateToGroups(allocateDTO);
+        return orderIds.isEmpty() ? 0L : orderIds.get(0);
+    }
+
+    private void appendAllocation(List<co.handk.common.model.dto.create.StockGroupAllocationItemDTO> allocations,
+                                  String groupCode,
+                                  Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            return;
+        }
+        co.handk.common.model.dto.create.StockGroupAllocationItemDTO item =
+                new co.handk.common.model.dto.create.StockGroupAllocationItemDTO();
+        item.setGroupCode(groupCode);
+        item.setDeptCode(groupCode);
+        item.setQuantity(quantity);
+        allocations.add(item);
     }
 }

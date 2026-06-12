@@ -314,7 +314,27 @@ public class ModuleFormController {
                 dto.put("stockId", stockId);
             }
         }
+        if ("stock".equals(module)) {
+            copyFromSourceIfBlank(dto, "deptId");
+            copyFromSourceIfBlank(dto, "groupCode");
+            copyFromSourceIfBlank(dto, "deptCode", "groupCode");
+        }
         return dto;
+    }
+
+    private void copyFromSourceIfBlank(JSONObject dto, String field) {
+        copyFromSourceIfBlank(dto, field, field);
+    }
+
+    private void copyFromSourceIfBlank(JSONObject dto, String targetField, String sourceField) {
+        if (!isBlankJsonValue(dto.opt(targetField))) {
+            return;
+        }
+        Object value = sourceValues.get(sourceField);
+        if (value == null || String.valueOf(value).isBlank()) {
+            return;
+        }
+        dto.put(targetField, value);
     }
 
     private boolean isBlankJsonValue(Object value) {

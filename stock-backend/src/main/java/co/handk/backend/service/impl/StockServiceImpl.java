@@ -16,6 +16,8 @@ import co.handk.common.model.dto.create.CreateStockDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
+import co.handk.common.model.dto.create.StockGroupAllocateDTO;
+import co.handk.common.model.dto.create.StockGroupAllocationItemDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
@@ -194,6 +196,72 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING);
         saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
         return order.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public List<Long> allocateToGroups(StockGroupAllocateDTO dto) {
+        Long userId = UserContext.getUserIdOrDefault();
+        if (!permissionQueryService.isSuperAdmin(userId)) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "only administrators can allocate self stock to groups");
+        }
+
+        Stock stock = resolveAllocationStock(dto);
+        java.util.LinkedHashMap<Long, GroupAllocationTarget> targets = new java.util.LinkedHashMap<>();
+        int totalQty = 0;
+        for (StockGroupAllocationItemDTO item : dto.getAllocations()) {
+            Dept dept = resolveAccessibleGroupDept(
+                    item.getDeptId(),
+                    resolveRequestedGroupCode(item.getGroupCode(), item.getDeptCode()));
+            int quantity = item.getQuantity();
+            GroupAllocationTarget previous = targets.get(dept.getId());
+            if (previous == null) {
+                targets.put(dept.getId(), new GroupAllocationTarget(dept, quantity));
+            } else {
+                targets.put(dept.getId(), new GroupAllocationTarget(dept, previous.quantity() + quantity));
+            }
+            totalQty += quantity;
+        }
+        if (totalQty > safeInt(stock.getCurrentQty())) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "allocation quantity exceeds available self stock");
+        }
+
+        List<Long> orderIds = new ArrayList<>();
+        for (GroupAllocationTarget target : targets.values()) {
+            StockOperateDTO operation = new StockOperateDTO();
+            operation.setStockId(stock.getId());
+            operation.setGoodsId(stock.getGoodsId());
+            operation.setSkuId(stock.getSkuId());
+            operation.setWarehouseId(stock.getWarehouseId());
+            operation.setStockTypeId(stock.getStockTypeId());
+            operation.setQuantity(target.quantity());
+            operation.setDeptId(target.dept().getId());
+            operation.setGroupCode(target.dept().getCode());
+            operation.setOutboundMode(StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE);
+            operation.setSaleDeadline(dto.getSaleDeadline());
+            operation.setRemark(dto.getRemark());
+            orderIds.add(outbound(operation));
+        }
+        return orderIds;
+    }
+
+    private Stock resolveAllocationStock(StockGroupAllocateDTO dto) {
+        if (dto.getStockId() != null) {
+            return requireStock(dto.getStockId(), dto.getWarehouseId());
+        }
+        StockOperateDTO operation = new StockOperateDTO();
+        operation.setGoodsId(dto.getGoodsId());
+        operation.setSkuId(dto.getSkuId());
+        operation.setWarehouseId(dto.getWarehouseId());
+        operation.setStockTypeId(dto.getStockTypeId());
+        return resolveOutboundStock(operation);
+    }
+
+    private record GroupAllocationTarget(Dept dept, int quantity) {
     }
 
     @Override
@@ -384,6 +452,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private void prepareOutboundAccess(StockOperateDTO dto, Stock stock) {
         String mode = normalizeOutboundMode(dto.getOutboundMode());
         dto.setOutboundMode(mode);
+        dto.setGroupCode(resolveRequestedGroupCode(dto.getGroupCode(), dto.getDeptCode()));
         Long userId = UserContext.getUserIdOrDefault();
         boolean admin = permissionQueryService.isSuperAdmin(userId);
 
@@ -476,6 +545,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
             targetDeptId = userDeptId;
         }
+        if (targetDeptId == null && requestedGroupCode != null && !requestedGroupCode.isBlank()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "department is not configured: " + requestedGroupCode.trim().toUpperCase());
+        }
         if (targetDeptId == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
@@ -501,6 +575,13 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
+    }
+
+    private String resolveRequestedGroupCode(String groupCode, String deptCode) {
+        if (groupCode != null && !groupCode.isBlank()) {
+            return groupCode;
+        }
+        return deptCode;
     }
 
     private boolean isConfiguredGroupCode(String deptCode) {
@@ -852,13 +933,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     private Stock requireStock(Long stockId, Integer warehouseId) {
-        if (warehouseId == null) {
-            throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "warehouseId is required for stock operation");
-        }
         Stock stock = requireStock(stockId);
-        if (stock.getWarehouseId() == null || !warehouseId.equals(stock.getWarehouseId())) {
+        if (warehouseId != null && (stock.getWarehouseId() == null || !warehouseId.equals(stock.getWarehouseId()))) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                     "stock does not belong to requested warehouse");
