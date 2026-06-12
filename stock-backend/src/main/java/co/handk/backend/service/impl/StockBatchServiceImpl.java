@@ -29,6 +29,8 @@ import java.util.HashMap;
 @Service
 @RequiredArgsConstructor
 public class StockBatchServiceImpl implements StockBatchService {
+    private static final long LEGACY_BATCH_ID_BASE = 9_000_000_000_000_000_000L;
+
     private final StockBatchMapper stockBatchMapper;
     private final GroupStockMapper groupStockMapper;
     private final StockMapper stockMapper;
@@ -66,6 +68,7 @@ public class StockBatchServiceImpl implements StockBatchService {
     @Transactional(rollbackFor = Exception.class)
     public void applyOutbound(StockOrder order, StockOrderItem item, Stock stock) {
         int quantity = item.getChangeQty();
+        reconcileSelfStockBatch(stock);
         if (StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE.equals(order.getOutboundMode())) {
             Dept dept = requireGroupDept(order.getDeptId());
             allocateToGroup(order, stock, dept, quantity);
@@ -257,8 +260,73 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .gt("available_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
-                .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()))
                 .orderByAsc("sale_deadline", "id"));
+    }
+
+    /**
+     * Older/imported stock rows may not have matching batch rows. Keep the
+     * batch ledger aligned with the authoritative self-stock quantity before
+     * consuming or allocating it.
+     */
+    private void reconcileSelfStockBatch(Stock stock) {
+        int stockQty = stock.getCurrentQty() == null ? 0 : stock.getCurrentQty();
+        if (stockQty <= 0) {
+            return;
+        }
+        int batchQty = activeBatches(stock.getId()).stream()
+                .mapToInt(batch -> batch.getAvailableQty() == null ? 0 : batch.getAvailableQty())
+                .sum();
+        int missingQty = stockQty - batchQty;
+        if (missingQty <= 0) {
+            return;
+        }
+
+        long legacyRefId = legacyBatchRefId(stock.getId());
+        StockBatch legacy = stockBatchMapper.selectOne(new QueryWrapper<StockBatch>()
+                .eq("inbound_order_item_id", legacyRefId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+        if (legacy == null) {
+            legacy = new StockBatch();
+            legacy.setInboundOrderId(legacyRefId);
+            legacy.setInboundOrderItemId(legacyRefId);
+            legacy.setStockId(stock.getId());
+            legacy.setGoodsId(Long.valueOf(stock.getGoodsId()));
+            legacy.setSkuId(stock.getSkuId());
+            legacy.setWarehouseId(Long.valueOf(stock.getWarehouseId()));
+            legacy.setStockTypeId(stock.getStockTypeId());
+            legacy.setOriginalQty(missingQty);
+            legacy.setAvailableQty(missingQty);
+            legacy.setAllocatedQty(0);
+            legacy.setCustomerOutQty(0);
+            legacy.setSaleDeadline(null);
+            legacy.setState(StockBizConstant.BATCH_STATE_ACTIVE);
+            legacy.setVersion(0L);
+            if (stockBatchMapper.insert(legacy) != 1) {
+                throw changed();
+            }
+            return;
+        }
+
+        int currentOriginal = legacy.getOriginalQty() == null ? 0 : legacy.getOriginalQty();
+        int currentAvailable = legacy.getAvailableQty() == null ? 0 : legacy.getAvailableQty();
+        int updated = stockBatchMapper.update(null, new LambdaUpdateWrapper<StockBatch>()
+                .eq(StockBatch::getId, legacy.getId())
+                .eq(StockBatch::getVersion, legacy.getVersion())
+                .set(StockBatch::getOriginalQty, currentOriginal + missingQty)
+                .set(StockBatch::getAvailableQty, currentAvailable + missingQty)
+                .set(StockBatch::getState, StockBizConstant.BATCH_STATE_ACTIVE)
+                .set(StockBatch::getVersion, legacy.getVersion() + 1));
+        if (updated != 1) {
+            throw changed();
+        }
+    }
+
+    private long legacyBatchRefId(Long stockId) {
+        if (stockId == null || stockId <= 0 || stockId >= LEGACY_BATCH_ID_BASE) {
+            throw new IllegalArgumentException("invalid stock id for legacy batch reconciliation");
+        }
+        return LEGACY_BATCH_ID_BASE + stockId;
     }
 
     private void updateBatch(StockBatch batch, int quantity, boolean allocation) {
