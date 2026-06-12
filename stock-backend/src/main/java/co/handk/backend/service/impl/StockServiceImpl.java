@@ -24,6 +24,10 @@ import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
 import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
 import co.handk.common.model.vo.CustomerGoodsStockVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixCellVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixColumnVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixRowVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -36,7 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -310,7 +316,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     @Override
     public PageResult<CustomerGoodsStockVO> pageCustomerGoodsStock(CustomerStockQueryDTO query) {
-        CustomerStockAccess access = resolveCustomerStockAccess(query);
+        CustomerStockAccess access = resolveCustomerGoodsAccess(query);
         long total = stockRecordMapper.countCustomerGoods(query, access.deptId(), access.ownerUserId());
         List<CustomerGoodsStockVO> records = total == 0
                 ? List.of()
@@ -321,13 +327,55 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     @Override
     public PageResult<CustomerGoodsStockDetailVO> pageCustomerGoodsStockDetails(CustomerStockQueryDTO query) {
-        CustomerStockAccess access = resolveCustomerStockAccess(query);
+        CustomerStockAccess access = resolveCustomerGoodsAccess(query);
         long total = stockRecordMapper.countCustomerGoodsDetails(query, access.deptId(), access.ownerUserId());
         List<CustomerGoodsStockDetailVO> records = total == 0
                 ? List.of()
                 : stockRecordMapper.selectCustomerGoodsDetails(
                         query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
         return PageResult.build(total, query.getPageNum(), query.getPageSize(), records);
+    }
+
+    @Override
+    public CustomerGoodsMatrixVO getCustomerGoodsMatrix(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerGoodsAccess(query);
+        long total = stockRecordMapper.countCustomerGoodsMatrixRows(
+                query, access.deptId(), access.ownerUserId());
+        List<CustomerGoodsMatrixColumnVO> columns = stockRecordMapper.selectCustomerGoodsMatrixColumns(
+                query, access.deptId(), access.ownerUserId());
+        List<CustomerGoodsMatrixRowVO> rows = total == 0
+                ? List.of()
+                : stockRecordMapper.selectCustomerGoodsMatrixRows(
+                        query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+
+        if (!rows.isEmpty()) {
+            List<Long> goodsIds = rows.stream().map(CustomerGoodsMatrixRowVO::getGoodsId).toList();
+            List<CustomerGoodsMatrixCellVO> cells = stockRecordMapper.selectCustomerGoodsMatrixCells(
+                    query, access.deptId(), access.ownerUserId(), goodsIds);
+            Map<Long, Map<Long, Long>> quantitiesByGoods = new LinkedHashMap<>();
+            for (CustomerGoodsMatrixCellVO cell : cells) {
+                quantitiesByGoods.computeIfAbsent(cell.getGoodsId(), ignored -> new LinkedHashMap<>())
+                        .put(cell.getCustomerId(), cell.getQuantity());
+            }
+            for (CustomerGoodsMatrixRowVO row : rows) {
+                Map<Long, Long> values = quantitiesByGoods.getOrDefault(row.getGoodsId(), Map.of());
+                Map<String, Long> quantities = new LinkedHashMap<>();
+                for (CustomerGoodsMatrixColumnVO column : columns) {
+                    quantities.put(String.valueOf(column.getCustomerId()),
+                            values.getOrDefault(column.getCustomerId(), 0L));
+                }
+                row.setQuantities(quantities);
+            }
+        }
+
+        CustomerGoodsMatrixVO result = new CustomerGoodsMatrixVO();
+        result.setTotal(total);
+        result.setPageNum(query.getPageNum());
+        result.setPageSize(query.getPageSize());
+        result.setTotalPages((total + query.getPageSize() - 1) / query.getPageSize());
+        result.setColumns(columns);
+        result.setRows(rows);
+        return result;
     }
 
     private CustomerStockAccess resolveCustomerStockAccess(CustomerStockQueryDTO query) {
@@ -343,6 +391,15 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
         query.setGroupCode(null);
         return new CustomerStockAccess(deptId, userId);
+    }
+
+    private CustomerStockAccess resolveCustomerGoodsAccess(CustomerStockQueryDTO query) {
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return new CustomerStockAccess(null, null);
+        }
+        query.setGroupCode(null);
+        return new CustomerStockAccess(null, userId);
     }
 
     private long pageOffset(CustomerStockQueryDTO query) {

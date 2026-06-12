@@ -17,6 +17,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 @Component
@@ -71,24 +72,24 @@ public class PermissionInterceptor implements HandlerInterceptor {
         if (uri != null && uri.startsWith(SecurityConstant.API_PREFIX)) {
             altUri = uri.substring(SecurityConstant.API_PREFIX_KEEP_LEADING_SLASH_INDEX);
         }
+        String permissionSuffix = read
+                ? SecurityConstant.PERMISSION_SUFFIX_READ
+                : SecurityConstant.PERMISSION_SUFFIX_WRITE;
+        String lookupPath = uri;
+        String alternatePath = altUri;
 
-        for (Permission permission : dataPermissions) {
-            String path = permission.getPath();
-            String code = permission.getCode();
-            if (path == null || path.isBlank() || code == null || code.isBlank()) {
-                continue;
-            }
-            if (!pathMatcher.match(path, uri) && !pathMatcher.match(path, altUri)) {
-                continue;
-            }
-            if (read && code.endsWith(SecurityConstant.PERMISSION_SUFFIX_READ)) {
-                return code;
-            }
-            if (!read && code.endsWith(SecurityConstant.PERMISSION_SUFFIX_WRITE)) {
-                return code;
-            }
-        }
-        return null;
+        return dataPermissions.stream()
+                .filter(Objects::nonNull)
+                .filter(permission -> permission.getPath() != null && !permission.getPath().isBlank())
+                .filter(permission -> permission.getCode() != null
+                        && permission.getCode().endsWith(permissionSuffix))
+                .filter(permission -> pathMatcher.match(permission.getPath(), lookupPath)
+                        || pathMatcher.match(permission.getPath(), alternatePath))
+                .sorted((left, right) -> pathMatcher.getPatternComparator(lookupPath)
+                        .compare(left.getPath(), right.getPath()))
+                .map(Permission::getCode)
+                .findFirst()
+                .orElse(null);
     }
 
     private boolean isReadRequest(String uri, String method) {

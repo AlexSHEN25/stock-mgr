@@ -13,6 +13,7 @@ import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
 import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
 import co.handk.common.model.vo.CustomerGoodsStockVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -158,6 +159,11 @@ public class StockController {
     @GetMapping("/customer/goods/detail/page")
     public PageResult<CustomerGoodsStockDetailVO> customerGoodsDetailPage(@Valid CustomerStockQueryDTO query) {
         return stockService.pageCustomerGoodsStockDetails(query);
+    }
+
+    @GetMapping("/customer/goods/matrix")
+    public CustomerGoodsMatrixVO customerGoodsMatrix(@Valid CustomerStockQueryDTO query) {
+        return stockService.getCustomerGoodsMatrix(query);
     }
 
     private Long tryHandleLegacyGroupAllocation(StockOperateDTO dto) {

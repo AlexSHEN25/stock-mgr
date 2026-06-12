@@ -7,7 +7,7 @@
     <sql id="customerStockWhere">
         sr.deleted = 0
         AND sr.order_type = 2
-        AND sr.outbound_mode = 'GROUP_CUSTOMER'
+        AND sr.outbound_mode IN ('CUSTOMER', 'GROUP_CUSTOMER')
         AND sr.customer_id IS NOT NULL
         <if test="deptId != null">AND sr.dept_id = #{deptId}</if>
         <if test="query.groupCode != null and query.groupCode != ''">
@@ -39,6 +39,51 @@
         <if test="query.endDate != null">AND sr.biz_date <![CDATA[ <= ]]> #{query.endDate}</if>
     </sql>
 
+    <sql id="customerGoodsOrderWhere">
+        o.deleted = 0
+        AND i.deleted = 0
+        AND o.order_type = 2
+        AND o.state = 2
+        AND o.outbound_mode IN ('CUSTOMER', 'GROUP_CUSTOMER')
+        AND o.customer_id IS NOT NULL
+        <if test="deptId != null">AND o.dept_id = #{deptId}</if>
+        <if test="query.groupCode != null and query.groupCode != ''">
+            AND UPPER(o.dept_code) = UPPER(#{query.groupCode})
+        </if>
+        <if test="ownerUserId != null">
+            AND EXISTS (
+                SELECT 1
+                FROM t_customer c
+                WHERE c.id = o.customer_id
+                  AND c.deleted = 0
+                  AND c.owner_user_id = #{ownerUserId}
+            )
+        </if>
+        <if test="query.customerId != null">AND o.customer_id = #{query.customerId}</if>
+        <if test="query.customerName != null and query.customerName != ''">
+            AND o.customer_name LIKE CONCAT('%', #{query.customerName}, '%')
+        </if>
+        <if test="query.categoryId != null">AND i.category_id = #{query.categoryId}</if>
+        <if test="query.categoryName != null and query.categoryName != ''">
+            AND i.category_name LIKE CONCAT('%', #{query.categoryName}, '%')
+        </if>
+        <if test="query.goodsId != null">AND i.goods_id = #{query.goodsId}</if>
+        <if test="query.goodsName != null and query.goodsName != ''">
+            AND i.goods_name LIKE CONCAT('%', #{query.goodsName}, '%')
+        </if>
+        <if test="query.skuId != null">AND i.sku_id = #{query.skuId}</if>
+        <if test="query.skuCode != null and query.skuCode != ''">
+            AND i.sku_code LIKE CONCAT('%', #{query.skuCode}, '%')
+        </if>
+        <if test="query.stockTypeId != null">AND i.stock_type_id = #{query.stockTypeId}</if>
+        <if test="query.startDate != null">
+            AND COALESCE(i.biz_date, o.biz_date) <![CDATA[ >= ]]> #{query.startDate}
+        </if>
+        <if test="query.endDate != null">
+            AND COALESCE(i.biz_date, o.biz_date) <![CDATA[ <= ]]> #{query.endDate}
+        </if>
+    </sql>
+
     <select id="countCustomerSummaries" resultType="long">
         SELECT COUNT(*)
         FROM (
@@ -68,63 +113,146 @@
     <select id="countCustomerGoods" resultType="long">
         SELECT COUNT(*)
         FROM (
-            SELECT sr.customer_id, sr.dept_id, sr.goods_id, sr.sku_id, sr.stock_type_id
-            FROM t_stock_record sr
-            WHERE <include refid="customerStockWhere"/>
-            GROUP BY sr.customer_id, sr.dept_id, sr.goods_id, sr.sku_id, sr.stock_type_id
+            SELECT o.customer_id,
+                   i.category_id,
+                   CASE WHEN i.category_id IS NULL THEN i.goods_id ELSE 0 END AS uncategorized_goods_id
+            FROM t_stock_order o
+            INNER JOIN t_stock_order_item i ON i.order_id = o.id
+            WHERE <include refid="customerGoodsOrderWhere"/>
+            GROUP BY o.customer_id,
+                     i.category_id,
+                     CASE WHEN i.category_id IS NULL THEN i.goods_id ELSE 0 END
         ) goods_summary
     </select>
 
     <select id="selectCustomerGoods"
             resultType="co.handk.common.model.vo.CustomerGoodsStockVO">
-        SELECT sr.customer_id AS customerId,
-               MAX(sr.customer_name) AS customerName,
-               sr.dept_id AS deptId,
-               MAX(sr.dept_code) AS groupCode,
-               sr.goods_id AS goodsId,
-               MAX(sr.goods_name) AS goodsName,
-               sr.sku_id AS skuId,
-               MAX(sr.sku_code) AS skuCode,
-               sr.stock_type_id AS stockTypeId,
-               MAX(sr.stock_type_name) AS stockTypeName,
-               SUM(sr.change_qty) AS quantity,
-               MAX(sr.biz_date) AS lastOutboundDate
-        FROM t_stock_record sr
-        WHERE <include refid="customerStockWhere"/>
-        GROUP BY sr.customer_id, sr.dept_id, sr.goods_id, sr.sku_id, sr.stock_type_id
-        ORDER BY lastOutboundDate DESC, goodsId DESC, skuId DESC
+        SELECT o.customer_id AS customerId,
+               MAX(o.customer_name) AS customerName,
+               CASE
+                   WHEN COUNT(DISTINCT o.outbound_mode) = 1
+                       AND MAX(o.outbound_mode) = 'GROUP_CUSTOMER'
+                       AND COUNT(DISTINCT o.dept_id) = 1
+                   THEN MAX(o.dept_id)
+                   ELSE NULL
+               END AS deptId,
+               CASE
+                   WHEN COUNT(DISTINCT o.outbound_mode) = 1
+                       AND MAX(o.outbound_mode) = 'GROUP_CUSTOMER'
+                       AND COUNT(DISTINCT o.dept_code) = 1
+                   THEN MAX(o.dept_code)
+                   ELSE NULL
+               END AS groupCode,
+               i.category_id AS categoryId,
+               COALESCE(MAX(i.category_name), '未分類') AS categoryName,
+               CASE WHEN i.category_id IS NULL THEN MAX(i.goods_id) ELSE NULL END AS goodsId,
+               CASE WHEN i.category_id IS NULL THEN MAX(i.goods_name) ELSE NULL END AS goodsName,
+               NULL AS skuId,
+               NULL AS skuCode,
+               NULL AS stockTypeId,
+               NULL AS stockTypeName,
+               COUNT(DISTINCT i.goods_id) AS goodsCount,
+               COUNT(DISTINCT i.sku_id) AS skuCount,
+               SUM(ABS(i.before_qty - i.after_qty)) AS quantity,
+               2 AS status,
+               '出庫完了' AS statusDesc,
+               CASE
+                   WHEN COUNT(DISTINCT o.outbound_mode) > 1 THEN 'MIXED'
+                   WHEN MAX(o.outbound_mode) = 'CUSTOMER' THEN 'SELF'
+                   WHEN COUNT(DISTINCT o.dept_code) = 1
+                       THEN CONCAT('GROUP:', MAX(o.dept_code))
+                   ELSE 'GROUP'
+               END AS sourceScope,
+               MAX(COALESCE(i.biz_date, o.biz_date)) AS lastOutboundDate
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+        GROUP BY o.customer_id,
+                 i.category_id,
+                 CASE WHEN i.category_id IS NULL THEN i.goods_id ELSE 0 END
+        ORDER BY lastOutboundDate DESC, categoryId DESC, goodsId DESC
         LIMIT #{offset}, #{limit}
     </select>
 
     <select id="countCustomerGoodsDetails" resultType="long">
         SELECT COUNT(*)
-        FROM t_stock_record sr
-        WHERE <include refid="customerStockWhere"/>
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
     </select>
 
     <select id="selectCustomerGoodsDetails"
             resultType="co.handk.common.model.vo.CustomerGoodsStockDetailVO">
-        SELECT sr.id AS recordId,
-               sr.biz_no AS bizNo,
-               sr.order_id AS orderId,
-               sr.order_item_id AS orderItemId,
-               sr.customer_id AS customerId,
-               sr.customer_name AS customerName,
-               sr.dept_id AS deptId,
-               sr.dept_code AS groupCode,
-               sr.goods_id AS goodsId,
-               sr.goods_name AS goodsName,
-               sr.sku_id AS skuId,
-               sr.sku_code AS skuCode,
-               sr.stock_type_id AS stockTypeId,
-               sr.stock_type_name AS stockTypeName,
-               sr.change_qty AS quantity,
-               sr.biz_date AS outboundDate,
-               sr.operator_id AS operatorId,
-               sr.operator_name AS operatorName
-        FROM t_stock_record sr
-        WHERE <include refid="customerStockWhere"/>
-        ORDER BY sr.biz_date DESC, sr.id DESC
+        SELECT i.id AS recordId,
+               o.order_no AS bizNo,
+               o.id AS orderId,
+               i.id AS orderItemId,
+               o.customer_id AS customerId,
+               o.customer_name AS customerName,
+               o.dept_id AS deptId,
+               o.dept_code AS groupCode,
+               i.goods_id AS goodsId,
+               i.goods_name AS goodsName,
+               i.sku_id AS skuId,
+               i.sku_code AS skuCode,
+               i.stock_type_id AS stockTypeId,
+               i.stock_type_name AS stockTypeName,
+               ABS(i.before_qty - i.after_qty) AS quantity,
+               COALESCE(i.biz_date, o.biz_date) AS outboundDate,
+               o.operator_id AS operatorId,
+               o.operator_name AS operatorName
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+        ORDER BY COALESCE(i.biz_date, o.biz_date) DESC, i.id DESC
         LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countCustomerGoodsMatrixRows" resultType="long">
+        SELECT COUNT(DISTINCT i.goods_id)
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+    </select>
+
+    <select id="selectCustomerGoodsMatrixColumns"
+            resultType="co.handk.common.model.vo.CustomerGoodsMatrixColumnVO">
+        SELECT o.customer_id AS customerId,
+               MAX(o.customer_name) AS customerName
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+        GROUP BY o.customer_id
+        ORDER BY customerName ASC, customerId ASC
+    </select>
+
+    <select id="selectCustomerGoodsMatrixRows"
+            resultType="co.handk.common.model.vo.CustomerGoodsMatrixRowVO">
+        SELECT i.goods_id AS goodsId,
+               MAX(i.goods_name) AS goodsName,
+               MAX(i.category_id) AS categoryId,
+               MAX(i.category_name) AS categoryName,
+               SUM(ABS(i.before_qty - i.after_qty)) AS totalQuantity
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+        GROUP BY i.goods_id
+        ORDER BY goodsName ASC, goodsId ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCustomerGoodsMatrixCells"
+            resultType="co.handk.common.model.vo.CustomerGoodsMatrixCellVO">
+        SELECT i.goods_id AS goodsId,
+               o.customer_id AS customerId,
+               SUM(ABS(i.before_qty - i.after_qty)) AS quantity
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+          AND i.goods_id IN
+          <foreach collection="goodsIds" item="goodsId" open="(" separator="," close=")">
+              #{goodsId}
+          </foreach>
+        GROUP BY i.goods_id, o.customer_id
     </select>
 </mapper>

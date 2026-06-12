@@ -10,6 +10,8 @@ public class CustomerStockQueryDTO extends PageQuery {
     private String groupCode;
     private Long customerId;
     private String customerName;
+    private Long categoryId;
+    private String categoryName;
     private Long goodsId;
     private String goodsName;
     private Long skuId;

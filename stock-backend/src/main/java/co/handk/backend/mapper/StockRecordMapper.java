@@ -4,6 +4,9 @@ import co.handk.backend.entity.StockRecord;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
 import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
 import co.handk.common.model.vo.CustomerGoodsStockVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixCellVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixColumnVO;
+import co.handk.common.model.vo.CustomerGoodsMatrixRowVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -43,4 +46,26 @@ public interface StockRecordMapper extends BaseMapper<StockRecord> {
                                                                 @Param("ownerUserId") Long ownerUserId,
                                                                 @Param("offset") long offset,
                                                                 @Param("limit") long limit);
+
+    long countCustomerGoodsMatrixRows(@Param("query") CustomerStockQueryDTO query,
+                                      @Param("deptId") Long deptId,
+                                      @Param("ownerUserId") Long ownerUserId);
+
+    List<CustomerGoodsMatrixColumnVO> selectCustomerGoodsMatrixColumns(
+            @Param("query") CustomerStockQueryDTO query,
+            @Param("deptId") Long deptId,
+            @Param("ownerUserId") Long ownerUserId);
+
+    List<CustomerGoodsMatrixRowVO> selectCustomerGoodsMatrixRows(
+            @Param("query") CustomerStockQueryDTO query,
+            @Param("deptId") Long deptId,
+            @Param("ownerUserId") Long ownerUserId,
+            @Param("offset") long offset,
+            @Param("limit") long limit);
+
+    List<CustomerGoodsMatrixCellVO> selectCustomerGoodsMatrixCells(
+            @Param("query") CustomerStockQueryDTO query,
+            @Param("deptId") Long deptId,
+            @Param("ownerUserId") Long ownerUserId,
+            @Param("goodsIds") List<Long> goodsIds);
 }
