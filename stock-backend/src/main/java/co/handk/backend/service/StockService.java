@@ -24,7 +24,8 @@ public interface StockService extends BaseService<Stock, StockVO> {
 
     Boolean approveOrder(Long orderId, Boolean approved, String approveRemark);
 
-    Integer getMyGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId);
+    Integer getGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId,
+                                 Long deptId, String groupCode);
 
     PageResult<CustomerStockSummaryVO> pageCustomerStock(CustomerStockQueryDTO query);
 

@@ -215,8 +215,16 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     @Override
-    public Integer getMyGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
-        Dept dept = resolveAccessibleGroupDept(null);
+    public Integer getGroupAvailableQty(Long goodsId, Long skuId, Long warehouseId, Long stockTypeId,
+                                        Long deptId, String groupCode) {
+        Long userId = UserContext.getUserIdOrDefault();
+        if (permissionQueryService.isSuperAdmin(userId)
+                && deptId == null
+                && (groupCode == null || groupCode.isBlank())) {
+            return stockBatchService.getGroupAvailableQty(
+                    null, goodsId, skuId, warehouseId, stockTypeId);
+        }
+        Dept dept = resolveAccessibleGroupDept(deptId, groupCode);
         return stockBatchService.getGroupAvailableQty(
                 dept.getId(), goodsId, skuId, warehouseId, stockTypeId);
     }

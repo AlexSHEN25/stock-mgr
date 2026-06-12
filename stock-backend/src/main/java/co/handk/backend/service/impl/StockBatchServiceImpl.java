@@ -107,10 +107,8 @@ public class StockBatchServiceImpl implements StockBatchService {
 
     @Override
     public int getGroupAvailableQty(Long deptId, Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
-        Dept dept = requireGroupDept(deptId);
         QueryWrapper<GroupStock> wrapper = new QueryWrapper<GroupStock>()
                 .select("COALESCE(SUM(current_qty), 0) AS current_qty")
-                .eq("dept_id", dept.getId())
                 .eq("goods_id", goodsId)
                 .eq("sku_id", skuId)
                 .eq("warehouse_id", warehouseId)
@@ -118,6 +116,9 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
                 .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()));
+        if (deptId != null) {
+            wrapper.eq("dept_id", requireGroupDept(deptId).getId());
+        }
         if (stockTypeId == null) wrapper.isNull("stock_type_id");
         else wrapper.eq("stock_type_id", stockTypeId);
         GroupStock total = groupStockMapper.selectOne(wrapper);

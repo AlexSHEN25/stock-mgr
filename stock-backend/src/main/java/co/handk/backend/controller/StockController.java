@@ -123,8 +123,11 @@ public class StockController {
     public Integer groupAvailable(@RequestParam("goodsId") Long goodsId,
                                   @RequestParam("skuId") Long skuId,
                                   @RequestParam("warehouseId") Long warehouseId,
-                                  @RequestParam(value = "stockTypeId", required = false) Long stockTypeId) {
-        return stockService.getMyGroupAvailableQty(goodsId, skuId, warehouseId, stockTypeId);
+                                  @RequestParam(value = "stockTypeId", required = false) Long stockTypeId,
+                                  @RequestParam(value = "deptId", required = false) Long deptId,
+                                  @RequestParam(value = "groupCode", required = false) String groupCode) {
+        return stockService.getGroupAvailableQty(
+                goodsId, skuId, warehouseId, stockTypeId, deptId, groupCode);
     }
 
     @GetMapping("/customer/page")
