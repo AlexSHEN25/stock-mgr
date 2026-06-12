@@ -126,6 +126,26 @@ public class StockBatchServiceImpl implements StockBatchService {
     }
 
     @Override
+    public List<Long> getAvailableGroupDeptIds(Long stockId) {
+        if (stockId == null) {
+            return List.of();
+        }
+        return groupStockMapper.selectList(new QueryWrapper<GroupStock>()
+                        .select("dept_id")
+                        .eq("stock_id", stockId)
+                        .gt("current_qty", 0)
+                        .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
+                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                        .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()))
+                        .groupBy("dept_id"))
+                .stream()
+                .map(GroupStock::getDeptId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    @Override
     public Map<String, Integer> getGroupQuantities(Long stockId) {
         List<GroupStock> rows = groupStockMapper.selectList(new QueryWrapper<GroupStock>()
                 .eq("stock_id", stockId)

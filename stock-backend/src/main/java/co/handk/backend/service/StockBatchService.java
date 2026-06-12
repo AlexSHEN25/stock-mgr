@@ -6,6 +6,7 @@ import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
 
 import java.util.Map;
+import java.util.List;
 
 public interface StockBatchService {
     void recordInbound(StockOrder order, StockOrderItem item, Stock stock);
@@ -15,6 +16,8 @@ public interface StockBatchService {
     void consumeGroupStock(StockOrder order, Stock stock, int quantity);
 
     int getGroupAvailableQty(Long deptId, Long goodsId, Long skuId, Long warehouseId, Long stockTypeId);
+
+    List<Long> getAvailableGroupDeptIds(Long stockId);
 
     Map<String, Integer> getGroupQuantities(Long stockId);
 

@@ -169,8 +169,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long outbound(StockOperateDTO dto) {
-        prepareOutboundAccess(dto);
         Stock stock = resolveOutboundStock(dto);
+        prepareOutboundAccess(dto, stock);
         requireAccessibleOutboundStock(stock, dto.getOutboundMode());
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
@@ -364,7 +364,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
     }
 
-    private void prepareOutboundAccess(StockOperateDTO dto) {
+    private void prepareOutboundAccess(StockOperateDTO dto, Stock stock) {
         String mode = normalizeOutboundMode(dto.getOutboundMode());
         dto.setOutboundMode(mode);
         Long userId = UserContext.getUserIdOrDefault();
@@ -381,6 +381,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
 
         if (StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(mode)) {
+            if (admin && dto.getDeptId() == null
+                    && (dto.getGroupCode() == null || dto.getGroupCode().isBlank())) {
+                dto.setDeptId(resolveUniqueGroupDeptId(stock.getId()));
+            }
             dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId(), dto.getGroupCode()).getId());
             return;
         }
@@ -388,6 +392,21 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (!admin) {
             dto.setDeptId(null);
         }
+    }
+
+    private Long resolveUniqueGroupDeptId(Long stockId) {
+        List<Long> deptIds = stockBatchService.getAvailableGroupDeptIds(stockId);
+        if (deptIds.size() == 1) {
+            return deptIds.get(0);
+        }
+        if (deptIds.isEmpty()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "no available group stock was found for this stock");
+        }
+        throw new co.handk.backend.exception.BusinessException(
+                co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                "multiple stock groups are available; deptId or groupCode is required");
     }
 
     private void requireAccessibleOutboundStock(Stock stock, String outboundMode) {
