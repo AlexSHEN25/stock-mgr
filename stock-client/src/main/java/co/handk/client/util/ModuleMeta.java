@@ -149,6 +149,7 @@ public final class ModuleMeta {
     private static final Set<String> ALWAYS_HIDDEN_COLUMNS = Set.of("beforeqty", "afterqty");
     private static final Set<String> GOODS_HIDDEN_ID_COLUMNS = Set.of("brandid", "seriesid", "categoryid", "makerid");
     private static final Set<String> GOODS_DETAIL_ONLY_COLUMNS = Set.of("costprice", "updateprice", "priceupdatetime", "barcode", "weight", "volume", "imageurl");
+    private static final Set<String> GOODS_READONLY_FIELDS = Set.of("currentqty", "inbounddone", "outboundmaxqty");
 
     private static final Map<String, List<String>> QUERY_FIELDS = new HashMap<>();
     private static final Map<String, List<String>> FORM_FIELDS = new HashMap<>();
@@ -166,7 +167,8 @@ public final class ModuleMeta {
     private static final Map<String, List<FormValueRule>> FORM_VALUE_RULES = new HashMap<>();
     private static final Map<String, Map<String, Map<String, String>>> INITIAL_RELATION_FILTERS = new HashMap<>();
     private static final List<String> INLINE_READONLY_FIELDS = List.of(
-            "id", "createTime", "updateTime", "statusDesc", "beforeQty", "afterQty"
+            "id", "createTime", "updateTime", "statusDesc", "beforeQty", "afterQty",
+            "currentQty", "inboundDone", "outboundMaxQty"
     );
     private static final ResourceBundle UI_BUNDLE = ResourceBundle.getBundle("i18n.ui", Locale.JAPAN);
 
@@ -467,6 +469,7 @@ public final class ModuleMeta {
                 || "createtime".equals(low)
                 || "updatetime".equals(low)
                 || "statusdesc".equals(low)
+                || GOODS_READONLY_FIELDS.contains(low)
                 || "beforeqty".equals(low)
                 || "afterqty".equals(low);
     }
@@ -615,11 +618,35 @@ public final class ModuleMeta {
         if (Session.hasPermission("DATA_ALL_WRITE")) {
             return true;
         }
+        if (MODULE_STOCK.equals(moduleKey)) {
+            return hasAnyPermission(
+                    "DATA_STOCK_WRITE",
+                    "DATA_STOCK_SELF_WRITE",
+                    "DATA_STOCK_A_WRITE",
+                    "DATA_STOCK_B_WRITE",
+                    "DATA_STOCK_C_WRITE",
+                    "DATA_STOCK_CUSTOMER_WRITE",
+                    "DATA_STOCK_ORDER_WRITE",
+                    "DATA_STOCK_ORDER_ITEM_WRITE",
+                    "DATA_STOCK_TYPE_WRITE");
+        }
         String code = WRITE_PERMISSION_CODES.get(moduleKey);
         if (code == null || code.isBlank()) {
             code = "DATA_" + camelToUpperUnderscore(moduleKey) + "_WRITE";
         }
         return Session.hasPermission(code);
+    }
+
+    private static boolean hasAnyPermission(String... codes) {
+        if (codes == null || codes.length == 0) {
+            return false;
+        }
+        for (String code : codes) {
+            if (code != null && !code.isBlank() && Session.hasPermission(code)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isInlineReadonlyField(String field) {
@@ -644,6 +671,7 @@ public final class ModuleMeta {
                 || "createtime".equals(low)
                 || "updatetime".equals(low)
                 || "statusdesc".equals(low)
+                || GOODS_READONLY_FIELDS.contains(low)
                 || "beforeqty".equals(low)
                 || "afterqty".equals(low);
     }

@@ -69,6 +69,14 @@ public class StockController {
      */
     @PostMapping("/customer/outbound")
     public Long customerOutbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+        if (dto.getCustomerId() == null && hasGroupAllocationTarget(dto)) {
+            Long legacyAllocationOrderId = tryHandleLegacyGroupAllocation(dto);
+            if (legacyAllocationOrderId != null) {
+                return legacyAllocationOrderId;
+            }
+            dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE);
+            return stockService.outbound(dto);
+        }
         dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_CUSTOMER);
         if (dto.getCustomerId() == null) {
             throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
@@ -207,5 +215,37 @@ public class StockController {
         item.setDeptCode(groupCode);
         item.setQuantity(quantity);
         allocations.add(item);
+    }
+
+    private boolean hasGroupAllocationTarget(StockOperateDTO dto) {
+        if (dto == null) {
+            return false;
+        }
+        if (dto.getDeptId() != null || hasText(dto.getGroupCode()) || hasText(dto.getDeptCode())) {
+            return true;
+        }
+        if (dto.getGroupAQty() != null && dto.getGroupAQty() > 0) {
+            return true;
+        }
+        if (dto.getGroupBQty() != null && dto.getGroupBQty() > 0) {
+            return true;
+        }
+        if (dto.getGroupCQty() != null && dto.getGroupCQty() > 0) {
+            return true;
+        }
+        if (dto.getAllocations() == null) {
+            return false;
+        }
+        return dto.getAllocations().stream()
+                .anyMatch(item -> item != null
+                        && item.getQuantity() != null
+                        && item.getQuantity() > 0
+                        && (item.getDeptId() != null
+                        || hasText(item.getGroupCode())
+                        || hasText(item.getDeptCode())));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

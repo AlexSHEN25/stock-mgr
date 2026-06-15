@@ -508,6 +508,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private void prepareOutboundAccess(StockOperateDTO dto, Stock stock) {
         String mode = normalizeOutboundMode(dto.getOutboundMode());
+        if (StockBizConstant.OUTBOUND_MODE_CUSTOMER.equals(mode)
+                && dto.getCustomerId() != null
+                && (dto.getDeptId() != null || hasText(dto.getGroupCode()) || hasText(dto.getDeptCode()))) {
+            mode = StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER;
+        }
         dto.setOutboundMode(mode);
         dto.setGroupCode(resolveRequestedGroupCode(dto.getGroupCode(), dto.getDeptCode()));
         Long userId = UserContext.getUserIdOrDefault();
@@ -717,7 +722,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 notifyInsufficientStock(item.getSkuCode(), changeQty, beforeQty, stock.getId());
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "insufficient stock for approved outbound order: SKU[" + item.getSkuCode() + "]");
+                        "承認済みの出庫伝票に対する在庫が不足しているため、出庫処理を実行できません: 品番[" + item.getSkuCode() + "]");
             }
             if (groupAllocate) {
                 stockBatchService.applyOutbound(order, item, stock);
@@ -1157,6 +1162,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             return StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER;
         }
         return StockBizConstant.OUTBOUND_MODE_CUSTOMER;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private StockOrderItem saveOrderItem(Long orderId,

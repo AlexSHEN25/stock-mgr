@@ -315,9 +315,24 @@ public class ModuleFormController {
             }
         }
         if ("stock".equals(module)) {
+            copyFromSourceIfBlank(dto, "goodsId");
+            copyFromSourceIfBlank(dto, "skuId");
+            copyFromSourceIfBlank(dto, "goodsName", "name");
+            copyFromSourceIfBlank(dto, "skuCode");
+            copyFromSourceIfBlank(dto, "brandId");
+            copyFromSourceIfBlank(dto, "seriesId");
+            copyFromSourceIfBlank(dto, "categoryId");
+            copyFromSourceIfBlank(dto, "makerId");
             copyFromSourceIfBlank(dto, "deptId");
             copyFromSourceIfBlank(dto, "groupCode");
             copyFromSourceIfBlank(dto, "deptCode", "groupCode");
+            if (isBlankJsonValue(dto.opt("outboundMode"))) {
+                if (hasSourceValue("groupCode") || hasSourceValue("deptId")) {
+                    dto.put("outboundMode", "GROUP_CUSTOMER");
+                } else {
+                    dto.put("outboundMode", "CUSTOMER");
+                }
+            }
         }
         return dto;
     }
@@ -339,6 +354,11 @@ public class ModuleFormController {
 
     private boolean isBlankJsonValue(Object value) {
         return value == null || String.valueOf(value).trim().isEmpty() || "null".equalsIgnoreCase(String.valueOf(value).trim());
+    }
+
+    private boolean hasSourceValue(String key) {
+        Object value = sourceValues.get(key);
+        return value != null && !String.valueOf(value).trim().isEmpty() && !"null".equalsIgnoreCase(String.valueOf(value).trim());
     }
 
     private Object extractValue(Control c) {

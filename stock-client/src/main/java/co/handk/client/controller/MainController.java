@@ -171,20 +171,30 @@ public class MainController {
 
     @FXML
     private void onStockInbound() {
-        if (!Module.STOCK.equals(currentModule)) {
+        if (!isStockOperationModule()) {
+            return;
+        }
+        Map<String, Object> selected = currentWorkingRow();
+        if (selected == null) {
+            messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
             return;
         }
         pendingStockOperation = "inbound";
-        openFormDialog(UiText.byKey("main.btn.stockInbound"), false);
+        openFormDialog(UiText.byKey("main.btn.stockInbound"), false, Module.STOCK, selected);
     }
 
     @FXML
     private void onStockOutbound() {
-        if (!Module.STOCK.equals(currentModule)) {
+        if (!isStockOperationModule()) {
+            return;
+        }
+        Map<String, Object> selected = currentWorkingRow();
+        if (selected == null) {
+            messageLabel.setText(UiText.MSG_SELECT_ROW_FIRST);
             return;
         }
         pendingStockOperation = "outbound";
-        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false);
+        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false, Module.STOCK, selected);
     }
 
     @FXML
@@ -436,15 +446,16 @@ public class MainController {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
         boolean canWrite = ModuleMeta.canWriteByPermission(currentModule);
         boolean messageModule = Module.MESSAGE.equals(currentModule);
-        boolean stockModule = Module.STOCK.equals(currentModule);
+        boolean stockModule = isStockOperationModule();
+        boolean stockOperationAllowed = ModuleMeta.canWriteByPermission(Module.STOCK);
         updateStockSubNav();
         addButton.setDisable(!policy.canCreate || !canWrite);
         stockInboundButton.setVisible(stockModule);
         stockInboundButton.setManaged(stockModule);
         stockOutboundButton.setVisible(stockModule);
         stockOutboundButton.setManaged(stockModule);
-        stockInboundButton.setDisable(!stockModule || !canWrite);
-        stockOutboundButton.setDisable(!stockModule || !canWrite);
+        stockInboundButton.setDisable(!stockOperationAllowed);
+        stockOutboundButton.setDisable(!stockOperationAllowed);
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
         readAllButton.setDisable(!messageModule || !canWrite);
@@ -578,6 +589,10 @@ public class MainController {
     }
 
     private void openFormDialog(String action, boolean editMode) {
+        openFormDialog(action, editMode, currentModule, editMode ? currentWorkingRow() : null);
+    }
+
+    private void openFormDialog(String action, boolean editMode, String formModule, Map<String, Object> source) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/module-form.fxml"));
             Parent root = loader.load();
@@ -590,12 +605,11 @@ public class MainController {
             }
             modal.setScene(new Scene(root));
             ModuleFormController formController = loader.getController();
-            Map<String, Object> selected = editMode ? currentWorkingRow() : null;
             formController.configure(
-                    currentModule,
+                    formModule,
                     action + " " + pageTitleLabel.getText(),
                     editMode,
-                    selected,
+                    source,
                     tableRowService.visibleKeys(dataTable.getItems(), SELECTED_KEY));
             modal.setOnCloseRequest(e -> formController.markCanceled());
             modal.showAndWait();
@@ -609,11 +623,15 @@ public class MainController {
 
     private void submitForm(boolean editMode, JSONObject dto) {
         try {
-            dto = ModuleMeta.applyFormValueRules(currentModule, dto);
+            String formModule = pendingStockOperation == null ? currentModule : Module.STOCK;
+            dto = ModuleMeta.applyFormValueRules(formModule, dto);
+            if (pendingStockOperation != null) {
+                dto = sanitizeStockOperationPayload(dto);
+            }
             JSONObject json;
-            if (Module.STOCK.equals(currentModule) && "outbound".equals(pendingStockOperation)) {
+            if ("outbound".equals(pendingStockOperation)) {
                 json = dataService.outboundStock(dto);
-            } else if (Module.STOCK.equals(currentModule) && "inbound".equals(pendingStockOperation)) {
+            } else if ("inbound".equals(pendingStockOperation)) {
                 json = dataService.inboundStock(dto);
             } else {
                 json = dataService.save(currentModule, editMode, dto);
@@ -1160,6 +1178,92 @@ public class MainController {
     private boolean isReadOnlyModule() {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
         return !policy.canCreate && !policy.canInlineEdit && !policy.canEdit && !policy.canBatchDelete && !policy.canDelete;
+    }
+
+    private boolean isStockOperationModule() {
+        return Module.STOCK.equals(currentModule) || Module.GOODS.equals(currentModule);
+    }
+
+    private JSONObject sanitizeStockOperationPayload(JSONObject dto) {
+        JSONObject clean = new JSONObject();
+        putIfPresent(clean, dto, "stockId");
+        putIntegerIfPresent(clean, dto, "goodsId");
+        putLongIfPresent(clean, dto, "skuId");
+        putIntegerIfPresent(clean, dto, "warehouseId");
+        putLongIfPresent(clean, dto, "stockTypeId");
+        putIntegerIfPresent(clean, dto, "quantity");
+        putIntegerIfPresent(clean, dto, "sourceType");
+        putLongIfPresent(clean, dto, "customerId");
+        putIfPresent(clean, dto, "customerName");
+        putLongIfPresent(clean, dto, "deptId");
+        putIfPresent(clean, dto, "groupCode");
+        putIfPresent(clean, dto, "deptCode");
+        putIntegerIfPresent(clean, dto, "groupAQty");
+        putIntegerIfPresent(clean, dto, "groupBQty");
+        putIntegerIfPresent(clean, dto, "groupCQty");
+        putIfPresent(clean, dto, "allocations");
+        putIfPresent(clean, dto, "outboundMode");
+        putIfPresent(clean, dto, "saleDeadline");
+        putIfPresent(clean, dto, "remark");
+        return clean;
+    }
+
+    private void putIfPresent(JSONObject target, JSONObject source, String key) {
+        if (source == null || !source.has(key)) {
+            return;
+        }
+        Object value = source.opt(key);
+        if (value == null || value == JSONObject.NULL) {
+            return;
+        }
+        if (value instanceof Boolean) {
+            return;
+        }
+        if (value instanceof String text && text.isBlank()) {
+            return;
+        }
+        target.put(key, value);
+    }
+
+    private void putIntegerIfPresent(JSONObject target, JSONObject source, String key) {
+        Number number = coerceNumber(source, key);
+        if (number == null) {
+            return;
+        }
+        target.put(key, number.intValue());
+    }
+
+    private void putLongIfPresent(JSONObject target, JSONObject source, String key) {
+        Number number = coerceNumber(source, key);
+        if (number == null) {
+            return;
+        }
+        target.put(key, number.longValue());
+    }
+
+    private Number coerceNumber(JSONObject source, String key) {
+        if (source == null || !source.has(key)) {
+            return null;
+        }
+        Object value = source.opt(key);
+        if (value == null || value == JSONObject.NULL || value instanceof Boolean) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number;
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        try {
+            if (text.contains(".")) {
+                return Double.parseDouble(text);
+            }
+            return Long.parseLong(text);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     private void focusFirstQueryField() {
