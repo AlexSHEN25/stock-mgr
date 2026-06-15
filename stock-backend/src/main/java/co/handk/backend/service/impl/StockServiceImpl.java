@@ -12,7 +12,6 @@ import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.dto.create.CreateStockDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
@@ -28,6 +27,7 @@ import co.handk.common.model.vo.CustomerGoodsMatrixCellVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixColumnVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixRowVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixVO;
+import co.handk.common.model.vo.CustomerOutboundTreeNodeVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -36,7 +36,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -93,9 +96,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public <C> boolean saveByDto(C dto) {
-        if (dto instanceof CreateStockDTO createDto) {
-            createDto.setLockQty(0);
-        }
         return super.saveByDto(dto);
     }
 
@@ -113,7 +113,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
         java.math.BigDecimal oldPrice = existed.getPrice();
         java.math.BigDecimal newPrice = updateDto.getPrice();
-        updateDto.setLockQty(existed.getLockQty());
         boolean priceChanged = newPrice != null && (oldPrice == null || oldPrice.compareTo(newPrice) != 0);
         if (priceChanged && updateDto.getPriceUpdateTime() == null) {
             updateDto.setPriceUpdateTime(LocalDateTime.now());
@@ -163,7 +162,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         boolean needApprove = scene == StockBizConstant.INBOUND_SCENE_SELF;
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType,
-                needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
+                needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED, null);
         StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
         if (!needApprove) {
             updateStockQuantityWithVersion(stock, afterQty);
@@ -183,14 +182,18 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
         String stockTypeName = getStockTypeName(stock.getStockTypeId());
-        requireOutboundIdempotency(dto, stock);
+        StockOrder existingOrder = findExistingOutboundOrder();
+        if (existingOrder != null) {
+            return existingOrder.getId();
+        }
+        String idempotencyKey = requireOutboundIdempotency(dto, stock);
 
         boolean groupCustomer = StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER
                 .equals(normalizeOutboundMode(dto.getOutboundMode()));
         int beforeQty = groupCustomer
                 ? stockBatchService.getGroupAvailableQty(dto.getDeptId(), Long.valueOf(stock.getGoodsId()),
                 stock.getSkuId(), Long.valueOf(stock.getWarehouseId()), stock.getStockTypeId())
-                : safeInt(stock.getCurrentQty());
+                : safeInt(stock.getCurrentQty()) - stockBatchService.getSelfLockedQty(stock.getId());
         if (beforeQty < dto.getQuantity()) {
             notifyInsufficientStock(sku.getSkuCode(), dto.getQuantity(), beforeQty, stock.getId());
             throw new co.handk.backend.exception.BusinessException(
@@ -199,8 +202,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         int afterQty = beforeQty - dto.getQuantity();
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_OUTBOUND,
-                StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING);
-        saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
+                StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING, idempotencyKey);
+        StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
+        stockBatchService.lockOutbound(order, item, stock);
         return order.getId();
     }
 
@@ -378,6 +382,24 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return result;
     }
 
+    @Override
+    public PageResult<CustomerOutboundTreeNodeVO> pageCustomerGoodsTree(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerGoodsAccess(query);
+        long total = stockRecordMapper.countCustomerGoodsTreeCountries(
+                query, access.deptId(), access.ownerUserId());
+        if (total == 0) {
+            return PageResult.build(0L, query.getPageNum(), query.getPageSize(), List.of());
+        }
+        List<String> countries = stockRecordMapper.selectCustomerGoodsTreeCountries(
+                query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+        if (countries == null || countries.isEmpty()) {
+            return PageResult.build(total, query.getPageNum(), query.getPageSize(), List.of());
+        }
+        List<CustomerOutboundTreeNodeVO> details = stockRecordMapper.selectCustomerGoodsTreeDetails(
+                query, access.deptId(), access.ownerUserId(), countries);
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), buildCustomerGoodsTree(details));
+    }
+
     private CustomerStockAccess resolveCustomerStockAccess(CustomerStockQueryDTO query) {
         Long userId = UserContext.getUserIdOrDefault();
         if (permissionQueryService.isSuperAdmin(userId)) {
@@ -407,6 +429,62 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     private record CustomerStockAccess(Long deptId, Long ownerUserId) {
+    }
+
+    private List<CustomerOutboundTreeNodeVO> buildCustomerGoodsTree(List<CustomerOutboundTreeNodeVO> details) {
+        Map<String, CustomerOutboundTreeNodeVO> countryNodes = new LinkedHashMap<>();
+        Map<String, CustomerOutboundTreeNodeVO> customerNodes = new LinkedHashMap<>();
+        if (details == null || details.isEmpty()) {
+            return List.of();
+        }
+
+        for (CustomerOutboundTreeNodeVO detail : details) {
+            String country = detail.getCountry() == null || detail.getCountry().isBlank()
+                    ? "未設定" : detail.getCountry().trim();
+            CustomerOutboundTreeNodeVO countryNode = countryNodes.computeIfAbsent(country, key -> {
+                CustomerOutboundTreeNodeVO node = new CustomerOutboundTreeNodeVO();
+                node.setId("country:" + key);
+                node.setNodeType("COUNTRY");
+                node.setCountry(key);
+                node.setTotalQuantity(0);
+                node.setGoodsKinds(0);
+                node.setChildren(new ArrayList<>());
+                return node;
+            });
+
+            String customerKey = country + ":" + detail.getCustomerId();
+            CustomerOutboundTreeNodeVO customerNode = customerNodes.computeIfAbsent(customerKey, key -> {
+                CustomerOutboundTreeNodeVO node = new CustomerOutboundTreeNodeVO();
+                node.setId("customer:" + country + ":" + detail.getCustomerId());
+                node.setNodeType("CUSTOMER");
+                node.setCountry(country);
+                node.setCustomerId(detail.getCustomerId());
+                node.setCustomerName(detail.getCustomerName());
+                node.setDeptId(detail.getDeptId());
+                node.setGroupCode(detail.getGroupCode());
+                node.setTotalQuantity(0);
+                node.setGoodsKinds(0);
+                node.setChildren(new ArrayList<>());
+                countryNode.getChildren().add(node);
+                return node;
+            });
+
+            CustomerOutboundTreeNodeVO recordNode = new CustomerOutboundTreeNodeVO();
+            BeanUtils.copyProperties(detail, recordNode);
+            recordNode.setId("record:" + detail.getRecordId());
+            recordNode.setNodeType("RECORD");
+            recordNode.setCountry(country);
+            recordNode.setChildren(null);
+            customerNode.getChildren().add(recordNode);
+
+            int quantity = recordNode.getQuantity() == null ? 0 : recordNode.getQuantity();
+            customerNode.setTotalQuantity(safeInt(customerNode.getTotalQuantity()) + quantity);
+            customerNode.setGoodsKinds(safeInt(customerNode.getGoodsKinds()) + 1);
+            countryNode.setTotalQuantity(safeInt(countryNode.getTotalQuantity()) + quantity);
+            countryNode.setGoodsKinds(safeInt(countryNode.getGoodsKinds()) + 1);
+        }
+
+        return new ArrayList<>(countryNodes.values());
     }
 
     private Long currentDeptId() {
@@ -476,6 +554,12 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         vo.setDeptId(deptId);
         vo.setGroupCode(dept == null ? null : dept.getCode());
         vo.setCurrentQty(stockBatchService.getGroupAvailableQty(
+                deptId,
+                Long.valueOf(vo.getGoodsId()),
+                vo.getSkuId(),
+                Long.valueOf(vo.getWarehouseId()),
+                vo.getStockTypeId()));
+        vo.setLockQty(stockBatchService.getGroupLockedQty(
                 deptId,
                 Long.valueOf(vo.getGoodsId()),
                 vo.getSkuId(),
@@ -679,8 +763,23 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setApproverName(approver == null ? null : approver.getUsername());
         order.setApproveTime(LocalDateTime.now());
         order.setRemark(approveRemark);
+        List<StockOrderItem> rejectItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
+                .eq("order_id", orderId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+        if (rejectItems == null || rejectItems.isEmpty()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蜈･蠎ｫ莨晉･ｨ譏守ｴｰ縺悟ｭ伜惠縺励∪縺帙ｓ");
+        }
 
         if (Boolean.FALSE.equals(approved)) {
+            for (StockOrderItem item : rejectItems) {
+                Stock stock = findStock(item.getGoodsId(), item.getSkuId(), order.getWarehouseId(), item.getStockTypeId());
+                if (stock == null) {
+                    throw new co.handk.backend.exception.BusinessException(
+                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蝨ｨ蠎ｫ蝠・刀縺悟ｭ伜惠縺励∪縺帙ｓ");
+                }
+                stockBatchService.releaseOutbound(order, item, stock);
+            }
             order.setState(StockBizConstant.ORDER_STATE_CANCELED);
             if (!stockOrderService.updateById(order)) {
                 throw new co.handk.backend.exception.BusinessException(
@@ -705,34 +804,26 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
 
             int changeQty = safeInt(item.getChangeQty());
-            boolean groupAllocate = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())
+            boolean outboundOrder = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType());
+            boolean groupAllocate = outboundOrder
                     && StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE.equals(order.getOutboundMode());
-            boolean groupCustomer = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())
+            boolean groupCustomer = outboundOrder
                     && StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(order.getOutboundMode());
-            int beforeQty = groupAllocate
-                    ? safeInt(stock.getCurrentQty())
-                    : groupCustomer
-                    ? stockBatchService.getGroupAvailableQty(order.getDeptId(), item.getGoodsId(), item.getSkuId(),
-                    order.getWarehouseId(), item.getStockTypeId())
-                    : safeInt(stock.getCurrentQty());
-            int afterQty = (groupAllocate || groupCustomer) ? beforeQty - changeQty
-                    : Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
-                    ? beforeQty + changeQty : beforeQty - changeQty;
+            int beforeQty = safeInt(item.getBeforeQty());
+            int afterQty = safeInt(item.getAfterQty());
+            if (Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())) {
+                beforeQty = safeInt(stock.getCurrentQty());
+                afterQty = beforeQty + changeQty;
+            }
             if (afterQty < 0) {
                 notifyInsufficientStock(item.getSkuCode(), changeQty, beforeQty, stock.getId());
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                         "承認済みの出庫伝票に対する在庫が不足しているため、出庫処理を実行できません: 品番[" + item.getSkuCode() + "]");
             }
-            if (groupAllocate) {
-                stockBatchService.applyOutbound(order, item, stock);
-                updateStockQuantityWithVersion(stock, afterQty);
-            } else if (groupCustomer) {
-                stockBatchService.consumeGroupStock(order, stock, changeQty);
+            if (outboundOrder) {
+                stockBatchService.confirmOutbound(order, item, stock);
             } else {
-                if (Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
-                    stockBatchService.applyOutbound(order, item, stock);
-                }
                 updateStockQuantityWithVersion(stock, afterQty);
             }
             item.setBeforeQty(beforeQty);
@@ -1028,7 +1119,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         stock.setSkuCode(sku.getSkuCode());
         stock.setWarehouseId(dto.getWarehouseId());
         stock.setCurrentQty(0);
-        stock.setLockQty(0);
         stock.setPrice(sku.getPrice());
         stock.setCurrency(sku.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : sku.getCurrency());
         stock.setPriceUpdateTime(sku.getPriceUpdateTime());
@@ -1105,12 +1195,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return this.getOne(wrapper);
     }
 
-    private StockOrder saveStockOrder(Stock stock, StockOperateDTO dto, int orderType, int sourceType, int state) {
+    private StockOrder saveStockOrder(
+            Stock stock, StockOperateDTO dto, int orderType, int sourceType, int state, String idempotencyKey) {
         StockOrder order = new StockOrder();
         order.setOrderNo(generateOrderNo(orderType));
         order.setOrderType(orderType);
         order.setWarehouseId(Long.valueOf(stock.getWarehouseId()));
         order.setSourceType(sourceType);
+        order.setIdempotencyKey(idempotencyKey);
         order.setTotalQty(dto.getQuantity());
         order.setStockTypeId(stock.getStockTypeId());
         order.setState(state);
@@ -1313,7 +1405,24 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         saveMessage(MESSAGE_TYPE_WARNING, text, sourceId);
     }
 
-    private void requireOutboundIdempotency(StockOperateDTO dto, Stock stock) {
+    private String requireOutboundIdempotency(StockOperateDTO dto, Stock stock) {
+        String headerKey = currentIdempotencyKey();
+        if (hasText(headerKey)) {
+            String requestKey = "OUTBOUND:" + headerKey.trim();
+            Long userId = UserContext.getUserIdOrDefault();
+            String redisKey = RedisKey.IDEMPOTENCY_REQUEST + "stock:outbound:request:" + userId + ":" + requestKey;
+            Boolean accepted = stringRedisUtil.setIfAbsent(redisKey, "1", 300L, TimeUnit.SECONDS);
+            if (!Boolean.TRUE.equals(accepted)) {
+                StockOrder existing = findExistingOutboundOrder();
+                if (existing != null) {
+                    return requestKey;
+                }
+                throw new co.handk.backend.exception.BusinessException(
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "duplicate outbound request detected, please retry later");
+            }
+            return requestKey;
+        }
         Long userId = UserContext.getUserIdOrDefault();
         String key = RedisKey.IDEMPOTENCY_REQUEST
                 + "stock:outbound:"
@@ -1334,6 +1443,32 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                     "duplicate outbound request detected, please retry later");
         }
+        return null;
+    }
+
+    private StockOrder findExistingOutboundOrder() {
+        String headerKey = currentIdempotencyKey();
+        if (!hasText(headerKey)) {
+            return null;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        return stockOrderService.getOne(new QueryWrapper<StockOrder>()
+                .eq("requester_id", userId)
+                .eq("idempotency_key", "OUTBOUND:" + headerKey.trim())
+                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .orderByDesc("id")
+                .last("LIMIT 1"));
+    }
+
+    private String currentIdempotencyKey() {
+        ServletRequestAttributes attributes =
+                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return null;
+        }
+        HttpServletRequest request = attributes.getRequest();
+        return request == null ? null : request.getHeader("Idempotency-Key");
     }
 
     private void notifyLowStock(String skuCode, int afterQty, Long sourceId) {

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 @Data
 public class CustomerStockQueryDTO extends PageQuery {
+    private String country;
     private String groupCode;
     private Long customerId;
     private String customerName;

@@ -14,6 +14,7 @@ import co.handk.common.model.vo.StockVO;
 import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
 import co.handk.common.model.vo.CustomerGoodsStockVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixVO;
+import co.handk.common.model.vo.CustomerOutboundTreeNodeVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -167,6 +168,11 @@ public class StockController {
     @GetMapping("/customer/goods/detail/page")
     public PageResult<CustomerGoodsStockDetailVO> customerGoodsDetailPage(@Valid CustomerStockQueryDTO query) {
         return stockService.pageCustomerGoodsStockDetails(query);
+    }
+
+    @GetMapping("/customer/goods/tree/page")
+    public PageResult<CustomerOutboundTreeNodeVO> customerGoodsTreePage(@Valid CustomerStockQueryDTO query) {
+        return stockService.pageCustomerGoodsTree(query);
     }
 
     @GetMapping("/customer/goods/matrix")

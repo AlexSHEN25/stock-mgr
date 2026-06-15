@@ -38,6 +38,9 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         if (StringUtils.isBlank(idempotencyKey)) {
             return true;
         }
+        if (isStockOutboundRequest(request)) {
+            return true;
+        }
 
         Long userId = UserContext.getUserIdOrDefault();
         String requestKey = RedisKey.IDEMPOTENCY_REQUEST
@@ -50,5 +53,10 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
             );
         }
         return true;
+    }
+
+    private boolean isStockOutboundRequest(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri != null && uri.startsWith("/api/stock") && uri.endsWith("/outbound");
     }
 }

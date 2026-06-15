@@ -20,6 +20,8 @@ public class StockOrder extends BaseEntity {
 
     private Long sourceId;
 
+    private String idempotencyKey;
+
     private Integer totalQty;
 
     private Long stockTypeId;

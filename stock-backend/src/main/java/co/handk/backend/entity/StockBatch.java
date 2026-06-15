@@ -16,6 +16,7 @@ public class StockBatch extends BaseEntity {
     private Long warehouseId;
     private Long stockTypeId;
     private Integer originalQty;
+    private Integer currentQty;
     private Integer availableQty;
     private Integer allocatedQty;
     private Integer customerOutQty;

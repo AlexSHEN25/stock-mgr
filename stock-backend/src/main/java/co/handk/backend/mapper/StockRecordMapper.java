@@ -7,6 +7,7 @@ import co.handk.common.model.vo.CustomerGoodsStockVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixCellVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixColumnVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixRowVO;
+import co.handk.common.model.vo.CustomerOutboundTreeNodeVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -68,4 +69,20 @@ public interface StockRecordMapper extends BaseMapper<StockRecord> {
             @Param("deptId") Long deptId,
             @Param("ownerUserId") Long ownerUserId,
             @Param("goodsIds") List<Long> goodsIds);
+
+    long countCustomerGoodsTreeCountries(@Param("query") CustomerStockQueryDTO query,
+                                         @Param("deptId") Long deptId,
+                                         @Param("ownerUserId") Long ownerUserId);
+
+    List<String> selectCustomerGoodsTreeCountries(@Param("query") CustomerStockQueryDTO query,
+                                                  @Param("deptId") Long deptId,
+                                                  @Param("ownerUserId") Long ownerUserId,
+                                                  @Param("offset") long offset,
+                                                  @Param("limit") long limit);
+
+    List<CustomerOutboundTreeNodeVO> selectCustomerGoodsTreeDetails(
+            @Param("query") CustomerStockQueryDTO query,
+            @Param("deptId") Long deptId,
+            @Param("ownerUserId") Long ownerUserId,
+            @Param("countries") List<String> countries);
 }

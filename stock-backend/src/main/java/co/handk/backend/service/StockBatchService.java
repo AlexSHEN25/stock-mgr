@@ -11,11 +11,17 @@ import java.util.List;
 public interface StockBatchService {
     void recordInbound(StockOrder order, StockOrderItem item, Stock stock);
 
-    void applyOutbound(StockOrder order, StockOrderItem item, Stock stock);
+    void lockOutbound(StockOrder order, StockOrderItem item, Stock stock);
 
-    void consumeGroupStock(StockOrder order, Stock stock, int quantity);
+    void confirmOutbound(StockOrder order, StockOrderItem item, Stock stock);
+
+    void releaseOutbound(StockOrder order, StockOrderItem item, Stock stock);
+
+    int getSelfLockedQty(Long stockId);
 
     int getGroupAvailableQty(Long deptId, Long goodsId, Long skuId, Long warehouseId, Long stockTypeId);
+
+    int getGroupLockedQty(Long deptId, Long goodsId, Long skuId, Long warehouseId, Long stockTypeId);
 
     List<Long> getAvailableGroupDeptIds(Long stockId);
 

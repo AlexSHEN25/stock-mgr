@@ -84,6 +84,48 @@
         </if>
     </sql>
 
+    <sql id="customerGoodsTreeWhere">
+        o.deleted = 0
+        AND i.deleted = 0
+        AND o.order_type = 2
+        AND o.state = 2
+        AND o.outbound_mode IN ('CUSTOMER', 'GROUP_CUSTOMER')
+        AND o.customer_id IS NOT NULL
+        <if test="deptId != null">AND o.dept_id = #{deptId}</if>
+        <if test="query.groupCode != null and query.groupCode != ''">
+            AND UPPER(o.dept_code) = UPPER(#{query.groupCode})
+        </if>
+        <if test="ownerUserId != null">
+            AND c.owner_user_id = #{ownerUserId}
+        </if>
+        <if test="query.country != null and query.country != ''">
+            AND COALESCE(NULLIF(TRIM(c.country), ''), '未設定') LIKE CONCAT('%', #{query.country}, '%')
+        </if>
+        <if test="query.customerId != null">AND o.customer_id = #{query.customerId}</if>
+        <if test="query.customerName != null and query.customerName != ''">
+            AND o.customer_name LIKE CONCAT('%', #{query.customerName}, '%')
+        </if>
+        <if test="query.categoryId != null">AND i.category_id = #{query.categoryId}</if>
+        <if test="query.categoryName != null and query.categoryName != ''">
+            AND i.category_name LIKE CONCAT('%', #{query.categoryName}, '%')
+        </if>
+        <if test="query.goodsId != null">AND i.goods_id = #{query.goodsId}</if>
+        <if test="query.goodsName != null and query.goodsName != ''">
+            AND i.goods_name LIKE CONCAT('%', #{query.goodsName}, '%')
+        </if>
+        <if test="query.skuId != null">AND i.sku_id = #{query.skuId}</if>
+        <if test="query.skuCode != null and query.skuCode != ''">
+            AND i.sku_code LIKE CONCAT('%', #{query.skuCode}, '%')
+        </if>
+        <if test="query.stockTypeId != null">AND i.stock_type_id = #{query.stockTypeId}</if>
+        <if test="query.startDate != null">
+            AND COALESCE(i.biz_date, o.biz_date) <![CDATA[ >= ]]> #{query.startDate}
+        </if>
+        <if test="query.endDate != null">
+            AND COALESCE(i.biz_date, o.biz_date) <![CDATA[ <= ]]> #{query.endDate}
+        </if>
+    </sql>
+
     <select id="countCustomerSummaries" resultType="long">
         SELECT COUNT(*)
         FROM (
@@ -254,5 +296,64 @@
               #{goodsId}
           </foreach>
         GROUP BY i.goods_id, o.customer_id
+    </select>
+
+    <select id="countCustomerGoodsTreeCountries" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country
+            FROM t_stock_order o
+            INNER JOIN t_stock_order_item i ON i.order_id = o.id
+            LEFT JOIN t_customer c ON c.id = o.customer_id AND c.deleted = 0
+            WHERE <include refid="customerGoodsTreeWhere"/>
+            GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '未設定')
+        ) country_summary
+    </select>
+
+    <select id="selectCustomerGoodsTreeCountries" resultType="string">
+        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        LEFT JOIN t_customer c ON c.id = o.customer_id AND c.deleted = 0
+        WHERE <include refid="customerGoodsTreeWhere"/>
+        GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '未設定')
+        ORDER BY country ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCustomerGoodsTreeDetails"
+            resultType="co.handk.common.model.vo.CustomerOutboundTreeNodeVO">
+        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country,
+               o.customer_id AS customerId,
+               o.customer_name AS customerName,
+               o.dept_id AS deptId,
+               o.dept_code AS groupCode,
+               o.order_no AS bizNo,
+               o.id AS orderId,
+               i.id AS orderItemId,
+               i.id AS recordId,
+               i.goods_id AS goodsId,
+               i.goods_name AS goodsName,
+               i.sku_id AS skuId,
+               i.sku_code AS skuCode,
+               i.stock_type_id AS stockTypeId,
+               i.stock_type_name AS stockTypeName,
+               ABS(i.before_qty - i.after_qty) AS quantity,
+               COALESCE(i.biz_date, o.biz_date) AS outboundDate,
+               o.operator_id AS operatorId,
+               o.operator_name AS operatorName
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        LEFT JOIN t_customer c ON c.id = o.customer_id AND c.deleted = 0
+        WHERE <include refid="customerGoodsTreeWhere"/>
+          AND COALESCE(NULLIF(TRIM(c.country), ''), '未設定') IN
+          <foreach collection="countries" item="country" open="(" separator="," close=")">
+              #{country}
+          </foreach>
+        ORDER BY country ASC,
+                 o.customer_name ASC,
+                 o.customer_id ASC,
+                 COALESCE(i.biz_date, o.biz_date) DESC,
+                 i.id DESC
     </select>
 </mapper>

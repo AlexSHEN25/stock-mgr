@@ -33,6 +33,14 @@ public final class StockBizConstant {
     public static final int BATCH_STATE_EXHAUSTED = 1;
     public static final int BATCH_STATE_EXPIRED = 2;
 
+    public static final String RESERVATION_SCOPE_SELF = "SELF";
+    public static final String RESERVATION_SCOPE_GROUP = "GROUP";
+
+    public static final int RESERVATION_STATE_LOCKED = 1;
+    public static final int RESERVATION_STATE_CONFIRMED = 2;
+    public static final int RESERVATION_STATE_RELEASED = 3;
+    public static final int RESERVATION_STATE_EXPIRED = 4;
+
     public static final int REQUEST_STATE_DRAFT = 0;
     public static final int REQUEST_STATE_SUBMITTED = 1;
     public static final int REQUEST_STATE_FINISHED = 2;

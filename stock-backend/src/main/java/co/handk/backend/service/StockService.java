@@ -9,6 +9,7 @@ import co.handk.common.model.PageResult;
 import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
 import co.handk.common.model.vo.CustomerGoodsStockVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixVO;
+import co.handk.common.model.vo.CustomerOutboundTreeNodeVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
 import co.handk.common.model.vo.StockVO;
 import org.springframework.stereotype.Service;
@@ -38,5 +39,7 @@ public interface StockService extends BaseService<Stock, StockVO> {
     PageResult<CustomerGoodsStockDetailVO> pageCustomerGoodsStockDetails(CustomerStockQueryDTO query);
 
     CustomerGoodsMatrixVO getCustomerGoodsMatrix(CustomerStockQueryDTO query);
+
+    PageResult<CustomerOutboundTreeNodeVO> pageCustomerGoodsTree(CustomerStockQueryDTO query);
 
 }

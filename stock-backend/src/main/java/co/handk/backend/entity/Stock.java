@@ -22,8 +22,6 @@ public class Stock extends BaseEntity {
 
     private Integer currentQty;
 
-    private Integer lockQty;
-
     private BigDecimal price;
 
     private String currency;
