@@ -15,6 +15,7 @@ import co.handk.backend.service.StockTypeService;
 import co.handk.backend.service.UserService;
 import co.handk.common.constant.MessageBizConstant;
 import co.handk.common.constant.StockBizConstant;
+import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.dto.create.CreateStockOrderDTO;
 import co.handk.common.model.dto.update.UpdateStockOrderDTO;
 import co.handk.common.model.vo.StockOrderVO;
@@ -295,7 +296,6 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
         }
         StockType stockType = stockTypeService.getOne(new QueryWrapper<StockType>()
                 .eq("name", DEFAULT_STOCK_TYPE_NAME)
-                .eq("deleted", co.handk.common.enums.DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         return stockType == null ? null : stockType.getId();
     }
@@ -332,9 +332,9 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
         }
         List<Object> qtyList = getBaseMapper().selectObjs(new QueryWrapper<StockOrder>()
                 .select("(SELECT COALESCE(SUM(change_qty), 0) FROM t_stock_order_item soi "
-                        + "WHERE soi.order_id = t_stock_order.id AND soi.deleted = 0) AS total_qty")
-                .eq("id", orderId)
-                .eq("deleted", co.handk.common.enums.DeleteEnum.UNDELETED.getCode()));
+                        + "WHERE soi.order_id = t_stock_order.id AND soi.deleted = "
+                        + DeleteEnum.UNDELETED.getCode() + ") AS total_qty")
+                .eq("id", orderId));
         if (qtyList == null || qtyList.isEmpty() || qtyList.get(0) == null) {
             return 0;
         }
@@ -346,8 +346,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             String candidate = "SO" + LocalDateTime.now().format(ORDER_NO_TIME_FORMAT)
                     + ThreadLocalRandom.current().nextInt(1000, 10000);
             long count = count(new QueryWrapper<StockOrder>()
-                    .eq("order_no", candidate)
-                    .eq("deleted", co.handk.common.enums.DeleteEnum.UNDELETED.getCode()));
+                    .eq("order_no", candidate));
             if (count == 0) {
                 return candidate;
             }

@@ -115,7 +115,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         GoodsVO vo = toVO(goods);
         GoodsSku sku = goodsSkuService.getOne(new QueryWrapper<GoodsSku>()
                 .eq("goods_id", id)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .orderByDesc("update_time")
                 .last("LIMIT 1"));
         if (sku != null) {
@@ -132,7 +131,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         GoodsImage image = goodsImageService.getOne(new QueryWrapper<GoodsImage>()
                 .eq("goods_id", id)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .orderByAsc("sort", "id")
                 .last("LIMIT 1"));
         if (image != null) {
@@ -164,7 +162,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         Integer skuStatusCode = dto.getSkuStatus() == null ? null : dto.getSkuStatus().getCode();
         UpdateWrapper<GoodsSku> skuWrapper = new UpdateWrapper<GoodsSku>()
                 .eq("goods_id", dto.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .set(StringUtils.hasText(dto.getSkuCode()), "sku_code", dto.getSkuCode())
                 .set(StringUtils.hasText(skuNameToSave), "sku_name", skuNameToSave)
                 .set(dto.getPrice() != null, "price", dto.getPrice())
@@ -188,7 +185,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             String normalizedImageUrl = fileStorageService.normalize(UploadBizType.GOODS, dto.getImageUrl());
             UpdateWrapper<GoodsImage> imageWrapper = new UpdateWrapper<GoodsImage>()
                     .eq("goods_id", dto.getId())
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .set(StringUtils.hasText(normalizedImageUrl), "image_url", normalizedImageUrl)
                     .set(dto.getImageSort() != null, "sort", dto.getImageSort())
                     .set(StringUtils.hasText(dto.getSkuCode()), "sku_code", dto.getSkuCode());
@@ -213,11 +209,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         int goodsRows = super.deleteByIdLogic(id);
         goodsSkuService.update(null, new UpdateWrapper<GoodsSku>()
                 .eq("goods_id", id)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .set("deleted", DeleteEnum.DELETED.getCode()));
         goodsImageService.update(null, new UpdateWrapper<GoodsImage>()
                 .eq("goods_id", id)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .set("deleted", DeleteEnum.DELETED.getCode()));
         cleanupCascadingRelations(existed.getBrandId(), existed.getSeriesId(), existed.getMakerId());
         return goodsRows;
@@ -228,7 +222,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             SeriesBrandRelation seriesRelation = seriesBrandRelationService.getOne(new QueryWrapper<SeriesBrandRelation>()
                     .eq("brand_id", brandId)
                     .eq("series_id", seriesId)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (seriesRelation == null) {
                 seriesRelation = new SeriesBrandRelation();
@@ -241,7 +234,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             BrandMakerRelation makerRelation = brandMakerRelationService.getOne(new QueryWrapper<BrandMakerRelation>()
                     .eq("brand_id", brandId)
                     .eq("maker_id", makerId)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (makerRelation == null) {
                 makerRelation = new BrandMakerRelation();
@@ -257,14 +249,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             seriesBrandRelationMapper.update(null, new UpdateWrapper<SeriesBrandRelation>()
                     .eq("brand_id", brandId)
                     .eq("series_id", seriesId)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .set("deleted", DeleteEnum.DELETED.getCode()));
         }
         if (brandId != null && makerId != null && !existsGoodsWithBrandMaker(brandId, makerId)) {
             brandMakerRelationMapper.update(null, new UpdateWrapper<BrandMakerRelation>()
                     .eq("brand_id", brandId)
                     .eq("maker_id", makerId)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .set("deleted", DeleteEnum.DELETED.getCode()));
         }
     }
@@ -272,15 +262,13 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private boolean existsGoodsWithSeriesBrand(Long brandId, Long seriesId) {
         return this.count(new QueryWrapper<Goods>()
                 .eq("brand_id", brandId)
-                .eq("series_id", seriesId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())) > 0;
+                .eq("series_id", seriesId)) > 0;
     }
 
     private boolean existsGoodsWithBrandMaker(Long brandId, Long makerId) {
         return this.count(new QueryWrapper<Goods>()
                 .eq("brand_id", brandId)
-                .eq("maker_id", makerId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())) > 0;
+                .eq("maker_id", makerId)) > 0;
     }
 
     private void validatePriceUpdateFields(java.math.BigDecimal updatePrice, LocalDateTime priceUpdateTime) {

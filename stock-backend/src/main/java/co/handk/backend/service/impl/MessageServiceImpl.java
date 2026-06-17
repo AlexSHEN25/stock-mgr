@@ -153,8 +153,7 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
         }
         Message message = getOne(new LambdaQueryWrapper<Message>()
                 .eq(Message::getId, id)
-                .eq(Message::getUserId, userId)
-                .eq(Message::getDeleted, DeleteEnum.UNDELETED.getCode()));
+                .eq(Message::getUserId, userId));
         if (message == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, MESSAGE_NOT_FOUND);
         }
@@ -166,7 +165,6 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
                 new LambdaUpdateWrapper<Message>()
                         .eq(Message::getId, id)
                         .eq(Message::getUserId, userId)
-                        .eq(Message::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .set(Message::getIsRead, MessageBizConstant.IS_READ)
         );
         if (affected <= 0) {
@@ -185,7 +183,6 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageMapper, Message, 
                 null,
                 new LambdaUpdateWrapper<Message>()
                         .eq(Message::getUserId, userId)
-                        .eq(Message::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .set(Message::getIsRead, MessageBizConstant.IS_READ)
         );
     }

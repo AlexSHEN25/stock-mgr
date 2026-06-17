@@ -45,7 +45,6 @@ public class StockBatchServiceImpl implements StockBatchService {
     public void recordInbound(StockOrder order, StockOrderItem item, Stock stock) {
         StockBatch existed = stockBatchMapper.selectOne(new QueryWrapper<StockBatch>()
                 .eq("inbound_order_item_id", item.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (existed != null) {
             return;
@@ -107,8 +106,7 @@ public class StockBatchServiceImpl implements StockBatchService {
         return sumLockedQty(new QueryWrapper<StockReservation>()
                 .eq("stock_id", stockId)
                 .eq("reservation_scope", StockBizConstant.RESERVATION_SCOPE_SELF)
-                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED));
     }
 
     @Override
@@ -129,8 +127,7 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("goods_id", goodsId)
                 .eq("sku_id", skuId)
                 .eq("warehouse_id", warehouseId)
-                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode());
+                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED);
         if (deptId != null) {
             wrapper.eq("dept_id", requireGroupDept(deptId).getId());
         }
@@ -152,7 +149,6 @@ public class StockBatchServiceImpl implements StockBatchService {
                         .eq("stock_id", stockId)
                         .gt("current_qty", 0)
                         .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
                         .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()))
                         .groupBy("dept_id"))
                 .stream()
@@ -167,8 +163,7 @@ public class StockBatchServiceImpl implements StockBatchService {
         List<GroupStock> rows = groupStockMapper.selectList(new QueryWrapper<GroupStock>()
                 .eq("stock_id", stockId)
                 .gt("current_qty", 0)
-                .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("state", StockBizConstant.BATCH_STATE_ACTIVE));
         Map<String, Integer> result = new HashMap<>();
         for (GroupStock row : rows) {
             int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
@@ -186,7 +181,6 @@ public class StockBatchServiceImpl implements StockBatchService {
         List<GroupStock> expired = groupStockMapper.selectList(new QueryWrapper<GroupStock>()
                 .gt("current_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .lt("sale_deadline", LocalDateTime.now()));
         int reclaimed = 0;
         for (GroupStock group : expired) {
@@ -361,7 +355,6 @@ public class StockBatchServiceImpl implements StockBatchService {
         GroupStock group = groupStockMapper.selectOne(new QueryWrapper<GroupStock>()
                 .eq("batch_id", batch.getId())
                 .eq("dept_id", dept.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (group == null) {
             group = new GroupStock();
@@ -401,7 +394,6 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("stock_id", stockId)
                 .gt("available_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .orderByAsc("sale_deadline", "id"));
     }
 
@@ -411,7 +403,6 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("stock_id", stockId)
                 .gt("current_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()))
                 .orderByAsc("sale_deadline", "id"));
     }
@@ -423,7 +414,6 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("warehouse_id", warehouseId)
                 .gt("current_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()));
         if (deptId != null) {
             wrapper.eq("dept_id", requireGroupDept(deptId).getId());
@@ -440,7 +430,6 @@ public class StockBatchServiceImpl implements StockBatchService {
         return stockReservationMapper.selectList(new QueryWrapper<StockReservation>()
                 .eq("order_item_id", orderItemId)
                 .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .orderByAsc("id"));
     }
 
@@ -448,16 +437,14 @@ public class StockBatchServiceImpl implements StockBatchService {
         return sumLockedQty(new QueryWrapper<StockReservation>()
                 .eq("batch_id", batchId)
                 .eq("reservation_scope", StockBizConstant.RESERVATION_SCOPE_SELF)
-                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED));
     }
 
     private int getLockedQtyForGroupRow(Long groupStockId) {
         return sumLockedQty(new QueryWrapper<StockReservation>()
                 .eq("group_stock_id", groupStockId)
                 .eq("reservation_scope", StockBizConstant.RESERVATION_SCOPE_GROUP)
-                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED));
     }
 
     private int sumLockedQty(QueryWrapper<StockReservation> wrapper) {
@@ -542,7 +529,6 @@ public class StockBatchServiceImpl implements StockBatchService {
         long legacyRefId = legacyBatchRefId(stock.getId());
         StockBatch legacy = stockBatchMapper.selectOne(new QueryWrapper<StockBatch>()
                 .eq("inbound_order_item_id", legacyRefId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (legacy == null) {
             legacy = new StockBatch();

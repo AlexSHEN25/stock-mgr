@@ -75,7 +75,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                     new QueryWrapper<RolePermission>()
                             .select("permission_id")
                             .in("role_id", roleIds)
-                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
             );
             List<Long> permissionIds = permissionIdObjs.stream()
                     .map(obj -> ((Number) obj).longValue())
@@ -86,7 +85,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
             }
             permissionMapper.selectList(new QueryWrapper<Permission>()
                             .in("id", permissionIds)
-                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
                             .eq("status", StatusEnum.NOMAL.getCode()))
                     .stream()
                     .map(Permission::getCode)
@@ -221,7 +219,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         try {
             return permissionMapper.selectList(
                     new QueryWrapper<Permission>()
-                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
                             .eq("status", StatusEnum.NOMAL.getCode())
                             .eq("type", PermissionTypeEnum.DATA.getCode())
             );
@@ -246,7 +243,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         try {
             return permissionMapper.selectList(
                     new QueryWrapper<Permission>()
-                            .eq("deleted", DeleteEnum.UNDELETED.getCode())
                             .eq("status", StatusEnum.NOMAL.getCode())
                             .ne("type", PermissionTypeEnum.DATA.getCode())
             );
@@ -264,7 +260,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
         return roleMapper.selectList(
                 new QueryWrapper<Role>()
                         .in("id", roleIds)
-                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
                         .eq("status", StatusEnum.NOMAL.getCode())
         );
     }
@@ -277,7 +272,6 @@ public class PermissionQueryServiceImpl implements PermissionQueryService {
                 new QueryWrapper<UserRole>()
                         .select("role_id")
                         .eq("user_id", userId)
-                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
         );
         return roleIdObjs.stream()
                 .map(obj -> ((Number) obj).longValue())

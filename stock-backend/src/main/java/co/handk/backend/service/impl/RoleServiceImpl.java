@@ -89,8 +89,7 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, Role, RoleVO>
             return;
         }
         List<RolePermission> relations = rolePermissionMapper.selectList(new QueryWrapper<RolePermission>()
-                .eq("role_id", roleId)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()));
+                .eq("role_id", roleId));
         if (relations == null || relations.isEmpty()) {
             vo.setPermissionIds(new ArrayList<>());
             vo.setPermissionNames(new ArrayList<>());
@@ -110,8 +109,7 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, Role, RoleVO>
         }
 
         List<Permission> permissions = permissionMapper.selectList(new QueryWrapper<Permission>()
-                .in(FieldNameConstant.COLUMN_ID, permissionIds)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()));
+                .in(FieldNameConstant.COLUMN_ID, permissionIds));
         if (permissions == null || permissions.isEmpty()) {
             vo.setPermissionNames(new ArrayList<>());
             return;
@@ -143,8 +141,7 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, Role, RoleVO>
             return new ArrayList<>();
         }
         return permissionMapper.selectList(new QueryWrapper<Permission>()
-                        .in("name", normalizedNames)
-                        .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()))
+                        .in("name", normalizedNames))
                 .stream()
                 .map(Permission::getId)
                 .filter(id -> id != null)
@@ -158,8 +155,7 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, Role, RoleVO>
         }
 
         List<RolePermission> existed = rolePermissionMapper.selectList(new QueryWrapper<RolePermission>()
-                .eq("role_id", roleId)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()));
+                .eq("role_id", roleId));
 
         Set<Long> targetSet = permissionIds == null
                 ? new LinkedHashSet<>()
@@ -180,7 +176,6 @@ public class RoleServiceImpl extends BaseServiceImpl<RoleMapper, Role, RoleVO>
             rolePermissionMapper.update(null, new UpdateWrapper<RolePermission>()
                     .eq("role_id", roleId)
                     .in("permission_id", toDelete)
-                    .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                     .set(FieldNameConstant.COLUMN_DELETED, DeleteEnum.DELETED.getCode()));
         }
 

@@ -498,7 +498,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (groupCode != null && !groupCode.isBlank()) {
             Dept requested = deptService.getOne(new QueryWrapper<Dept>()
                     .eq("code", groupCode.trim())
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (requested == null) {
                 throw new co.handk.backend.exception.BusinessException(
@@ -523,7 +522,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     private QueryWrapper<Stock> buildGroupStockPageWrapper(StockQueryDTO query, Dept dept) {
         String groupStockSql = "SELECT stock_id FROM t_group_stock"
-                + " WHERE deleted = 0"
+                + " WHERE deleted = " + DeleteEnum.UNDELETED.getCode()
                 + " AND current_qty > 0"
                 + " AND state = " + StockBizConstant.BATCH_STATE_ACTIVE
                 + " AND (sale_deadline IS NULL OR sale_deadline >= NOW())";
@@ -659,7 +658,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Warehouse warehouse = warehouseService.getOne(new QueryWrapper<Warehouse>()
                 .eq("code", code)
                 .eq("status", StatusEnum.NOMAL.getCode())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (warehouse == null) {
             throw new co.handk.backend.exception.BusinessException(
@@ -719,7 +717,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return deptService.getOne(new QueryWrapper<Dept>()
                 .apply("UPPER(code) = {0}", groupCode.trim().toUpperCase())
                 .eq("status", StatusEnum.NOMAL.getCode())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
     }
 
@@ -764,8 +761,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setApproveTime(LocalDateTime.now());
         order.setRemark(approveRemark);
         List<StockOrderItem> rejectItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
-                .eq("order_id", orderId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("order_id", orderId));
         if (rejectItems == null || rejectItems.isEmpty()) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蜈･蠎ｫ莨晉･ｨ譏守ｴｰ縺悟ｭ伜惠縺励∪縺帙ｓ");
@@ -789,8 +785,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
 
         List<StockOrderItem> items = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
-                .eq("order_id", orderId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("order_id", orderId));
         if (items == null || items.isEmpty()) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票明細が存在しません");
@@ -1185,8 +1180,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         QueryWrapper<Stock> wrapper = new QueryWrapper<Stock>()
                 .eq("goods_id", goodsId)
                 .eq("sku_id", skuId)
-                .eq("warehouse_id", warehouseId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode());
+                .eq("warehouse_id", warehouseId);
         if (stockTypeId == null) {
             wrapper.isNull("stock_type_id");
         } else {
@@ -1298,7 +1292,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private void saveStockRecord(StockOrder order, Stock stock, String remark, int beforeQty, int afterQty) {
         StockOrderItem item = stockOrderItemService.getOne(new QueryWrapper<StockOrderItem>()
                 .eq("order_id", order.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (item == null) {
             throw new co.handk.backend.exception.BusinessException(
@@ -1372,7 +1365,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         boolean updated = this.update(new LambdaUpdateWrapper<Stock>()
                 .eq(Stock::getId, stock.getId())
                 .eq(Stock::getWarehouseId, stock.getWarehouseId())
-                .eq(Stock::getDeleted, DeleteEnum.UNDELETED.getCode())
                 .eq(Stock::getVersion, oldVersion)
                 .set(Stock::getCurrentQty, afterQty)
                 .set(Stock::getVersion, oldVersion + 1));
@@ -1456,7 +1448,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .eq("requester_id", userId)
                 .eq("idempotency_key", "OUTBOUND:" + headerKey.trim())
                 .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .orderByDesc("id")
                 .last("LIMIT 1"));
     }

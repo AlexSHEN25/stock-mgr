@@ -9,7 +9,6 @@ import co.handk.backend.service.LoginService;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.RedisKey;
-import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.dto.LoginDTO;
 import co.handk.common.model.vo.LoginVO;
@@ -39,11 +38,10 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public LoginVO login(LoginDTO dto) {
         String username = dto.getUsername();
-        User user = userMapper.selectByUsername(
-                username,
-                StatusEnum.NOMAL.getCode(),
-                DeleteEnum.UNDELETED.getCode()
-        );
+        User user = userMapper.selectOne(new QueryWrapper<User>()
+                .eq("username", username)
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .last("LIMIT 1"));
         if (Objects.isNull(user)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
@@ -138,7 +136,6 @@ public class LoginServiceImpl implements LoginService {
         UserToken existed = userTokenMapper.selectOne(
                 new QueryWrapper<UserToken>()
                         .eq("user_id", userId)
-                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
                         .last("LIMIT 1")
         );
 

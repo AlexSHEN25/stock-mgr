@@ -65,7 +65,8 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
             wrapper.inSql("order_id",
-                    "SELECT id FROM t_stock_order WHERE deleted = 0 AND (requester_id = "
+                    "SELECT id FROM t_stock_order WHERE deleted = " + DeleteEnum.UNDELETED.getCode()
+                            + " AND (requester_id = "
                             + userId + " OR operator_id = " + userId + ")");
         }
         return wrapper;
@@ -132,8 +133,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
             return 0;
         }
         List<StockOrderItem> items = list(new QueryWrapper<StockOrderItem>()
-                .in("id", ids)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .in("id", ids));
         if (items == null || items.isEmpty()) {
             return 0;
         }
@@ -170,14 +170,12 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
 
         StockRecord record = stockRecordService.getOne(new LambdaQueryWrapper<StockRecord>()
                 .eq(StockRecord::getOrderItemId, item.getId())
-                .eq(StockRecord::getDeleted, DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (record == null || record.getStockId() == null) {
             throw new RuntimeException("stock record not found for stock order item");
         }
         Stock stock = stockMapper.selectOne(new QueryWrapper<Stock>()
                 .eq("id", record.getStockId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (stock == null) {
             throw new RuntimeException("stock not found");
@@ -199,7 +197,6 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                 null,
                 new LambdaUpdateWrapper<Stock>()
                 .eq(Stock::getId, stock.getId())
-                .eq(Stock::getDeleted, DeleteEnum.UNDELETED.getCode())
                 .eq(Stock::getVersion, oldVersion)
                 .set(Stock::getCurrentQty, nextQty)
                 .set(Stock::getVersion, oldVersion + 1)
@@ -244,7 +241,6 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                 null,
                 new LambdaUpdateWrapper<StockOrder>()
                         .eq(StockOrder::getId, order.getId())
-                        .eq(StockOrder::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .eq(StockOrder::getTotalQty, totalQty)
                         .set(StockOrder::getTotalQty, nextTotalQty)
         );
@@ -262,15 +258,13 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
             return;
         }
         List<StockOrderItem> items = list(new QueryWrapper<StockOrderItem>()
-                .eq("order_id", orderId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("order_id", orderId));
         int totalQty = 0;
         for (StockOrderItem item : items) {
             totalQty += item.getChangeQty() == null ? 0 : item.getChangeQty();
         }
         if (!stockOrderService.update(new LambdaUpdateWrapper<StockOrder>()
                 .eq(StockOrder::getId, orderId)
-                .eq(StockOrder::getDeleted, DeleteEnum.UNDELETED.getCode())
                 .set(StockOrder::getTotalQty, totalQty))) {
             throw new RuntimeException("failed to recalculate stock order total qty");
         }

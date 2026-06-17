@@ -59,7 +59,6 @@ public class DeptServiceImpl extends BaseServiceImpl<DeptMapper, Dept, DeptVO>
     @Override
     protected <Q> QueryWrapper<Dept> buildWrapper(Q dto) {
         QueryWrapper<Dept> wrapper = new QueryWrapper<>();
-        wrapper.eq("deleted", DeleteEnum.UNDELETED.getCode());
         if (!(dto instanceof DeptQueryDTO queryDTO)) {
             return wrapper;
         }

@@ -5,7 +5,6 @@ import co.handk.backend.meta.EnumOptionRegistry;
 import co.handk.backend.mapper.PermissionMapper;
 import co.handk.backend.service.PermissionService;
 import co.handk.common.constant.FieldNameConstant;
-import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.vo.EnumOptionVO;
 import co.handk.common.model.vo.OptionVO;
 import co.handk.common.model.vo.PermissionVO;
@@ -34,7 +33,6 @@ public class PermissionServiceImpl extends BaseServiceImpl<PermissionMapper, Per
         if (entity.getParentId() != null) {
             Permission parent = permissionMapper.selectOne(new QueryWrapper<Permission>()
                     .eq(FieldNameConstant.COLUMN_ID, entity.getParentId())
-                    .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (parent != null) {
                 vo.setParentName(parent.getName());
@@ -56,7 +54,6 @@ public class PermissionServiceImpl extends BaseServiceImpl<PermissionMapper, Per
     @Override
     public List<OptionVO> options() {
         return permissionMapper.selectList(new QueryWrapper<Permission>()
-                        .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                         .orderByAsc("sort")
                         .orderByAsc(FieldNameConstant.COLUMN_ID))
                 .stream()
@@ -67,8 +64,7 @@ public class PermissionServiceImpl extends BaseServiceImpl<PermissionMapper, Per
     @Override
     public List<TextOptionVO> moduleOptions() {
         return permissionMapper.selectList(new QueryWrapper<Permission>()
-                        .select("module")
-                        .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()))
+                        .select("module"))
                 .stream()
                 .map(Permission::getModule)
                 .filter(module -> module != null && !module.isBlank())

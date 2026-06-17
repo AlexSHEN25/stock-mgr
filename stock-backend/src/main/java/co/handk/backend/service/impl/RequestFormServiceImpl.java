@@ -256,7 +256,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         RequestForm existing = getOne(new QueryWrapper<RequestForm>()
                 .eq("biz_no", dto.getBizNo().trim())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (existing != null) {
             requireOwned(existing);
@@ -300,8 +299,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private void syncRequestItems(Long requestId, List<RequestFormWithItemsDTO.Item> submittedItems) {
         List<RequestFormWithItemsDTO.Item> items = submittedItems == null ? new ArrayList<>() : submittedItems;
         List<RequestItem> existingItems = requestItemService.list(new QueryWrapper<RequestItem>()
-                .eq("request_id", requestId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("request_id", requestId));
         Map<Long, RequestItem> existingById = new HashMap<>();
         Map<Long, RequestItem> existingByStockRecordId = new HashMap<>();
         for (RequestItem item : existingItems) {
@@ -354,8 +352,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     private void deleteItemsByRequestId(Long requestId) {
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
-                .eq("request_id", requestId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("request_id", requestId));
         for (RequestItem item : items) {
             requestItemService.deleteByIdLogic(item.getId());
         }
@@ -381,8 +378,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
 
         List<StockOrderItem> allItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
-                .eq("order_id", outboundOrder.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("order_id", outboundOrder.getId()));
         if (allItems.isEmpty()) {
             throw fail("source outbound order has no items");
         }
@@ -420,7 +416,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     .eq("order_id", outboundOrder.getId())
                     .eq("order_item_id", orderItem.getId())
                     .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (stockRecord == null) {
                 throw fail("source outbound stock record not found");
@@ -466,8 +461,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         Dept dept = user != null && user.getDeptId() != null ? deptService.getByIdNotDeleted(user.getDeptId()) : null;
 
         List<StockOrderItem> allItems = stockOrderItemService.list(new QueryWrapper<StockOrderItem>()
-                .eq("order_id", outboundOrder.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("order_id", outboundOrder.getId()));
         if (allItems.isEmpty()) {
             throw fail("source outbound order has no items");
         }
@@ -479,7 +473,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
         RequestForm form = this.getOne(new QueryWrapper<RequestForm>()
                 .eq("source_order_id", outboundOrder.getId())
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (form == null) {
             form = new RequestForm();
@@ -509,7 +502,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     .eq("order_id", outboundOrder.getId())
                     .eq("order_item_id", orderItem.getId())
                     .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (stockRecord == null) {
                 throw fail("source outbound stock record not found");
@@ -518,7 +510,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             RequestItem existing = requestItemService.getOne(new QueryWrapper<RequestItem>()
                     .eq("request_id", form.getId())
                     .eq("stock_record_id", stockRecord.getId())
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (existing == null) {
                 RequestItem requestItem = buildRequestItemFromStockRecord(form, stockRecord, remark);
@@ -575,7 +566,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                );
         if (items.isEmpty()) {
             throw fail("request form has no active items");
         }
@@ -678,7 +669,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("request_id", form.getId())
                 .eq("stock_record_id", record.getId())
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (requestItem == null) {
             throw fail("selected stock record is not available");
@@ -767,8 +757,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
 
         List<RequestItem> existing = requestItemService.list(new QueryWrapper<RequestItem>()
-                .eq("request_id", requestId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("request_id", requestId));
         Map<Long, RequestItem> selectedMap = new HashMap<>();
         for (RequestItem requestItem : existing) {
             if (!Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(requestItem.getState())) {
@@ -892,7 +881,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             RequestItem existing = requestItemService.getOne(new QueryWrapper<RequestItem>()
                     .eq("request_id", form.getId())
                     .eq("stock_record_id", stockRecordId)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
 
             int currentQty = existing == null || !Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(existing.getState())
@@ -943,7 +931,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         List<RequestItem> activeItems = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", form.getId())
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                );
         List<Long> removedStockRecordIds = new ArrayList<>();
         for (RequestItem item : activeItems) {
             if (item.getStockRecordId() != null && !requestedQuantities.containsKey(item.getStockRecordId())) {
@@ -981,8 +969,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
         List<RequestItem> existing = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", form.getId())
-                .in("stock_record_id", stockRecordIds)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .in("stock_record_id", stockRecordIds));
         if (existing == null || existing.isEmpty()) {
             return true;
         }
@@ -1070,8 +1057,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     private List<RequestItem> listRequestItems(Long requestId) {
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
-                .eq("request_id", requestId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("request_id", requestId));
         if (items == null || items.isEmpty()) {
             throw fail("request form has no active items");
         }
@@ -1277,7 +1263,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         Config config = configService.getOne(new QueryWrapper<Config>()
                 .eq("name", name)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         return config == null ? null : config.getValue();
     }
@@ -1647,7 +1632,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 null,
                 new LambdaUpdateWrapper<StockOrderItem>()
                         .eq(StockOrderItem::getId, orderItem.getId())
-                        .eq(StockOrderItem::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .eq(StockOrderItem::getChangeQty, currentRaw)
                         .set(StockOrderItem::getChangeQty, nextQty)
         );
@@ -1661,7 +1645,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     null,
                     new LambdaUpdateWrapper<StockOrder>()
                             .eq(StockOrder::getId, order.getId())
-                            .eq(StockOrder::getDeleted, DeleteEnum.UNDELETED.getCode())
                             .eq(StockOrder::getTotalQty, totalQty)
                             .set(StockOrder::getTotalQty, totalQty - deltaQty)
             );
@@ -1709,7 +1692,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 null,
                 new LambdaUpdateWrapper<StockOrderItem>()
                         .eq(StockOrderItem::getId, orderItem.getId())
-                        .eq(StockOrderItem::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .eq(StockOrderItem::getChangeQty, currentRaw)
                         .set(StockOrderItem::getChangeQty, targetRemainingQty)
         );
@@ -1725,7 +1707,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     null,
                     new LambdaUpdateWrapper<StockOrder>()
                             .eq(StockOrder::getId, order.getId())
-                            .eq(StockOrder::getDeleted, DeleteEnum.UNDELETED.getCode())
                             .eq(StockOrder::getTotalQty, totalQty)
                             .set(StockOrder::getTotalQty, Math.max(0, totalQty + delta))
             );
@@ -1744,7 +1725,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     .eq("request_id", form.getId())
                     .eq("stock_record_id", record.getId())
                     .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             int requestQty = requestItem == null || requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
             if (requestQty + remainingQty != originalQty) {
@@ -1760,7 +1740,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             RequestItem existed = requestItemService.getOne(new QueryWrapper<RequestItem>()
                     .eq("request_id", requestId)
                     .eq("stock_record_id", stockRecordId)
-                    .eq("deleted", DeleteEnum.UNDELETED.getCode())
                     .last("LIMIT 1"));
             if (existed == null) {
                 throw ex;
@@ -1824,7 +1803,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                );
         int totalQty = 0;
         BigDecimal totalAmt = BigDecimal.ZERO;
         for (RequestItem item : items) {
@@ -1843,15 +1822,13 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         requireOwnedSourceOutbound(form);
         return stockRecordService.list(new QueryWrapper<StockRecord>()
                 .eq("order_id", form.getSourceOrderId())
-                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND));
     }
 
     private List<StockRecord> listAvailableOutboundRecords() {
         Long userId = UserContext.getUserIdOrDefault();
         QueryWrapper<StockRecord> wrapper = new QueryWrapper<StockRecord>()
                 .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .orderByDesc("biz_date", "id");
         if (!permissionQueryService.isSuperAdmin(userId)) {
             wrapper.and(query -> query.eq("requester_id", userId).or().eq("operator_id", userId));
@@ -1874,8 +1851,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         for (StockOrder order : stockOrderService.list(new QueryWrapper<StockOrder>()
                 .in("id", orderIds)
                 .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
-                .eq("state", StockBizConstant.ORDER_STATE_FINISHED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()))) {
+                .eq("state", StockBizConstant.ORDER_STATE_FINISHED))) {
             finishedOrderIds.add(order.getId());
         }
         return records.stream()
@@ -1887,7 +1863,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                );
         RequestForm form = this.getByIdNotDeleted(requestId);
         if (form == null || !sourceHasKnifeAndHandle(form)) {
             return;
@@ -1922,7 +1898,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         List<RequestItem> items = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", form.getId())
                 .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                );
         for (RequestItem item : items) {
             hasKnife = hasKnife || isKnifeCategory(item.getCategoryName());
             hasHandle = hasHandle || isHandleCategory(item.getCategoryName());
@@ -1968,8 +1944,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         QueryWrapper<Stock> wrapper = new QueryWrapper<Stock>()
                 .eq("goods_id", goodsId)
                 .eq("sku_id", skuId)
-                .eq("warehouse_id", warehouseId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode());
+                .eq("warehouse_id", warehouseId);
         if (stockTypeId == null) {
             wrapper.isNull("stock_type_id");
         } else {
@@ -1987,7 +1962,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 .eq("source_type", StockBizConstant.SOURCE_TYPE_REQUEST)
                 .eq("source_id", stockRecordId)
                 .likeRight("remark", REMARK_DELIVERY_INBOUND)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
     }
 

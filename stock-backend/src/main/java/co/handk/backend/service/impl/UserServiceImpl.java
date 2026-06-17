@@ -148,7 +148,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
                 String encrypted = PasswordUtil.encrypt(newPlainPassword, salt);
                 this.lambdaUpdate()
                         .eq(User::getId, updateUserDTO.getId())
-                        .eq(User::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .set(User::getSalt, salt)
                         .set(User::getPassword, encrypted)
                         .update();
@@ -223,7 +222,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
         }
         UserRole userRole = userRoleMapper.selectOne(new QueryWrapper<UserRole>()
                 .eq("user_id", userId)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (userRole == null || userRole.getRoleId() == null) {
             return;
@@ -231,7 +229,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
         vo.setRoleId(userRole.getRoleId());
         Role role = roleMapper.selectOne(new QueryWrapper<Role>()
                 .eq(FieldNameConstant.COLUMN_ID, userRole.getRoleId())
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (role != null) {
             vo.setRoleName(role.getName());
@@ -243,8 +240,7 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
             return;
         }
         List<UserRole> existedList = userRoleMapper.selectList(new QueryWrapper<UserRole>()
-                .eq("user_id", userId)
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode()));
+                .eq("user_id", userId));
         if (existedList == null || existedList.isEmpty()) {
             UserRole userRole = new UserRole();
             userRole.setUserId(userId);
@@ -255,14 +251,12 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
         UserRole keeper = existedList.get(0);
         userRoleMapper.update(null, new UpdateWrapper<UserRole>()
                 .eq(FieldNameConstant.COLUMN_ID, keeper.getId())
-                .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                 .set("role_id", roleId));
 
         if (existedList.size() > 1) {
             List<Long> redundantIds = existedList.stream().skip(1).map(UserRole::getId).toList();
             userRoleMapper.update(null, new UpdateWrapper<UserRole>()
                     .in(FieldNameConstant.COLUMN_ID, redundantIds)
-                    .eq(FieldNameConstant.COLUMN_DELETED, DeleteEnum.UNDELETED.getCode())
                     .set(FieldNameConstant.COLUMN_DELETED, DeleteEnum.DELETED.getCode()));
         }
     }
@@ -390,7 +384,6 @@ public class UserServiceImpl extends BaseServiceImpl<UserMapper, User, UserVO>
         }
         if (StringUtils.hasText(queryDTO.getDeptName())) {
             List<Long> deptIds = deptService.lambdaQuery()
-                    .eq(Dept::getDeleted, DeleteEnum.UNDELETED.getCode())
                     .like(Dept::getName, queryDTO.getDeptName().trim())
                     .list()
                     .stream()

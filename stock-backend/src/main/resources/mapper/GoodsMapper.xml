@@ -4,22 +4,30 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="co.handk.backend.mapper.GoodsMapper">
 
+    <sql id="notDeleted">
+        deleted = 0
+    </sql>
+
+    <sql id="aliasNotDeleted">
+        ${alias}.deleted = 0
+    </sql>
+
     <sql id="fromAndWhere">
         FROM t_goods g
-        LEFT JOIN t_goods_sku gs ON gs.goods_id = g.id AND gs.deleted = 0
-        LEFT JOIN t_goods_image gi ON gi.sku_id = gs.id AND gi.deleted = 0
-        LEFT JOIN t_brand b ON b.id = g.brand_id AND b.deleted = 0
-        LEFT JOIN t_series s ON s.id = g.series_id AND s.deleted = 0
-        LEFT JOIN t_category c ON c.id = g.category_id AND c.deleted = 0
-        LEFT JOIN t_maker m ON m.id = g.maker_id AND m.deleted = 0
+        LEFT JOIN t_goods_sku gs ON gs.goods_id = g.id AND <include refid="aliasNotDeleted"><property name="alias" value="gs"/></include>
+        LEFT JOIN t_goods_image gi ON gi.sku_id = gs.id AND <include refid="aliasNotDeleted"><property name="alias" value="gi"/></include>
+        LEFT JOIN t_brand b ON b.id = g.brand_id AND <include refid="aliasNotDeleted"><property name="alias" value="b"/></include>
+        LEFT JOIN t_series s ON s.id = g.series_id AND <include refid="aliasNotDeleted"><property name="alias" value="s"/></include>
+        LEFT JOIN t_category c ON c.id = g.category_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
+        LEFT JOIN t_maker m ON m.id = g.maker_id AND <include refid="aliasNotDeleted"><property name="alias" value="m"/></include>
         LEFT JOIN (
             SELECT goods_id, sku_id, SUM(current_qty) AS current_qty
             FROM t_stock
-            WHERE deleted = 0
+            WHERE <include refid="notDeleted"/>
             GROUP BY goods_id, sku_id
         ) stock_summary ON stock_summary.goods_id = g.id
             AND stock_summary.sku_id = gs.id
-        WHERE g.deleted = 0
+        WHERE <include refid="aliasNotDeleted"><property name="alias" value="g"/></include>
         <if test="q != null">
             <if test="q.name != null and q.name != ''">
                 AND g.name LIKE CONCAT('%', #{q.name}, '%')
@@ -44,7 +52,7 @@
                     SELECT 1
                     FROM t_stock st
                     WHERE st.goods_id = g.id
-                      AND st.deleted = 0
+                      AND <include refid="aliasNotDeleted"><property name="alias" value="st"/></include>
                       AND st.warehouse_id = #{q.warehouseId}
                 )
             </if>
@@ -111,7 +119,7 @@
             WHEN EXISTS (
                 SELECT 1
                 FROM t_stock st
-                WHERE st.deleted = 0
+                WHERE <include refid="aliasNotDeleted"><property name="alias" value="st"/></include>
                   AND st.goods_id = g.id
                   AND st.sku_id = gs.id
             ) THEN TRUE

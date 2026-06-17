@@ -69,7 +69,8 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
             wrapper.inSql("request_id",
-                    "SELECT id FROM t_request_form WHERE deleted = 0 AND user_id = " + userId);
+                    "SELECT id FROM t_request_form WHERE deleted = " + DeleteEnum.UNDELETED.getCode()
+                            + " AND user_id = " + userId);
         }
         return wrapper;
     }
@@ -135,8 +136,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
             return 0;
         }
         List<RequestItem> items = list(new QueryWrapper<RequestItem>()
-                .in("id", ids)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .in("id", ids));
         if (items == null || items.isEmpty()) {
             return 0;
         }
@@ -185,7 +185,6 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                 null,
                 new LambdaUpdateWrapper<StockOrderItem>()
                         .eq(StockOrderItem::getId, orderItem.getId())
-                        .eq(StockOrderItem::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .eq(StockOrderItem::getChangeQty, currentQty)
                         .set(StockOrderItem::getChangeQty, nextQty)
         );
@@ -200,7 +199,6 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                     null,
                     new LambdaUpdateWrapper<StockOrder>()
                             .eq(StockOrder::getId, order.getId())
-                            .eq(StockOrder::getDeleted, DeleteEnum.UNDELETED.getCode())
                             .eq(StockOrder::getTotalQty, totalQty)
                             .set(StockOrder::getTotalQty, totalQty + requestQty)
             );
@@ -224,7 +222,6 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         Long userId = UserContext.getUserIdOrDefault();
         RequestForm form = requestFormMapper.selectOne(new QueryWrapper<RequestForm>()
                 .eq("id", requestId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (form == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request form not found");
@@ -257,15 +254,13 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         }
         RequestForm form = requestFormMapper.selectOne(new QueryWrapper<RequestForm>()
                 .eq("id", requestId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .last("LIMIT 1"));
         if (form == null) {
             return;
         }
         List<RequestItem> items = list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId)
-                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode()));
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED));
         int totalQty = 0;
         BigDecimal totalAmt = BigDecimal.ZERO;
         for (RequestItem item : items) {
@@ -281,7 +276,6 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                 null,
                 new LambdaUpdateWrapper<RequestForm>()
                         .eq(RequestForm::getId, form.getId())
-                        .eq(RequestForm::getDeleted, DeleteEnum.UNDELETED.getCode())
                         .set(RequestForm::getTotalQty, totalQty)
                         .set(RequestForm::getRequestQty, totalQty)
                         .set(RequestForm::getTotalAmt, totalAmt)

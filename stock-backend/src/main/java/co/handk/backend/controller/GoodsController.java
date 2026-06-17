@@ -83,19 +83,15 @@ public class GoodsController {
     public GoodsFormOptionsVO formOptions() {
         GoodsFormOptionsVO vo = new GoodsFormOptionsVO();
         vo.setBrandOptions(toOptionList(brandService.list(new QueryWrapper<Brand>()
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .orderByAsc("id"))));
         vo.setSeriesOptions(toOptionList(seriesService.list(new QueryWrapper<Series>()
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .orderByAsc("id"))));
         vo.setCategoryOptions(toOptionList(categoryService.list(new QueryWrapper<Category>()
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .orderByAsc("id"))));
         vo.setMakerOptions(toOptionList(makerService.list(new QueryWrapper<Maker>()
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .orderByAsc("id"))));
         vo.setStatusOptions(List.of(
@@ -114,7 +110,6 @@ public class GoodsController {
     public List<OptionVO> seriesOptions(@RequestParam("brandId") Long brandId) {
         return toOptionList(seriesService.list(new QueryWrapper<Series>()
                 .eq("brand_id", brandId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .orderByAsc("id")));
     }
@@ -136,8 +131,7 @@ public class GoodsController {
     public List<OptionVO> makerOptions(@RequestParam("brandId") Long brandId) {
         return toOptionList(makerService.list(new QueryWrapper<Maker>()
                 .inSql("id", "SELECT maker_id FROM t_brand_maker_relation"
-                        + " WHERE deleted = 0 AND brand_id = " + brandId)
-                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                        + " WHERE deleted = " + DeleteEnum.UNDELETED.getCode() + " AND brand_id = " + brandId)
                 .eq("status", StatusEnum.NOMAL.getCode())
                 .orderByAsc("id")));
     }
