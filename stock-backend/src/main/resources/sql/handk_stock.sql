@@ -23,20 +23,6 @@ create TABLE `t_user`
     COLLATE = utf8mb4_unicode_ci
     COMMENT ='用户表';
 
-INSERT INTO `t_user`
-(`id`, `username`, `password`, `dept_id`, `salt`, `email`, `phone`, `avatar`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
-VALUES (1, 'admin', '53ed35e1ac326eec04db3a65aa7f0276', 1, 'salt_admin', 'admin@test.com', '09000000001',
-        '/avatar/upload/1_0cf14549-8988-4f0d-9132-975344b88071.png', 1, 0, 1, 1, '2026-05-25 15:42:05',
-        '2026-05-25 15:42:05'),
-       (2, 'sales01', '285cb306e6caa304a5cdbf9d2f9bfacb', 2, 'salt_sales01', 'sales01@test.com', '09000000002',
-        '/avatar/sales01.png', 1, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (3, 'warehouse01', '8750063d034114ef8d4aca57898550dd', 3, 'salt_wh01', 'warehouse01@test.com',
-        '09000000003', '/avatar/warehouse01.png', 1, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (4, 'viewer01', '4fbc57eea3b37fdc30dc096dbc483176', 1, 'salt_viewer', 'viewer01@test.com', '09000000004',
-        '/avatar/viewer01.png', 1, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (5, 'sales02', '256c07013bc6ec48d0d3483ad34592bf', 2, '60e92491f5099c82bfe87aaf4a5247c6', 'sales02@handk.o',
-        '07711112222', '/avatar/upload/mpq9wepm05c389.png', 1, 0, 1, 1, '2026-05-27 21:10:26',
-        '2026-05-29 10:58:38');
 
 DROP TABLE IF EXISTS `t_dept`;
 CREATE TABLE `t_dept`
@@ -61,11 +47,6 @@ CREATE TABLE `t_dept`
   COLLATE = utf8mb4_unicode_ci
     COMMENT ='部门表';
 
-INSERT INTO `t_dept`
-(`id`, `parent_id`, `name`, `code`, `leader_id`, `sort`, `status`, `deleted`, `created_by`, `updated_by`)
-VALUES (1, 0, 'Aグループ', 'A', NULL, 1, 1, 0, 1, 1),
-       (2, 0, 'Bグループ', 'B', NULL, 2, 1, 0, 1, 1),
-       (3, 0, 'Cグループ', 'C', NULL, 3, 1, 0, 1, 1);
 
 
 DROP TABLE IF EXISTS `t_user_token`;
@@ -113,12 +94,6 @@ create TABLE `t_role`
     DEFAULT CHARSET = utf8mb4
     COMMENT ='角色表';
 
-INSERT INTO `t_role`
-(`id`, `name`, `code`, `remark`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
-VALUES (1, 'システム管理者', 'ROLE_SUPER_ADMIN', 'システムのデフォルト管理者', 1, 0, 1, 1, '2026-05-25 15:42:05',
-        '2026-05-25 15:42:05'),
-       (2, '一般ユーザー', 'ROLE_NORMAL_USER', 'システムのデフォルト一般ユーザー', 1, 0, 1, 1, '2026-05-25 15:42:05',
-        '2026-05-25 15:42:05');
 
 DROP TABLE IF EXISTS `t_permission`;
 create TABLE `t_permission`
@@ -182,112 +157,8 @@ create TABLE `t_role_permission`
     DEFAULT CHARSET = utf8mb4
     COMMENT ='角色权限关系表';
 
-INSERT INTO `t_permission`
-(`id`, `name`, `code`, `module`, `type`, `parent_id`, `path`, `sort`, `icon`, `component`, `status`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
-VALUES
-    (1,'システム管理','MENU_SYSTEM','system',1,0,'/system',1,'setting','system/index',1,0,1,1,NOW(),NOW()),
-    (2,'ユーザー管理','MENU_USER','user',1,1,'/user',2,'user','user/index',1,0,1,1,NOW(),NOW()),
-    (3,'商品管理','MENU_GOODS','goods',1,1,'/goods',3,'goods','goods/index',1,0,1,1,NOW(),NOW()),
-    (4,'在庫管理','MENU_STOCK','stock',1,1,'/stock',4,'stock','stock/index',1,0,1,1,NOW(),NOW()),
-    (5,'顧客管理','MENU_CUSTOMER','customer',1,1,'/customer',5,'customer','customer/index',1,0,1,1,NOW(),NOW()),
 
-    (6,'在庫一覧閲覧','DATA_STOCK_READ','stock',2,4,'/api/stock/**',1,'api','',1,0,1,1,NOW(),NOW()),
-    (7,'在庫一覧編集','DATA_STOCK_WRITE','stock',2,4,'/api/stock/**',2,'api','',1,0,1,1,NOW(),NOW()),
-    (8,'在庫区分閲覧','DATA_STOCK_TYPE_READ','stock',2,4,'/api/stockType/**',3,'api','',1,0,1,1,NOW(),NOW()),
-    (9,'在庫区分編集','DATA_STOCK_TYPE_WRITE','stock',2,4,'/api/stockType/**',4,'api','',1,0,1,1,NOW(),NOW()),
-    (10,'倉庫管理閲覧','DATA_WAREHOUSE_READ','stock',2,4,'/api/warehouse/**',5,'api','',1,0,1,1,NOW(),NOW()),
-    (11,'倉庫管理編集','DATA_WAREHOUSE_WRITE','stock',2,4,'/api/warehouse/**',6,'api','',1,0,1,1,NOW(),NOW()),
-    (12,'入出庫伝票閲覧','DATA_STOCK_ORDER_READ','stock',2,4,'/api/stockOrder/**',7,'api','',1,0,1,1,NOW(),NOW()),
-    (13,'入出庫伝票編集','DATA_STOCK_ORDER_WRITE','stock',2,4,'/api/stockOrder/**',8,'api','',1,0,1,1,NOW(),NOW()),
-    (14,'入出庫明細閲覧','DATA_STOCK_ORDER_ITEM_READ','stock',2,4,'/api/stockOrderItem/**',9,'api','',1,0,1,1,NOW(),NOW()),
-    (15,'入出庫明細編集','DATA_STOCK_ORDER_ITEM_WRITE','stock',2,4,'/api/stockOrderItem/**',10,'api','',1,0,1,1,NOW(),NOW()),
-    (16,'在庫履歴閲覧','DATA_STOCK_RECORD_READ','stock',2,4,'/api/stockRecord/**',11,'api','',1,0,1,1,NOW(),NOW()),
-    (17,'在庫履歴編集','DATA_STOCK_RECORD_WRITE','stock',2,4,'/api/stockRecord/**',12,'api','',1,0,1,1,NOW(),NOW()),
-    (18,'価格履歴閲覧','DATA_PRICE_RECORD_READ','stock',2,4,'/api/priceRecord/**',13,'api','',1,0,1,1,NOW(),NOW()),
-    (19,'価格履歴編集','DATA_PRICE_RECORD_WRITE','stock',2,4,'/api/priceRecord/**',14,'api','',1,0,1,1,NOW(),NOW()),
-    (20,'まとめ納品書閲覧','DATA_REQUEST_FORM_READ','stock',2,4,'/api/requestForm/**',15,'api','',1,0,1,1,NOW(),NOW()),
-    (21,'まとめ納品書編集','DATA_REQUEST_FORM_WRITE','stock',2,4,'/api/requestForm/**',16,'api','',1,0,1,1,NOW(),NOW()),
 
-    (24,'顧客管理閲覧','DATA_CUSTOMER_READ','customer',2,5,'/api/customer/**',1,'api','',1,0,1,1,NOW(),NOW()),
-    (25,'顧客管理編集','DATA_CUSTOMER_WRITE','customer',2,5,'/api/customer/**',2,'api','',1,0,1,1,NOW(),NOW()),
-    (26,'顧客ランク管理閲覧','DATA_CUSTOMER_LEVEL_READ','customer',2,5,'/api/customerLevel/**',3,'api','',1,0,1,1,NOW(),NOW()),
-    (27,'顧客ランク管理編集','DATA_CUSTOMER_LEVEL_WRITE','customer',2,5,'/api/customerLevel/**',4,'api','',1,0,1,1,NOW(),NOW()),
-
-    (28,'ユーザー管理閲覧','DATA_USER_READ','user',2,2,'/api/user/**',1,'api','',1,0,1,1,NOW(),NOW()),
-    (29,'商品管理閲覧','DATA_GOODS_READ','goods',2,3,'/api/goods/**',1,'api','',1,0,1,1,NOW(),NOW()),
-    (30,'商品SKU閲覧','DATA_GOODS_SKU_READ','goods',2,3,'/api/goodsSku/**',2,'api','',1,0,1,1,NOW(),NOW()),
-    (31,'商品画像閲覧','DATA_GOODS_IMAGE_READ','goods',2,3,'/api/goodsImage/**',3,'api','',1,0,1,1,NOW(),NOW()),
-    (32,'商品SKU仕様閲覧','DATA_GOODS_SKU_SPEC_READ','goods',2,3,'/api/goodsSkuSpec/**',4,'api','',1,0,1,1,NOW(),NOW()),
-    (33,'メッセージ管理閲覧','DATA_MESSAGE_READ','system',2,1,'/api/message/**',1,'api','',1,0,1,1,NOW(),NOW()),
-    (34,'メッセージ管理編集','DATA_MESSAGE_WRITE','system',2,1,'/api/message/**',2,'api','',1,0,1,1,NOW(),NOW());
-
-INSERT INTO `t_role_permission` (`id`, `role_id`, `permission_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`) VALUES
-    (1,1,1,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (2,1,2,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (3,1,3,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (4,1,4,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (5,1,5,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (6,1,6,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (7,1,7,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (8,1,8,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (9,1,9,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (10,1,10,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (11,1,11,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (12,1,12,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (13,1,13,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (14,1,14,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (15,1,15,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (16,1,16,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (17,1,17,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (18,1,18,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (19,1,19,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (20,1,20,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (21,1,21,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (22,1,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (23,1,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (24,1,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (25,1,27,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (28,2,4,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (29,2,5,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (30,2,6,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (31,2,8,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (32,2,10,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (33,2,12,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (34,2,14,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (35,2,16,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (36,2,18,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (37,2,20,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (38,2,22,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (39,2,24,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (40,2,26,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (41,2,2,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (42,2,3,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (43,2,7,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (44,2,9,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (45,2,11,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (46,2,13,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (47,2,15,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (48,2,17,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (49,2,19,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (50,2,21,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (51,2,23,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (52,2,25,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (53,2,27,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (54,2,28,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (55,2,29,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (56,2,30,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (57,2,31,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (58,2,32,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (59,2,33,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05'),
-    (60,2,34,0,1,1,'2026-05-25 15:42:05','2026-05-25 15:42:05');
-
-INSERT INTO `t_user_role`
-(`id`, `user_id`, `role_id`, `deleted`, `created_by`, `updated_by`, `create_time`, `update_time`)
-VALUES (1, 1, 1, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (2, 2, 2, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (3, 3, 2, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (4, 4, 2, 0, 1, 1, '2026-05-25 15:42:05', '2026-05-25 15:42:05'),
-       (5, 5, 1, 0, 1, 1, '2026-05-27 21:10:26', '2026-05-27 21:10:26');
 
 DROP TABLE IF EXISTS `t_stock`;
 create TABLE `t_stock`
@@ -299,7 +170,6 @@ create TABLE `t_stock`
     `sku_code`          VARCHAR(128)              DEFAULT NULL COMMENT '商品品番',
     `warehouse_id`      BIGINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT '仓库ID',
     `current_qty`       INT(10)          NOT NULL DEFAULT 0 COMMENT '实际库存数量',
-    `lock_qty`          INT(10)          NOT NULL DEFAULT 0 COMMENT '已被锁定库存数量',
     `price`             DECIMAL(18, 2)   NOT NULL DEFAULT 0.00 COMMENT '单价',
     `currency`          VARCHAR(8)       NOT NULL DEFAULT 'JPY' COMMENT '币种',
     `price_update_time` DATETIME                  DEFAULT NULL COMMENT '价格最后更新时间',
@@ -330,6 +200,7 @@ CREATE TABLE t_stock_order
     `warehouse_id`   BIGINT UNSIGNED  NOT NULL COMMENT '仓库ID',
     `source_type`    TINYINT UNSIGNED NOT NULL COMMENT '来源类型:1订单2退货3请求单4手动',
     `source_id`      BIGINT                    DEFAULT NULL COMMENT '来源ID',
+    `idempotency_key` VARCHAR(128)             DEFAULT NULL COMMENT '幂等键',
     `total_qty`      INT(10)          NOT NULL DEFAULT 0 COMMENT '总数量',
     `stock_type_id`  BIGINT UNSIGNED           DEFAULT NULL COMMENT '库存商品分类ID',
     `state`          TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单据状态:0草稿1审核中2完成3取消',
@@ -357,6 +228,7 @@ CREATE TABLE t_stock_order
     `update_time`    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON update CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id),
     UNIQUE KEY uk_order_no (order_no),
+    UNIQUE KEY uk_requester_idempotency (requester_id, idempotency_key, deleted),
     KEY idx_state_deleted (state, deleted),
     KEY idx_wh_state (warehouse_id, state),
     KEY idx_source (source_type, source_id),
@@ -476,6 +348,8 @@ create TABLE `t_stock_record`
     KEY idx_sku (sku_id),
     KEY idx_order_type (order_type),
     KEY idx_customer (customer_id),
+    KEY idx_group_customer_goods
+        (deleted, order_type, outbound_mode, dept_id, customer_id, goods_id, sku_id, stock_type_id, biz_date),
     KEY idx_operator (operator_id),
     KEY idx_create_time (create_time),
     KEY `idx_brand_id` (`brand_id`),
@@ -543,6 +417,49 @@ CREATE TABLE `t_group_stock`
     KEY `idx_group_available` (`dept_id`, `stock_id`, `sale_deadline`, `state`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '组别独立库存';
 
+DROP TABLE IF EXISTS `t_stock_reservation`;
+CREATE TABLE `t_stock_reservation`
+(
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `idempotency_key` VARCHAR(128) DEFAULT NULL,
+    `order_id` BIGINT UNSIGNED NOT NULL,
+    `order_item_id` BIGINT UNSIGNED NOT NULL,
+    `stock_id` BIGINT UNSIGNED NOT NULL,
+    `batch_id` BIGINT UNSIGNED DEFAULT NULL,
+    `group_stock_id` BIGINT UNSIGNED DEFAULT NULL,
+    `goods_id` BIGINT UNSIGNED NOT NULL,
+    `sku_id` BIGINT UNSIGNED NOT NULL,
+    `warehouse_id` BIGINT UNSIGNED NOT NULL,
+    `stock_type_id` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `reservation_scope` VARCHAR(32) NOT NULL COMMENT 'SELF/GROUP',
+    `outbound_mode` VARCHAR(32) DEFAULT NULL COMMENT 'CUSTOMER/GROUP_ALLOCATE/GROUP_CUSTOMER',
+    `dept_id` BIGINT UNSIGNED DEFAULT NULL,
+    `dept_code` VARCHAR(32) DEFAULT NULL,
+    `customer_id` BIGINT UNSIGNED DEFAULT NULL,
+    `customer_name` VARCHAR(255) DEFAULT NULL,
+    `reservation_qty` INT NOT NULL,
+    `state` TINYINT NOT NULL DEFAULT 1 COMMENT '1 locked 2 confirmed 3 released 4 expired',
+    `confirm_time` DATETIME DEFAULT NULL,
+    `release_time` DATETIME DEFAULT NULL,
+    `expires_at` DATETIME DEFAULT NULL,
+    `version` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    `created_by` BIGINT UNSIGNED DEFAULT NULL,
+    `updated_by` BIGINT UNSIGNED DEFAULT NULL,
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_order_item_batch` (`order_item_id`, `batch_id`, `deleted`),
+    UNIQUE KEY `uk_order_item_group_stock` (`order_item_id`, `group_stock_id`, `deleted`),
+    KEY `idx_idempotency_key` (`idempotency_key`),
+    KEY `idx_order_item_state` (`order_item_id`, `state`, `deleted`),
+    KEY `idx_stock_state` (`stock_id`, `state`, `deleted`),
+    KEY `idx_batch_state` (`batch_id`, `state`, `deleted`),
+    KEY `idx_group_stock_state` (`group_stock_id`, `state`, `deleted`),
+    KEY `idx_customer_state` (`customer_id`, `state`, `deleted`),
+    KEY `idx_dept_state` (`dept_id`, `state`, `deleted`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '库存预留锁定表';
+
 DROP TABLE IF EXISTS `t_warehouse`;
 create TABLE t_warehouse
 (
@@ -563,9 +480,6 @@ create TABLE t_warehouse
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '仓库表';
 
-INSERT INTO `t_warehouse` (`id`, `name`, `code`, `address`, `manager_id`, `status`, `deleted`, `created_by`, `updated_by`)
-VALUES (1, '自社在庫', 'SELF', '自社倉庫', NULL, 1, 0, 1, 1),
-       (2, 'ハンドル在庫', 'HANDLE', 'ハンドル倉庫', NULL, 1, 0, 1, 1);
 
 
 DROP TABLE IF EXISTS `t_goods`;
@@ -782,34 +696,34 @@ create TABLE `t_maker`
 
 DROP TABLE IF EXISTS `t_brand_maker_relation`;
 CREATE TABLE `t_brand_maker_relation` (
-      `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
-      `brand_id` BIGINT UNSIGNED NOT NULL COMMENT '品牌ID',
-      `maker_id` BIGINT UNSIGNED NOT NULL COMMENT '厂家ID',
-      `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
-      `created_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
-      `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
-      `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-      `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-      PRIMARY KEY (`id`),
-      UNIQUE KEY `uk_brand_maker` (`brand_id`, `maker_id`),
-      KEY `idx_brand` (`brand_id`),
-      KEY `idx_maker` (`maker_id`)
+                                          `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+                                          `brand_id` BIGINT UNSIGNED NOT NULL COMMENT '品牌ID',
+                                          `maker_id` BIGINT UNSIGNED NOT NULL COMMENT '厂家ID',
+                                          `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                          `created_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
+                                          `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
+                                          `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                          `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                          PRIMARY KEY (`id`),
+                                          UNIQUE KEY `uk_brand_maker` (`brand_id`, `maker_id`),
+                                          KEY `idx_brand` (`brand_id`),
+                                          KEY `idx_maker` (`maker_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='品牌厂家关联表';
 
 DROP TABLE IF EXISTS `t_series_brand_relation`;
 CREATE TABLE `t_series_brand_relation` (
-        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
-        `series_id` BIGINT UNSIGNED NOT NULL COMMENT '系列ID',
-        `brand_id` BIGINT UNSIGNED NOT NULL COMMENT '品牌ID',
-        `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
-        `created_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
-        `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
-        `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-        `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-        PRIMARY KEY (`id`),
-        UNIQUE KEY `uk_series_brand` (`series_id`, `brand_id`),
-        KEY `idx_series` (`series_id`),
-        KEY `idx_brand` (`brand_id`)
+                                           `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+                                           `series_id` BIGINT UNSIGNED NOT NULL COMMENT '系列ID',
+                                           `brand_id` BIGINT UNSIGNED NOT NULL COMMENT '品牌ID',
+                                           `deleted` TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否删除',
+                                           `created_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '创建人ID',
+                                           `updated_by` BIGINT UNSIGNED DEFAULT NULL COMMENT '更新人ID',
+                                           `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                                           `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                                           PRIMARY KEY (`id`),
+                                           UNIQUE KEY `uk_series_brand` (`series_id`, `brand_id`),
+                                           KEY `idx_series` (`series_id`),
+                                           KEY `idx_brand` (`brand_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系列品牌关联表';
 
 
@@ -1025,47 +939,6 @@ create TABLE `t_config`
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT = '系统配置表';
 
-INSERT INTO `t_config` (`name`, `group`, `title`, `tip`, `type`, `value`, `content`, `created_by`, `updated_by`)
-VALUES ('request.form.template.default', 'request', 'Default request template', 'Fallback template for request form download', 'file', 'template/request_form_template_A.xlsx', NULL, 1, 1),
-       ('request.form.template.A', 'request', 'Request template A', 'Template used by department code A', 'file', 'template/request_form_template_A.xlsx', NULL, 1, 1),
-       ('request.form.template.B', 'request', 'Request template B', 'Template used by department code B', 'file', 'template/request_form_template_B.xlsx', NULL, 1, 1),
-       ('request.form.template.C', 'request', 'Request template C', 'Template used by department code C', 'file', 'template/request_form_template_C.xlsx', NULL, 1, 1),
-       ('knife_keywords', 'request', 'Knife category keywords',
-        'Comma separated keywords used to identify knife categories for request item matching',
-        'string', '厨刀,刀', NULL, 1, 1),
-       ('handle_keywords', 'request', 'Handle category keywords',
-        'Comma separated keywords used to identify handle categories for request item matching',
-         'string', 'ハンドル,柄', NULL, 1, 1),
-       ('stock.group.codes', 'stock', 'Stock group codes',
-        'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1),
-       ('perm.group.menu.A', 'permission', 'Group A menu scope',
-        'Menu codes visible to department A', 'string',
-        'stock,stockA,stockOrder,stockType,stockRecord,priceRecord',
-        NULL, 1, 1),
-       ('perm.group.menu.B', 'permission', 'Group B menu scope',
-        'Menu codes visible to department B', 'string',
-        'stock,stockB,stockOrder,stockType,stockRecord,priceRecord',
-        NULL, 1, 1),
-       ('perm.group.menu.C', 'permission', 'Group C menu scope',
-        'Menu codes visible to department C', 'string',
-        'stock,stockC,stockOrder,stockType,stockRecord,priceRecord',
-        NULL, 1, 1);
-
-INSERT INTO `t_config` (`name`, `group`, `title`, `tip`, `type`, `value`, `content`, `created_by`, `updated_by`)
-VALUES('stock.group.codes', 'stock', 'Stock group codes',
-       'Department codes allowed to own group stock', 'string', 'A,B,C', NULL, 1, 1),
-      ('perm.group.menu.A', 'permission', 'Group A menu scope',
-       'Menu codes visible to department A', 'string',
-       'stock,stockA,stockOrder,stockType,stockRecord,priceRecord',
-       NULL, 1, 1),
-      ('perm.group.menu.B', 'permission', 'Group B menu scope',
-       'Menu codes visible to department B', 'string',
-       'stock,stockB,stockOrder,stockType,stockRecord,priceRecord',
-       NULL, 1, 1),
-      ('perm.group.menu.C', 'permission', 'Group C menu scope',
-       'Menu codes visible to department C', 'string',
-       'stock,stockC,stockOrder,stockType,stockRecord,priceRecord',
-       NULL, 1, 1);
 
 
 DROP TABLE IF EXISTS `t_operate_log`;
@@ -1097,3 +970,9 @@ create TABLE `t_operate_log`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='操作日志表';
+
+-- latest local schema patch
+-- Supports customer and goods aggregation for completed group-customer outbound records.
+ALTER TABLE t_stock_record
+    ADD INDEX idx_group_customer_goods
+        (deleted, order_type, outbound_mode, dept_id, customer_id, goods_id, sku_id, stock_type_id, biz_date);
