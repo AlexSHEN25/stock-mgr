@@ -55,6 +55,14 @@ public class ModuleDataService {
         return new JSONObject(ApiClient.post(ApiPath.STOCK_OUTBOUND, dto.toString()));
     }
 
+    public byte[] downloadGoodsTemplate() throws Exception {
+        return ApiClient.getBytes(ApiPath.GOODS_IMPORT_TEMPLATE);
+    }
+
+    public JSONObject importGoods(java.io.File file) throws Exception {
+        return new JSONObject(ApiClient.postMultipart(ApiPath.GOODS_IMPORT_UPSERT, "file", file));
+    }
+
     public JSONObject delete(String module, String id) throws Exception {
         String res = ApiClient.delete(ModuleEndpointStrategy.deletePath(module, id));
         return new JSONObject(res);

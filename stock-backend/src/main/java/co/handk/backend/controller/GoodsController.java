@@ -6,10 +6,15 @@ import co.handk.backend.entity.Brand;
 import co.handk.backend.entity.Category;
 import co.handk.backend.entity.Maker;
 import co.handk.backend.entity.Series;
+import co.handk.backend.annotation.context.UserContext;
+import co.handk.backend.constant.MessageKeyConstant;
+import co.handk.backend.constant.SecurityConstant;
+import co.handk.backend.exception.AccessDeniedException;
 import co.handk.backend.service.BrandService;
 import co.handk.backend.service.CategoryService;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.MakerService;
+import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.SeriesService;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.NumberConstant;
@@ -17,18 +22,22 @@ import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsDTO;
+import co.handk.common.model.dto.goods.GoodsBatchUpsertDTO;
 import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.dto.update.UpdateGoodsDTO;
+import co.handk.common.model.vo.GoodsBatchUpsertResultVO;
 import co.handk.common.model.vo.GoodsFormOptionsVO;
 import co.handk.common.model.vo.GoodsListVO;
 import co.handk.common.model.vo.GoodsVO;
 import co.handk.common.model.vo.OptionVO;
 import co.handk.common.model.vo.TextOptionVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -43,6 +52,7 @@ public class GoodsController {
     private final SeriesService seriesService;
     private final CategoryService categoryService;
     private final MakerService makerService;
+    private final PermissionQueryService permissionQueryService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateGoodsDTO dto) {
@@ -77,6 +87,24 @@ public class GoodsController {
     @GetMapping("/page")
     public PageResult<GoodsListVO> page(@Valid GoodsQueryDTO query) {
         return goodsService.pageGoods(query);
+    }
+
+    @PostMapping("/batch/upsert")
+    public GoodsBatchUpsertResultVO batchUpsert(@RequestBody @NotNull @Valid GoodsBatchUpsertDTO dto) {
+        validateAdminOnlyImportAccess();
+        return goodsService.batchUpsertGoods(dto);
+    }
+
+    @PostMapping("/import/upsert")
+    public GoodsBatchUpsertResultVO importUpsert(@RequestPart("file") MultipartFile file) {
+        validateAdminOnlyImportAccess();
+        return goodsService.importGoods(file);
+    }
+
+    @GetMapping("/import/template")
+    public void downloadImportTemplate(HttpServletResponse response) {
+        validateAdminOnlyImportAccess();
+        goodsService.downloadBatchTemplate(response);
     }
 
     @GetMapping("/form/options")
@@ -152,6 +180,16 @@ public class GoodsController {
             }
             return null;
         }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
+    }
+
+    private void validateAdminOnlyImportAccess() {
+        Long userId = UserContext.getUserId();
+        if (userId == null || !permissionQueryService.isSuperAdmin(userId)) {
+            throw new AccessDeniedException(
+                    MessageKeyConstant.ERROR_NO_PERMISSION,
+                    SecurityConstant.NO_PERMISSION_MESSAGE
+            );
+        }
     }
 
 }

@@ -38,6 +38,8 @@ public final class UiText {
     public static final String TITLE_LOGIN_FAILED = t("title.loginFailed");
     public static final String TITLE_CHANGE_PASSWORD = t("title.changePassword");
     public static final String TITLE_MATCH_REQUEST_ITEMS = t("title.matchRequestItems");
+    public static final String TITLE_GOODS_IMPORT_RESULT = t("title.goodsImportResult");
+    public static final String TITLE_SELECT_IMPORT_FILE = t("title.selectImportFile");
 
     public static final String MSG_CONFIRM_BATCH_DELETE = t("msg.confirmBatchDelete");
     public static final String MSG_CONFIRM_DELETE = t("msg.confirmDelete");
@@ -91,10 +93,16 @@ public final class UiText {
     public static final String MSG_MATCH_REQUEST_ITEMS_NUMBER_REQUIRED = t("msg.matchRequestItemsNumberRequired");
     public static final String MSG_MATCH_REQUEST_ITEMS_SUCCESS = t("msg.matchRequestItemsSuccess");
     public static final String MSG_MATCH_REQUEST_ITEMS_FAILED = t("msg.matchRequestItemsFailed");
+    public static final String MSG_GOODS_TEMPLATE_DOWNLOAD_DONE = t("msg.goodsTemplateDownloadDone");
+    public static final String MSG_GOODS_IMPORT_NO_FILE = t("msg.goodsImportNoFile");
+    public static final String MSG_GOODS_IMPORT_SUCCESS = t("msg.goodsImportSuccess");
+    public static final String MSG_GOODS_IMPORT_FAILED = t("msg.goodsImportFailed");
+    public static final String MSG_GOODS_IMPORT_RESULT_EMPTY = t("msg.goodsImportResultEmpty");
 
     public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
     public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");
     public static final String DOWNLOAD_PDF_FILENAME_PATTERN = t("format.downloadPdfFilename");
+    public static final String GOODS_TEMPLATE_FILENAME = t("format.goodsTemplateFilename");
     public static final String DELETE_ID_PATTERN = t("format.deleteId");
     public static final String RELATION_FALLBACK_PATTERN = t("format.relationFallback");
     public static final String FIELD_ID = t("field.id");

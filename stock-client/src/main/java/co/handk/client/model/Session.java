@@ -60,6 +60,10 @@ public class Session {
         return permissionCodes.contains("ROLE_NORMAL_USER") && !permissionCodes.contains("ROLE_SUPER_ADMIN");
     }
 
+    public static boolean isSuperAdmin() {
+        return permissionCodes.contains("ROLE_SUPER_ADMIN");
+    }
+
     public static long getExpireAtMillis() {
         return expireAtMillis;
     }

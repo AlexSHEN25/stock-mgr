@@ -119,6 +119,8 @@
                     <Button text="%main.btn.next" onAction="#onNextPage"/>
                     <Button fx:id="stockInboundButton" text="%main.btn.stockInbound" onAction="#onStockInbound" visible="false" managed="false" styleClass="success-btn"/>
                     <Button fx:id="stockOutboundButton" text="%main.btn.stockOutbound" onAction="#onStockOutbound" visible="false" managed="false" styleClass="danger-btn"/>
+                    <Button fx:id="goodsTemplateButton" text="%main.btn.goodsTemplate" onAction="#onGoodsTemplateDownload" visible="false" managed="false"/>
+                    <Button fx:id="goodsImportButton" text="%main.btn.goodsImport" onAction="#onGoodsImport" visible="false" managed="false" styleClass="primary-btn"/>
                     <Button fx:id="addButton" text="%main.btn.create" onAction="#onAdd" styleClass="success-btn"/>
                     <Button fx:id="inlineEditButton" text="%main.btn.inlineEdit" onAction="#onInlineEdit"/>
                     <Button fx:id="inlineSaveButton" text="%main.btn.save" onAction="#onInlineSave" styleClass="success-btn"/>

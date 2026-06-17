@@ -9,6 +9,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -130,6 +131,35 @@ public class ApiClient {
             throw new IOException(body.isBlank() ? ("HTTP " + status) : body);
         }
         return bytes;
+    }
+
+    public static String postMultipart(String path, String fieldName, File file) throws Exception {
+        String boundary = "----StockClientBoundary" + System.currentTimeMillis();
+        HttpURLConnection conn = open(path, METHOD_POST);
+        conn.setRequestProperty(HEADER_CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        conn.setDoOutput(true);
+
+        long start = System.currentTimeMillis();
+        debugRequest(METHOD_POST, path, "multipart:" + file.getName(), conn);
+
+        String contentType = Files.probeContentType(file.toPath());
+        if (contentType == null || contentType.isBlank()) {
+            contentType = "application/octet-stream";
+        }
+
+        try (OutputStream os = conn.getOutputStream();
+             PrintWriter writer = new PrintWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8), true)) {
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"").append(fieldName)
+                    .append("\"; filename=\"").append(file.getName()).append("\"\r\n");
+            writer.append("Content-Type: ").append(contentType).append("\r\n\r\n").flush();
+            Files.copy(file.toPath(), os);
+            os.flush();
+            writer.append("\r\n").flush();
+            writer.append("--").append(boundary).append("--\r\n").flush();
+        }
+
+        return read(conn, start, METHOD_POST, path);
     }
 
     private static HttpURLConnection open(String path, String method) throws Exception {

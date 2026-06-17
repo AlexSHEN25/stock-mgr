@@ -63,6 +63,8 @@ public final class AppConstants {
         public static final String MESSAGE_READ_ALL = "/message/read-all";
         public static final String STOCK_INBOUND = "/stock/inbound";
         public static final String STOCK_OUTBOUND = "/stock/outbound";
+        public static final String GOODS_IMPORT_TEMPLATE = "/goods/import/template";
+        public static final String GOODS_IMPORT_UPSERT = "/goods/import/upsert";
 
         private ApiPath() {
         }

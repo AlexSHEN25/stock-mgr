@@ -77,6 +77,8 @@ public class MainController {
     @FXML private TextField deleteIdField;
     @FXML private Button stockInboundButton;
     @FXML private Button stockOutboundButton;
+    @FXML private Button goodsTemplateButton;
+    @FXML private Button goodsImportButton;
     @FXML private Button addButton;
     @FXML private Button readAllButton;
     @FXML private Button inlineEditButton;
@@ -195,6 +197,64 @@ public class MainController {
         }
         pendingStockOperation = "outbound";
         openFormDialog(UiText.byKey("main.btn.stockOutbound"), false, Module.STOCK, selected);
+    }
+
+    @FXML
+    private void onGoodsTemplateDownload() {
+        if (!Module.GOODS.equals(currentModule)) {
+            return;
+        }
+        try {
+            byte[] bytes = dataService.downloadGoodsTemplate();
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle(UiText.TITLE_SAVE_FILE);
+            chooser.setInitialFileName(UiText.GOODS_TEMPLATE_FILENAME);
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx"));
+            Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+            File target = chooser.showSaveDialog(owner);
+            if (target == null) {
+                return;
+            }
+            try (FileOutputStream fos = new FileOutputStream(target)) {
+                fos.write(bytes);
+            }
+            messageLabel.setText(UiText.MSG_GOODS_TEMPLATE_DOWNLOAD_DONE);
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_DOWNLOAD_FAIL + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onGoodsImport() {
+        if (!Module.GOODS.equals(currentModule)) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(UiText.TITLE_SELECT_IMPORT_FILE);
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"));
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        File file = chooser.showOpenDialog(owner);
+        if (file == null) {
+            messageLabel.setText(UiText.MSG_GOODS_IMPORT_NO_FILE);
+            return;
+        }
+        try {
+            JSONObject json = dataService.importGoods(file);
+            if (!uiFeedback.isSuccess(json)) {
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_GOODS_IMPORT_FAILED));
+                return;
+            }
+            JSONObject data = json.optJSONObject("data");
+            if (data == null) {
+                messageLabel.setText(UiText.MSG_GOODS_IMPORT_RESULT_EMPTY);
+                return;
+            }
+            showGoodsImportResultDialog(data);
+            messageLabel.setText(UiText.MSG_GOODS_IMPORT_SUCCESS);
+            loadData();
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_GOODS_IMPORT_FAILED + ": " + ex.getMessage());
+        }
     }
 
     @FXML
@@ -445,8 +505,10 @@ public class MainController {
     private void applyActionPolicy() {
         ModuleMeta.ModuleActionPolicy policy = ModuleMeta.actionPolicy(currentModule);
         boolean canWrite = ModuleMeta.canWriteByPermission(currentModule);
+        boolean superAdmin = Session.isSuperAdmin();
         boolean messageModule = Module.MESSAGE.equals(currentModule);
         boolean stockModule = isStockOperationModule();
+        boolean goodsModule = Module.GOODS.equals(currentModule);
         boolean stockOperationAllowed = ModuleMeta.canWriteByPermission(Module.STOCK);
         updateStockSubNav();
         addButton.setDisable(!policy.canCreate || !canWrite);
@@ -456,6 +518,12 @@ public class MainController {
         stockOutboundButton.setManaged(stockModule);
         stockInboundButton.setDisable(!stockOperationAllowed);
         stockOutboundButton.setDisable(!stockOperationAllowed);
+        goodsTemplateButton.setVisible(goodsModule && superAdmin);
+        goodsTemplateButton.setManaged(goodsModule && superAdmin);
+        goodsImportButton.setVisible(goodsModule && superAdmin);
+        goodsImportButton.setManaged(goodsModule && superAdmin);
+        goodsTemplateButton.setDisable(!goodsModule || !superAdmin);
+        goodsImportButton.setDisable(!goodsModule || !superAdmin || !canWrite);
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
         readAllButton.setDisable(!messageModule || !canWrite);
@@ -1282,6 +1350,45 @@ public class MainController {
         alert.setContentText(content);
         Optional<ButtonType> result = alert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;
+    }
+
+    private void showGoodsImportResultDialog(JSONObject data) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(UiText.TITLE_GOODS_IMPORT_RESULT);
+        alert.setHeaderText(String.format(
+                "total=%d, success=%d, created=%d, updated=%d, failed=%d",
+                data.optInt("totalCount"),
+                data.optInt("successCount"),
+                data.optInt("createdCount"),
+                data.optInt("updatedCount"),
+                data.optInt("failureCount")
+        ));
+        TextArea area = new TextArea(buildGoodsImportResultText(data.optJSONArray("rows")));
+        area.setEditable(false);
+        area.setWrapText(false);
+        area.setPrefColumnCount(90);
+        area.setPrefRowCount(20);
+        alert.getDialogPane().setContent(area);
+        alert.showAndWait();
+    }
+
+    private String buildGoodsImportResultText(JSONArray rows) {
+        if (rows == null || rows.isEmpty()) {
+            return UiText.MSG_GOODS_IMPORT_RESULT_EMPTY;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.getJSONObject(i);
+            builder.append("row=").append(row.optInt("rowNo"))
+                    .append(", action=").append(row.optString("action"))
+                    .append(", success=").append(row.optBoolean("success"))
+                    .append(", goodsId=").append(row.opt("goodsId"))
+                    .append(", skuId=").append(row.opt("skuId"))
+                    .append(", skuCode=").append(row.optString("skuCode"))
+                    .append(", message=").append(row.optString("message"))
+                    .append(System.lineSeparator());
+        }
+        return builder.toString();
     }
 
     private static final class Option {
