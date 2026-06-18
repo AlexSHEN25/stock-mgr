@@ -99,6 +99,11 @@ public class GoodsController {
         return goodsService.pageGoods(query);
     }
 
+    @GetMapping("/export")
+    public void export(@ModelAttribute GoodsQueryDTO query, HttpServletResponse response) {
+        goodsService.exportGoods(query, response);
+    }
+
     @PostMapping("/batch/upsert")
     public GoodsBatchUpsertResultVO batchUpsert(@RequestBody @NotNull @Valid GoodsBatchUpsertDTO dto) {
         validateAdminOnlyImportAccess();

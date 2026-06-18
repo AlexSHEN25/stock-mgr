@@ -16,12 +16,14 @@ import co.handk.common.model.vo.CustomerGoodsStockVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixVO;
 import co.handk.common.model.vo.CustomerOutboundTreeNodeVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -142,6 +144,11 @@ public class StockController {
     @GetMapping("/page")
     public PageResult<StockVO> page(@Valid StockQueryDTO query) {
         return stockService.page(query);
+    }
+
+    @GetMapping("/self/export")
+    public void exportSelf(@ModelAttribute StockQueryDTO query, HttpServletResponse response) {
+        stockService.exportSelfStock(query, response);
     }
 
     @GetMapping("/group/available")

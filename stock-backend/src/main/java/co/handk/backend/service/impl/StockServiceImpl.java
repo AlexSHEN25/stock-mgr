@@ -7,6 +7,7 @@ import co.handk.backend.mapper.StockRecordMapper;
 import co.handk.backend.service.*;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
+import co.handk.common.constant.GoodsImportConstant;
 import co.handk.common.constant.RedisKey;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
@@ -32,6 +33,14 @@ import co.handk.common.model.vo.CustomerStockSummaryVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,8 +49,13 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,6 +71,17 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private static final int MESSAGE_IS_UNREAD = 0;
     private static final int MESSAGE_STATE_SENT = 1;
     private static final int LOW_STOCK_THRESHOLD = 10;
+    private static final int EXPORT_COLUMN_WIDTH = 18 * 256;
+    private static final long EXPORT_MAX_ROWS = 10_000L;
+    private static final String EXPORT_SELF_STOCK_FILE_NAME = "self_stock_export.xlsx";
+    private static final String EXPORT_SELF_STOCK_SHEET_NAME = "自社在庫一覧";
+    private static final String ERROR_EXPORT_FAILED = "Excel出力に失敗しました";
+    private static final DateTimeFormatter EXPORT_DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String[] SELF_STOCK_EXPORT_HEADERS = {
+            "ID", "商品ID", "商品名", "SKU ID", "SKUコード", "倉庫ID", "倉庫名",
+            "在庫区分ID", "在庫区分", "現在数量", "ロック数量", "価格", "通貨", "価格更新日時", "状態"
+    };
 
     @Autowired
     private GoodsService goodsService;
@@ -159,7 +184,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
         int sourceType = scene == StockBizConstant.INBOUND_SCENE_SELF
                 ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
-        boolean needApprove = scene == StockBizConstant.INBOUND_SCENE_SELF;
+        boolean admin = permissionQueryService.isSuperAdmin(UserContext.getUserIdOrDefault());
+        boolean needApprove = scene == StockBizConstant.INBOUND_SCENE_SELF && !admin;
 
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType,
                 needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED, null);
@@ -290,6 +316,95 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             return pageGroupStockWithWrapper(query, wrapper, dept);
         }
         return super.page(query);
+    }
+
+    @Override
+    public void exportSelfStock(StockQueryDTO query, HttpServletResponse response) {
+        StockQueryDTO exportQuery = new StockQueryDTO();
+        if (query != null) {
+            BeanUtils.copyProperties(query, exportQuery);
+        }
+        exportQuery.setStockScope("self");
+        exportQuery.setGroupCode(null);
+        exportQuery.setPageNum(1L);
+        exportQuery.setPageSize(EXPORT_MAX_ROWS);
+
+        List<StockVO> records = page(exportQuery).getRecords();
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet(EXPORT_SELF_STOCK_SHEET_NAME);
+            CellStyle headerStyle = createExportHeaderStyle(workbook);
+            writeExportHeader(sheet, headerStyle, SELF_STOCK_EXPORT_HEADERS);
+            for (int i = 0; i < records.size(); i++) {
+                StockVO item = records.get(i);
+                Row row = sheet.createRow(i + 1);
+                int column = 0;
+                writeExportCell(row, column++, item.getId());
+                writeExportCell(row, column++, item.getGoodsId());
+                writeExportCell(row, column++, item.getGoodsName());
+                writeExportCell(row, column++, item.getSkuId());
+                writeExportCell(row, column++, item.getSkuCode());
+                writeExportCell(row, column++, item.getWarehouseId());
+                writeExportCell(row, column++, item.getWarehouseName());
+                writeExportCell(row, column++, item.getStockTypeId());
+                writeExportCell(row, column++, item.getStockTypeName());
+                writeExportCell(row, column++, item.getCurrentQty());
+                writeExportCell(row, column++, item.getLockQty());
+                writeExportCell(row, column++, item.getPrice());
+                writeExportCell(row, column++, item.getCurrency());
+                writeExportCell(row, column++, item.getPriceUpdateTime());
+                writeExportCell(row, column, item.getStatusDesc());
+            }
+            writeWorkbookResponse(workbook, response, EXPORT_SELF_STOCK_FILE_NAME);
+        } catch (IOException ex) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, ERROR_EXPORT_FAILED, ex);
+        }
+    }
+
+    private CellStyle createExportHeaderStyle(XSSFWorkbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        style.setFillForegroundColor((short) 22);
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
+    }
+
+    private void writeExportHeader(Sheet sheet, CellStyle headerStyle, String[] headers) {
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+            sheet.setColumnWidth(i, EXPORT_COLUMN_WIDTH);
+        }
+    }
+
+    private void writeExportCell(Row row, int columnIndex, Object value) {
+        Cell cell = row.createCell(columnIndex);
+        if (value == null) {
+            cell.setBlank();
+            return;
+        }
+        if (value instanceof Number number) {
+            cell.setCellValue(number.doubleValue());
+            return;
+        }
+        if (value instanceof LocalDateTime dateTime) {
+            cell.setCellValue(EXPORT_DATE_TIME_FORMATTER.format(dateTime));
+            return;
+        }
+        cell.setCellValue(String.valueOf(value));
+    }
+
+    private void writeWorkbookResponse(XSSFWorkbook workbook, HttpServletResponse response, String fileName)
+            throws IOException {
+        response.setContentType(GoodsImportConstant.EXCEL_CONTENT_TYPE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setHeader("Content-Disposition",
+                "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
+        workbook.write(response.getOutputStream());
+        response.flushBuffer();
     }
 
     @Override
@@ -962,10 +1077,12 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             totalQty += qty;
         }
 
+        Long userId = UserContext.getUserIdOrDefault();
+        boolean admin = permissionQueryService.isSuperAdmin(userId);
         boolean selfInbound = orderType == StockBizConstant.ORDER_TYPE_INBOUND
                 && resolveInboundScene(dto.getSourceType()) == StockBizConstant.INBOUND_SCENE_SELF;
         int sourceType = selfInbound ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
-        boolean needApprove = orderType == StockBizConstant.ORDER_TYPE_OUTBOUND || selfInbound;
+        boolean needApprove = orderType == StockBizConstant.ORDER_TYPE_OUTBOUND || (selfInbound && !admin);
         StockOrder order = new StockOrder();
         order.setOrderNo(generateOrderNo(orderType));
         order.setOrderType(orderType);
@@ -974,7 +1091,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setTotalQty(totalQty);
         order.setStockTypeId(stockTypeId);
         order.setState(needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
-        Long userId = UserContext.getUserIdOrDefault();
         User user = userService.getByIdNotDeleted(userId);
         String username = user == null ? null : user.getUsername();
         order.setRequesterId(userId);
@@ -984,7 +1100,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setRemark(orderRemark);
         order.setBizDate(bizDate);
         if (!needApprove) {
-            order.setFinishTime(LocalDateTime.now());
+            applyAutoApproval(order, userId, username);
         }
         if (!stockOrderService.save(order)) {
             throw new co.handk.backend.exception.BusinessException(
@@ -1228,7 +1344,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
         order.setBizDate(LocalDate.now());
         if (state == StockBizConstant.ORDER_STATE_FINISHED) {
-            order.setFinishTime(LocalDateTime.now());
+            applyAutoApproval(order, userId, user == null ? null : user.getUsername());
         }
         if (!stockOrderService.save(order)) {
             throw new co.handk.backend.exception.BusinessException(
@@ -1248,6 +1364,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             return StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER;
         }
         return StockBizConstant.OUTBOUND_MODE_CUSTOMER;
+    }
+
+    private void applyAutoApproval(StockOrder order, Long approverId, String approverName) {
+        LocalDateTime now = LocalDateTime.now();
+        order.setApproverId(approverId);
+        order.setApproverName(approverName);
+        order.setApproveTime(now);
+        order.setFinishTime(now);
     }
 
     private boolean hasText(String value) {

@@ -101,6 +101,15 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final int INSTRUCTION_COLUMN_WIDTH = 90 * 256;
     private static final int DICTIONARY_ID_COLUMN_WIDTH = 20 * 256;
     private static final int DICTIONARY_NAME_COLUMN_WIDTH = 28 * 256;
+    private static final long EXPORT_MAX_ROWS = 10_000L;
+    private static final String EXPORT_GOODS_FILE_NAME = "goods_export.xlsx";
+    private static final String EXPORT_GOODS_SHEET_NAME = "商品一覧";
+    private static final String ERROR_EXPORT_FAILED = "Excel出力に失敗しました";
+    private static final String[] GOODS_EXPORT_HEADERS = {
+            "ID", "商品名", "英語名", "SKU ID", "SKUコード", "SKU名",
+            "ブランド", "シリーズ", "カテゴリ", "メーカー", "価格", "通貨",
+            "現在数量", "入庫完了", "出庫可能数量", "人気商品", "表示順", "状態", "説明"
+    };
     private static final String ROW_PREFIX = "行 ";
     private static final String ERROR_IMPORT_FILE_REQUIRED = "インポートファイルを選択してください";
     private static final String ERROR_TEMPLATE_GENERATE_FAILED = "商品インポートテンプレートの生成に失敗しました";
@@ -1136,6 +1145,96 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         long offset = (queryDTO.getPageNum() - 1) * queryDTO.getPageSize();
         List<GoodsListVO> records = baseMapper.selectGoodsPage(queryDTO, offset, queryDTO.getPageSize());
         return PageResult.build(total, queryDTO.getPageNum(), queryDTO.getPageSize(), records);
+    }
+
+    @Override
+    public void exportGoods(GoodsQueryDTO query, HttpServletResponse response) {
+        GoodsQueryDTO exportQuery = new GoodsQueryDTO();
+        if (query != null) {
+            BeanUtils.copyProperties(query, exportQuery);
+        }
+        exportQuery.setPageNum(1L);
+        exportQuery.setPageSize(EXPORT_MAX_ROWS);
+
+        List<GoodsListVO> records = pageGoods(exportQuery).getRecords();
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet(EXPORT_GOODS_SHEET_NAME);
+            CellStyle headerStyle = createExportHeaderStyle(workbook);
+            writeExportHeader(sheet, headerStyle, GOODS_EXPORT_HEADERS);
+            for (int i = 0; i < records.size(); i++) {
+                GoodsListVO item = records.get(i);
+                Row row = sheet.createRow(i + 1);
+                int column = 0;
+                writeExportCell(row, column++, item.getId());
+                writeExportCell(row, column++, item.getName());
+                writeExportCell(row, column++, item.getEnglishName());
+                writeExportCell(row, column++, item.getSkuId());
+                writeExportCell(row, column++, item.getSkuCode());
+                writeExportCell(row, column++, item.getSkuName());
+                writeExportCell(row, column++, item.getBrandName());
+                writeExportCell(row, column++, item.getSeriesName());
+                writeExportCell(row, column++, item.getCategoryName());
+                writeExportCell(row, column++, item.getMakerName());
+                writeExportCell(row, column++, item.getPrice());
+                writeExportCell(row, column++, item.getCurrency());
+                writeExportCell(row, column++, item.getCurrentQty());
+                writeExportCell(row, column++, Boolean.TRUE.equals(item.getInboundDone()) ? "完了" : "未完了");
+                writeExportCell(row, column++, item.getOutboundMaxQty());
+                writeExportCell(row, column++, Objects.equals(item.getIsHot(), NumberConstant.ONE) ? "はい" : "いいえ");
+                writeExportCell(row, column++, item.getSort());
+                writeExportCell(row, column++, item.getStatusDesc());
+                writeExportCell(row, column, item.getDescription());
+            }
+            writeWorkbookResponse(workbook, response, EXPORT_GOODS_FILE_NAME);
+        } catch (IOException ex) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_EXPORT_FAILED, ex);
+        }
+    }
+
+    private CellStyle createExportHeaderStyle(XSSFWorkbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        style.setFillForegroundColor((short) 22);
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
+    }
+
+    private void writeExportHeader(Sheet sheet, CellStyle headerStyle, String[] headers) {
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(headerStyle);
+            sheet.setColumnWidth(i, EXCEL_COLUMN_WIDTH);
+        }
+    }
+
+    private void writeExportCell(Row row, int columnIndex, Object value) {
+        Cell cell = row.createCell(columnIndex);
+        if (value == null) {
+            cell.setBlank();
+            return;
+        }
+        if (value instanceof Number number) {
+            cell.setCellValue(number.doubleValue());
+            return;
+        }
+        if (value instanceof LocalDateTime dateTime) {
+            cell.setCellValue(TEMPLATE_DATE_TIME_FORMATTER.format(dateTime));
+            return;
+        }
+        cell.setCellValue(String.valueOf(value));
+    }
+
+    private void writeWorkbookResponse(XSSFWorkbook workbook, HttpServletResponse response, String fileName)
+            throws IOException {
+        response.setContentType(GoodsImportConstant.EXCEL_CONTENT_TYPE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setHeader("Content-Disposition",
+                "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
+        workbook.write(response.getOutputStream());
+        response.flushBuffer();
     }
 
     @Override

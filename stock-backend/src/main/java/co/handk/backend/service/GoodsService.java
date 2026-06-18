@@ -30,6 +30,8 @@ public interface GoodsService extends BaseService<Goods, GoodsVO> {
 
     PageResult<GoodsListVO> pageGoods(@Valid GoodsQueryDTO query);
 
+    void exportGoods(GoodsQueryDTO query, HttpServletResponse response);
+
     GoodsBatchUpsertResultVO batchUpsertGoods(@NotNull @Valid GoodsBatchUpsertDTO dto);
 
     GoodsBatchUpsertResultVO importGoods(@NotNull MultipartFile file);
