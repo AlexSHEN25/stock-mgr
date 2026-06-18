@@ -81,7 +81,7 @@ public class StockController {
         dto.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_CUSTOMER);
         if (dto.getCustomerId() == null) {
             throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "customerId is required");
+                    "顧客IDは必須です");
         }
         return stockService.outbound(dto);
     }

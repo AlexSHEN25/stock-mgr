@@ -215,7 +215,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (!permissionQueryService.isSuperAdmin(userId)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "only administrators can allocate self stock to groups");
+                    "自社在庫の組別配分は管理者のみ実行できます");
         }
 
         Stock stock = resolveAllocationStock(dto);
@@ -409,7 +409,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (deptId == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "current user department is required");
+                    "現在のユーザーに部署が設定されていません");
         }
         query.setGroupCode(null);
         return new CustomerStockAccess(deptId, userId);
@@ -502,14 +502,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             if (requested == null) {
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "department is not configured: " + groupCode);
+                        "部署が設定されていません: " + groupCode);
             }
             if (!admin) {
                 Long userDeptId = currentDeptId();
                 if (userDeptId == null || !userDeptId.equals(requested.getId())) {
                     throw new co.handk.backend.exception.BusinessException(
                             co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                            "users can only view stock for their own department");
+                            "自部署の在庫のみ参照できます");
                 }
             }
             return requested;
@@ -605,7 +605,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             if (!admin) {
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "only administrators can allocate self stock to a group");
+                        "自社在庫の組別配分は管理者のみ実行できます");
             }
             dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId(), dto.getGroupCode()).getId());
             return;
@@ -633,11 +633,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (deptIds.isEmpty()) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "no available group stock was found for this stock");
+                    "この在庫に利用可能な組別在庫がありません");
         }
         throw new co.handk.backend.exception.BusinessException(
                 co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                "multiple stock groups are available; deptId or groupCode is required");
+                "複数の組別在庫があります。部署IDまたは組コードを指定してください");
     }
 
     private void requireAccessibleOutboundStock(Stock stock, String outboundMode) {
@@ -650,7 +650,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (stock.getWarehouseId() == null || !selfWarehouse.getId().equals(Long.valueOf(stock.getWarehouseId()))) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "users can only request outbound from self stock or their own group stock");
+                    "自社在庫または自部署の組別在庫のみ出庫申請できます");
         }
     }
 
@@ -662,7 +662,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (warehouse == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "required warehouse is not configured: " + code);
+                    "必要な倉庫が設定されていません: " + code);
         }
         return warehouse;
     }
@@ -685,27 +685,27 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             if (targetDeptId != null && !targetDeptId.equals(userDeptId)) {
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "users can only operate stock for their own department");
+                        "自部署の在庫のみ操作できます");
             }
             targetDeptId = userDeptId;
         }
         if (targetDeptId == null && requestedGroupCode != null && !requestedGroupCode.isBlank()) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "department is not configured: " + requestedGroupCode.trim().toUpperCase());
+                    "部署が設定されていません: " + requestedGroupCode.trim().toUpperCase());
         }
         if (targetDeptId == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                     admin
-                            ? "target deptId or groupCode is required for stock group operation"
-                            : "current user is not assigned to a department");
+                            ? "組別在庫操作には部署IDまたは組コードが必要です"
+                            : "現在のユーザーに部署が設定されていません");
         }
         Dept dept = deptService.getByIdNotDeleted(targetDeptId);
         if (dept == null || dept.getCode() == null || !isConfiguredGroupCode(dept.getCode())) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "department is not configured as stock group: " + (dept == null ? "null" : dept.getCode()));
+                    "部署が在庫組として設定されていません: " + (dept == null ? "null" : dept.getCode()));
         }
         return dept;
     }
@@ -738,7 +738,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Long approverId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(approverId)) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "only administrators can approve stock orders");
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫伝票の承認は管理者のみ実行できます");
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         if (order == null) {
@@ -764,7 +764,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .eq("order_id", orderId));
         if (rejectItems == null || rejectItems.isEmpty()) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蜈･蠎ｫ莨晉･ｨ譏守ｴｰ縺悟ｭ伜惠縺励∪縺帙ｓ");
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票明細が存在しません");
         }
 
         if (Boolean.FALSE.equals(approved)) {
@@ -772,7 +772,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 Stock stock = findStock(item.getGoodsId(), item.getSkuId(), order.getWarehouseId(), item.getStockTypeId());
                 if (stock == null) {
                     throw new co.handk.backend.exception.BusinessException(
-                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "蝨ｨ蠎ｫ蝠・刀縺悟ｭ伜惠縺励∪縺帙ｓ");
+                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫商品が存在しません");
                 }
                 stockBatchService.releaseOutbound(order, item, stock);
             }
@@ -1122,7 +1122,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         stock.setVersion(0L);
         if (!this.save(stock)) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "failed to initialize stock for inbound");
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫用在庫の初期化に失敗しました");
         }
         return stock;
     }
@@ -1134,14 +1134,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (dto.getGoodsId() == null || dto.getSkuId() == null || dto.getWarehouseId() == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "goodsId, skuId and warehouseId are required for outbound");
+                    "出庫には商品ID、SKU ID、倉庫IDが必要です");
         }
         Long warehouseId = Long.valueOf(dto.getWarehouseId());
         Stock stock = findStock(Long.valueOf(dto.getGoodsId()), dto.getSkuId(), warehouseId, dto.getStockTypeId());
         if (stock == null) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "stock not found for outbound");
+                    "出庫対象の在庫が見つかりません");
         }
         return stock;
     }
@@ -1351,7 +1351,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         int scene = sourceType == null ? StockBizConstant.INBOUND_SCENE_RESALE : sourceType;
         if (scene != StockBizConstant.INBOUND_SCENE_SELF && scene != StockBizConstant.INBOUND_SCENE_RESALE) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "invalid inbound source type");
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫元種別が不正です");
         }
         return scene;
     }

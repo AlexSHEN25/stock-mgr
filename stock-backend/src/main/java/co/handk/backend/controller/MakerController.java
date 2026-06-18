@@ -4,12 +4,16 @@ import jakarta.validation.constraints.NotNull;
 
 import co.handk.common.constant.NumberConstant;
 
+import co.handk.backend.entity.Brand;
+import co.handk.backend.service.BrandService;
 import co.handk.backend.service.MakerService;
+import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateMakerDTO;
 import co.handk.common.model.dto.query.MakerQueryDTO;
 import co.handk.common.model.dto.update.UpdateMakerDTO;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MakerController {
     private final MakerService makerService;
+    private final BrandService brandService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateMakerDTO dto) {
@@ -33,6 +38,15 @@ public class MakerController {
     @GetMapping("/{id}")
     public MakerVO get(@PathVariable("id") @NotNull Long id) {
         return makerService.getVOById(id);
+    }
+
+    @GetMapping("/form/options")
+    public MasterRelationOptionsVO formOptions() {
+        MasterRelationOptionsVO vo = new MasterRelationOptionsVO();
+        vo.setBrandOptions(brandService.list(new QueryWrapper<Brand>()
+                .eq("status", StatusEnum.NOMAL.getCode())
+                .orderByAsc("id")).stream().map(item -> new OptionVO(item.getId(), item.getName())).toList());
+        return vo;
     }
 
     @PutMapping

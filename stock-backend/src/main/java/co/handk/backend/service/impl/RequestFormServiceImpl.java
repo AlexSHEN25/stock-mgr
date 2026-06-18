@@ -113,6 +113,43 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             Map.entry("request form state is not allowed for current user", "RF033"),
             Map.entry("request form state is not editable for current user", "RF034")
     );
+    private static final Map<String, String> ERROR_MESSAGE_JA_BY_MESSAGE = Map.ofEntries(
+            Map.entry("request form operation failed", "請求書処理に失敗しました"),
+            Map.entry("request form not found", "請求書が見つかりません"),
+            Map.entry("request form source outbound order is required", "元出庫伝票は必須です"),
+            Map.entry("source outbound order not found", "元出庫伝票が見つかりません"),
+            Map.entry("source outbound order is not owned by current user", "現在のユーザーは元出庫伝票を操作できません"),
+            Map.entry("selected stock record is not available", "選択した在庫履歴は利用できません"),
+            Map.entry("source outbound item not found", "元出庫明細が見つかりません"),
+            Map.entry("requested qty must be >= 0", "請求数量は0以上で入力してください"),
+            Map.entry("requested qty cannot exceed available outbound qty", "請求数量は出庫可能数量を超えられません"),
+            Map.entry("source outbound item changed concurrently, please retry", "元出庫明細が更新されました。再試行してください"),
+            Map.entry("source outbound order changed concurrently, please retry", "元出庫伝票が更新されました。再試行してください"),
+            Map.entry("source outbound stock record not found", "元出庫在庫履歴が見つかりません"),
+            Map.entry("failed to save request item", "請求明細の保存に失敗しました"),
+            Map.entry("failed to add request item", "請求明細の追加に失敗しました"),
+            Map.entry("failed to update request item", "請求明細の更新に失敗しました"),
+            Map.entry("failed to remove request item", "請求明細の削除に失敗しました"),
+            Map.entry("request and outbound quantities are inconsistent", "請求数量と出庫数量が一致しません"),
+            Map.entry("request form pdf generation failed", "請求書PDFの生成に失敗しました"),
+            Map.entry("request form workbook generation failed", "請求書Excelの生成に失敗しました"),
+            Map.entry("customer is not owned by current user", "現在のユーザーはこの顧客を操作できません"),
+            Map.entry("knife and handle quantities must match", "刀身と柄の数量は一致する必要があります"),
+            Map.entry("source outbound order has no items", "元出庫伝票に明細がありません"),
+            Map.entry("no source outbound items selected", "元出庫明細を選択してください"),
+            Map.entry("failed to save request form", "請求書の保存に失敗しました"),
+            Map.entry("failed to update request form", "請求書の更新に失敗しました"),
+            Map.entry("request form has no active items", "有効な請求明細がありません"),
+            Map.entry("failed to create inbound order", "入庫伝票の作成に失敗しました"),
+            Map.entry("stock not found for request item", "請求明細の在庫が見つかりません"),
+            Map.entry("failed to save inbound order item", "入庫明細の保存に失敗しました"),
+            Map.entry("request form is not owned by current user", "現在のユーザーはこの請求書を操作できません"),
+            Map.entry("source outbound order is not finished", "元出庫伝票は完了していません"),
+            Map.entry("request form already reapplied inbound", "請求書はすでに再入庫済みです"),
+            Map.entry("request form is completed and cannot be modified", "完了済みの請求書は変更できません"),
+            Map.entry("request form state is not allowed for current user", "現在のユーザーはこの請求書状態を設定できません"),
+            Map.entry("request form state is not editable for current user", "現在のユーザーはこの請求書状態を編集できません")
+    );
 
     @Autowired private StockOrderService stockOrderService;
     @Autowired private StockOrderItemService stockOrderItemService;
@@ -2108,7 +2145,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     private String withErrorCode(String message) {
         String code = resolveErrorCode(message);
-        return "[" + code + "] " + message;
+        return "[" + code + "] " + resolveErrorMessage(message);
     }
 
     private String resolveErrorCode(String message) {
@@ -2122,6 +2159,22 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             }
         }
         return DEFAULT_ERROR_CODE;
+    }
+
+    private String resolveErrorMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return "請求書処理に失敗しました";
+        }
+        for (Map.Entry<String, String> entry : ERROR_MESSAGE_JA_BY_MESSAGE.entrySet()) {
+            String knownMessage = entry.getKey();
+            if (message.equals(knownMessage)) {
+                return entry.getValue();
+            }
+            if (message.startsWith(knownMessage + ",")) {
+                return entry.getValue() + message.substring(knownMessage.length());
+            }
+        }
+        return message;
     }
 
     @Override

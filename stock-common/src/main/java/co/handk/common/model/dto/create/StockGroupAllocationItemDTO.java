@@ -13,7 +13,7 @@ public class StockGroupAllocationItemDTO {
 
     private String deptCode;
 
-    @NotNull(message = "quantity is required")
+    @NotNull(message = "数量は必須です")
     @Min(value = 1, message = "quantity must be at least 1")
     private Integer quantity;
 }

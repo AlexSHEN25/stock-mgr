@@ -18,7 +18,7 @@ public class CreateRequestFormDTO {
 
     private String deptName;
 
-    @NotNull(message = "customerId is required")
+    @NotNull(message = "顧客IDは必須です")
     private Long customerId;
 
     private String customerName;

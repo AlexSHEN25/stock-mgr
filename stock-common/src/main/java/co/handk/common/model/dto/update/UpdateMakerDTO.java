@@ -1,18 +1,21 @@
 package co.handk.common.model.dto.update;
 
-import jakarta.validation.constraints.NotBlank;
 import co.handk.common.enums.StatusEnum;
-
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import jakarta.validation.constraints.PositiveOrZero;
+
+import java.util.List;
 
 @Data
 public class UpdateMakerDTO {
-    @NotNull(message = "IDは必須項目です")
+    @NotNull(message = "id is required")
     private Long id;
 
-    @NotBlank(message = "名称は必須項目です")
+    @NotBlank(message = "name is required")
     private String name;
+
     private StatusEnum status;
+
+    private List<Long> brandIds;
 }

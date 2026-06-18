@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 public class GoodsBatchUpsertDTO {
 
-    @NotEmpty(message = "items is required")
+    @NotEmpty(message = "明細は必須です")
     @Valid
     private List<GoodsBatchUpsertItemDTO> items;
 }

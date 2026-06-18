@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 public class RequestFormItemBatchDTO {
 
-    @NotNull(message = "requestId is required")
+    @NotNull(message = "請求書IDは必須です")
     private Long requestId;
 
     /**
@@ -26,7 +26,7 @@ public class RequestFormItemBatchDTO {
 
     @Data
     public static class Item {
-        @NotNull(message = "stockRecordId is required")
+        @NotNull(message = "在庫履歴IDは必須です")
         private Long stockRecordId;
 
         /**
@@ -39,7 +39,7 @@ public class RequestFormItemBatchDTO {
          */
         private List<Long> handleStockRecordIds;
 
-        @NotNull(message = "requestQty is required")
+        @NotNull(message = "請求数量は必須です")
         @PositiveOrZero(message = "requestQty must be zero or greater")
         private Integer requestQty;
     }

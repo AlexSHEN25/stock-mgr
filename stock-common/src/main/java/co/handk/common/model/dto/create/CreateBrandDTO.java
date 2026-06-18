@@ -5,6 +5,8 @@ import co.handk.common.enums.StatusEnum;
 import lombok.Data;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.util.List;
+
 @Data
 public class CreateBrandDTO {
 
@@ -14,5 +16,7 @@ public class CreateBrandDTO {
     private String image;
     private String content;
     private StatusEnum status;
+    private List<Long> seriesIds;
+    private List<Long> makerIds;
 
 }

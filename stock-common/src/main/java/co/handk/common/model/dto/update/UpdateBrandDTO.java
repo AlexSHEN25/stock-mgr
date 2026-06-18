@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.util.List;
+
 @Data
 public class UpdateBrandDTO {
     @NotNull(message = "IDは必須項目です")
@@ -18,4 +20,6 @@ public class UpdateBrandDTO {
     private String image;
     private String content;
     private StatusEnum status;
+    private List<Long> seriesIds;
+    private List<Long> makerIds;
 }

@@ -78,7 +78,7 @@ class WebPageAlignmentTest {
         assertEquals(
                 List.of("orderType", "bizDate", "warehouseId", "sourceType", "stockTypeId", "state", "remark"),
                 ModuleMeta.formFields("stockOrder"));
-        assertEquals(Map.of("name", "\u901a\u5e38\u54c1"),
+        assertEquals(Map.of("name", "通常品"),
                 ModuleMeta.initialRelationFilters("stockOrder", "stockTypeId"));
     }
 
@@ -87,15 +87,15 @@ class WebPageAlignmentTest {
         assertEquals(
                 List.of("warehouseId", "goodsId", "skuId", "sourceType", "outboundMode", "stockTypeId", "quantity", "remark"),
                 ModuleMeta.formFields("stock"));
-        assertEquals(Map.of("name", "\u81ea\u793e\u5728\u5eab"),
+        assertEquals(Map.of("name", "自社在庫"),
                 ModuleMeta.initialRelationFilters("stock", "warehouseId"));
         assertTrue(ModuleMeta.shouldAutoSelectFirstRelation("stock", "warehouseId"));
     }
 
     @Test
     void goodsTableMetadataMatchesWebPageBehavior() {
-        assertEquals("\u306f\u3044", ModuleMeta.optionByValue("goods", "isHot", "1").label);
-        assertEquals("\u3044\u3044\u3048", ModuleMeta.optionByValue("goods", "isHot", "0").label);
+        assertEquals("はい", ModuleMeta.optionByValue("goods", "isHot", "1").label);
+        assertEquals("いいえ", ModuleMeta.optionByValue("goods", "isHot", "0").label);
         assertEquals(
                 List.of("skuId", "goodsName", "skuCode", "statusDesc", "createTime", "updateTime"),
                 ModuleMeta.orderedColumns("goods", List.of(

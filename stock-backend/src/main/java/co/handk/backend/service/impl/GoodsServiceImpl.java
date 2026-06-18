@@ -9,6 +9,7 @@ import co.handk.backend.entity.Maker;
 import co.handk.backend.entity.BrandMakerRelation;
 import co.handk.backend.entity.Series;
 import co.handk.backend.entity.SeriesBrandRelation;
+import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.GoodsMapper;
 import co.handk.backend.mapper.BrandMakerRelationMapper;
@@ -25,8 +26,10 @@ import co.handk.backend.service.MakerService;
 import co.handk.backend.service.SeriesService;
 import co.handk.backend.service.SeriesBrandRelationService;
 import co.handk.common.constant.CommonConstant;
+import co.handk.common.constant.GoodsImportConstant;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.enums.GoodsBatchActionEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateGoodsDTO;
@@ -88,45 +91,89 @@ import java.util.UUID;
 public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsVO>
         implements GoodsService {
 
-    private static final String TEMPLATE_SHEET_NAME = "商品导入模板";
-    private static final String INSTRUCTION_SHEET_NAME = "填写说明";
-    private static final String DICTIONARY_SHEET_NAME = "基础数据";
+    private static final String TEMPLATE_SHEET_NAME = GoodsImportConstant.SHEET_TEMPLATE;
+    private static final String INSTRUCTION_SHEET_NAME = GoodsImportConstant.SHEET_INSTRUCTION;
+    private static final String DICTIONARY_SHEET_NAME = GoodsImportConstant.SHEET_DICTIONARY;
     private static final int TEMPLATE_HEADER_ROW_INDEX = 0;
     private static final int TEMPLATE_NOTE_ROW_INDEX = 1;
     private static final int TEMPLATE_DATA_START_ROW_INDEX = 2;
+    private static final int EXCEL_COLUMN_WIDTH = 18 * 256;
+    private static final int INSTRUCTION_COLUMN_WIDTH = 90 * 256;
+    private static final int DICTIONARY_ID_COLUMN_WIDTH = 20 * 256;
+    private static final int DICTIONARY_NAME_COLUMN_WIDTH = 28 * 256;
+    private static final String ROW_PREFIX = "行 ";
+    private static final String ERROR_IMPORT_FILE_REQUIRED = "インポートファイルを選択してください";
+    private static final String ERROR_TEMPLATE_GENERATE_FAILED = "商品インポートテンプレートの生成に失敗しました";
+    private static final String ERROR_CREATE_GOODS_FAILED = "商品の登録に失敗しました";
+    private static final String ERROR_UPDATE_GOODS_FAILED = "商品の更新に失敗しました";
+    private static final String ERROR_TEMPLATE_SHEET_NOT_FOUND = "テンプレートシートが見つかりません";
+    private static final String ERROR_HEADER_ROW_MISSING = "ヘッダー行が見つかりません";
+    private static final String ERROR_IMPORT_FILE_READ_FAILED = "インポートファイルの読み取りに失敗しました";
+    private static final String ERROR_TEMPLATE_COLUMN_MISSING = "テンプレート列が不足しています: ";
+    private static final String ERROR_UNKNOWN = "不明なエラー";
     private static final DateTimeFormatter TEMPLATE_DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String HEADER_GOODS_ID = "商品ID";
+    private static final String HEADER_SKU_ID = "SKU ID";
+    private static final String HEADER_GOODS_NAME = "商品名称";
+    private static final String HEADER_ENGLISH_NAME = "英文名称";
+    private static final String HEADER_BRAND_ID = "品牌ID";
+    private static final String HEADER_BRAND_NAME = "品牌名称";
+    private static final String HEADER_SERIES_ID = "系列ID";
+    private static final String HEADER_SERIES_NAME = "系列名称";
+    private static final String HEADER_CATEGORY_ID = "分类ID";
+    private static final String HEADER_CATEGORY_NAME = "分类名称";
+    private static final String HEADER_MAKER_ID = "厂家ID";
+    private static final String HEADER_MAKER_NAME = "厂家名称";
+    private static final String HEADER_DESCRIPTION = "说明";
+    private static final String HEADER_IS_HOT = "热门";
+    private static final String HEADER_SORT = "排序";
+    private static final String HEADER_SKU_CODE = "SKU编码";
+    private static final String HEADER_SKU_NAME = "SKU名称";
+    private static final String HEADER_PRICE = "价格";
+    private static final String HEADER_CURRENCY = "货币";
+    private static final String HEADER_COST_PRICE = "成本价";
+    private static final String HEADER_UPDATE_PRICE = "调价";
+    private static final String HEADER_PRICE_UPDATE_TIME = "调价时间";
+    private static final String HEADER_BARCODE = "条码";
+    private static final String HEADER_WEIGHT = "重量";
+    private static final String HEADER_VOLUME = "体积";
+    private static final String HEADER_SKU_STATUS = "SKU状态";
+    private static final String HEADER_IMAGE_ID = "图片ID";
+    private static final String HEADER_IMAGE_URL = "图片URL";
+    private static final String HEADER_IMAGE_SORT = "图片排序";
+    private static final String HEADER_GOODS_STATUS = "商品状态";
     private static final List<String> TEMPLATE_HEADERS = List.of(
-            "商品ID",
-            "SKU ID",
-            "商品名称",
-            "英文名称",
-            "品牌ID",
-            "品牌名称",
-            "系列ID",
-            "系列名称",
-            "分类ID",
-            "分类名称",
-            "厂家ID",
-            "厂家名称",
-            "说明",
-            "热门",
-            "排序",
-            "SKU编码",
-            "SKU名称",
-            "价格",
-            "货币",
-            "成本价",
-            "调价",
-            "调价时间",
-            "条码",
-            "重量",
-            "体积",
-            "SKU状态",
-            "图片ID",
-            "图片URL",
-            "图片排序",
-            "商品状态"
+            HEADER_GOODS_ID,
+            HEADER_SKU_ID,
+            HEADER_GOODS_NAME,
+            HEADER_ENGLISH_NAME,
+            HEADER_BRAND_ID,
+            HEADER_BRAND_NAME,
+            HEADER_SERIES_ID,
+            HEADER_SERIES_NAME,
+            HEADER_CATEGORY_ID,
+            HEADER_CATEGORY_NAME,
+            HEADER_MAKER_ID,
+            HEADER_MAKER_NAME,
+            HEADER_DESCRIPTION,
+            HEADER_IS_HOT,
+            HEADER_SORT,
+            HEADER_SKU_CODE,
+            HEADER_SKU_NAME,
+            HEADER_PRICE,
+            HEADER_CURRENCY,
+            HEADER_COST_PRICE,
+            HEADER_UPDATE_PRICE,
+            HEADER_PRICE_UPDATE_TIME,
+            HEADER_BARCODE,
+            HEADER_WEIGHT,
+            HEADER_VOLUME,
+            HEADER_SKU_STATUS,
+            HEADER_IMAGE_ID,
+            HEADER_IMAGE_URL,
+            HEADER_IMAGE_SORT,
+            HEADER_GOODS_STATUS
     );
 
     private final GoodsSkuService goodsSkuService;
@@ -316,7 +363,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     @Override
     public GoodsBatchUpsertResultVO importGoods(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "import file is required");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_IMPORT_FILE_REQUIRED);
         }
         return batchUpsertItems(parseGoodsImportFile(file));
     }
@@ -324,8 +371,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     @Override
     public void downloadBatchTemplate(HttpServletResponse response) {
         try (XSSFWorkbook workbook = buildBatchTemplateWorkbook()) {
-            String fileName = "goods_batch_template.xlsx";
-            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            String fileName = GoodsImportConstant.TEMPLATE_FILE_NAME;
+            response.setContentType(GoodsImportConstant.EXCEL_CONTENT_TYPE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.setHeader("Content-Disposition",
                     "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
@@ -333,8 +380,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             response.flushBuffer();
         } catch (IOException ex) {
             throw new BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "failed to generate goods import template",
+                    MessageKeyConstant.ERROR_RUNTIME,
+                    ERROR_TEMPLATE_GENERATE_FAILED,
                     ex
             );
         }
@@ -342,28 +389,10 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     private void syncCascadingRelations(Long brandId, Long seriesId, Long makerId) {
         if (brandId != null && seriesId != null) {
-            SeriesBrandRelation seriesRelation = seriesBrandRelationService.getOne(new QueryWrapper<SeriesBrandRelation>()
-                    .eq("brand_id", brandId)
-                    .eq("series_id", seriesId)
-                    .last("LIMIT 1"));
-            if (seriesRelation == null) {
-                seriesRelation = new SeriesBrandRelation();
-                seriesRelation.setBrandId(brandId);
-                seriesRelation.setSeriesId(seriesId);
-                seriesBrandRelationService.save(seriesRelation);
-            }
+            seriesBrandRelationMapper.upsertRelation(seriesId, brandId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
         }
         if (brandId != null && makerId != null) {
-            BrandMakerRelation makerRelation = brandMakerRelationService.getOne(new QueryWrapper<BrandMakerRelation>()
-                    .eq("brand_id", brandId)
-                    .eq("maker_id", makerId)
-                    .last("LIMIT 1"));
-            if (makerRelation == null) {
-                makerRelation = new BrandMakerRelation();
-                makerRelation.setBrandId(brandId);
-                makerRelation.setMakerId(makerId);
-                brandMakerRelationService.save(makerRelation);
-            }
+            brandMakerRelationMapper.upsertRelation(brandId, makerId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
         }
     }
 
@@ -423,14 +452,14 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 rowResult.setSkuId(committed.getSkuId());
                 rowResult.setMessage(committed.getMessage());
                 result.setSuccessCount(result.getSuccessCount() + 1);
-                if ("CREATED".equals(committed.getAction())) {
+                if (GoodsBatchActionEnum.CREATED.getCode().equals(committed.getAction())) {
                     result.setCreatedCount(result.getCreatedCount() + 1);
                 } else {
                     result.setUpdatedCount(result.getUpdatedCount() + 1);
                 }
             } catch (Exception ex) {
                 rowResult.setSuccess(false);
-                rowResult.setAction("FAILED");
+                rowResult.setAction(GoodsBatchActionEnum.FAILED.getCode());
                 rowResult.setMessage(resolveExceptionMessage(ex));
                 result.setFailureCount(result.getFailureCount() + 1);
             }
@@ -457,27 +486,25 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (target == null) {
             CreateGoodsDTO createDto = buildCreateGoodsDto(item);
             if (!goodsServiceProxy().saveGoods(createDto)) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "failed to create goods");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_CREATE_GOODS_FAILED);
             }
             ExistingGoodsTarget saved = resolveExistingTarget(item);
-            rowResult.setAction("CREATED");
+            rowResult.setAction(GoodsBatchActionEnum.CREATED.getCode());
             rowResult.setGoodsId(saved == null || saved.goods() == null ? null : saved.goods().getId());
             rowResult.setSkuId(saved == null || saved.sku() == null ? null : saved.sku().getId());
-            rowResult.setMessage("created");
+            rowResult.setMessage(GoodsBatchActionEnum.CREATED.getMessage());
             return rowResult;
         }
 
         UpdateGoodsDTO updateDto = buildUpdateGoodsDto(item, target);
         if (!goodsServiceProxy().updateGoods(updateDto)) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "failed to update goods");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_UPDATE_GOODS_FAILED);
         }
         ExistingGoodsTarget updated = resolveExistingTarget(item);
-        rowResult.setAction("UPDATED");
+        rowResult.setAction(GoodsBatchActionEnum.UPDATED.getCode());
         rowResult.setGoodsId(updated == null || updated.goods() == null ? null : updated.goods().getId());
         rowResult.setSkuId(updated == null || updated.sku() == null ? null : updated.sku().getId());
-        rowResult.setMessage("updated");
+        rowResult.setMessage(GoodsBatchActionEnum.UPDATED.getMessage());
         return rowResult;
     }
 
@@ -490,20 +517,20 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         String skuCode = trimToNull(item.getSkuCode());
         String name = firstNonBlank(item.getName(), item.getSkuName(), skuCode);
         if (!StringUtils.hasText(name)) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": 商品名称 or SKU编码 is required");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "商品名称またはSKU编码を入力してください"));
         }
         if (brandId == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": brand is required");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "ブランドを入力してください"));
         }
         if (categoryId == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": category is required");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "カテゴリを入力してください"));
         }
         if (!StringUtils.hasText(skuCode)) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": SKU编码 is required");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "SKU编码を入力してください"));
         }
         dto.setName(name);
         dto.setEnglishName(firstNonBlank(item.getEnglishName(), name));
@@ -540,12 +567,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         dto.setName(firstNonBlank(item.getName(), goods.getName(), sku == null ? null : sku.getSkuName(),
                 item.getSkuCode(), sku == null ? null : sku.getSkuCode()));
         dto.setEnglishName(firstNonBlank(item.getEnglishName(), goods.getEnglishName(), dto.getName()));
-        Long brandId = firstNonNull(resolveBrandId(item, false), goods.getBrandId());
-        Long categoryId = firstNonNull(resolveCategoryId(item, false), goods.getCategoryId());
+        Long brandId = firstNonNull(resolveBrandId(item), goods.getBrandId());
+        Long categoryId = firstNonNull(resolveCategoryId(item), goods.getCategoryId());
         dto.setBrandId(brandId);
-        dto.setSeriesId(firstNonNull(resolveSeriesId(item, brandId, false), goods.getSeriesId()));
+        dto.setSeriesId(firstNonNull(resolveSeriesId(item, brandId), goods.getSeriesId()));
         dto.setCategoryId(categoryId);
-        dto.setMakerId(firstNonNull(resolveMakerId(item, false), goods.getMakerId()));
+        dto.setMakerId(firstNonNull(resolveMakerId(item), goods.getMakerId()));
         dto.setDescription(firstNonNull(trimToNull(item.getDescription()), goods.getDescription()));
         dto.setIsHot(firstNonNull(parseFlag(item.getIsHot(), false), goods.getIsHot()));
         dto.setSort(firstNonNull(item.getSort(), goods.getSort()));
@@ -578,20 +605,20 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (item.getGoodsId() != null) {
             goods = this.getByIdNotDeleted(item.getGoodsId());
             if (goods == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": goods not found by goodsId");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "商品IDに該当する商品が見つかりません"));
             }
         }
         if (item.getSkuId() != null) {
             sku = goodsSkuService.getByIdNotDeleted(item.getSkuId());
             if (sku == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": sku not found by skuId");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "SKU IDに該当するSKUが見つかりません"));
             }
             Goods skuGoods = this.getByIdNotDeleted(sku.getGoodsId());
             if (goods != null && !goods.getId().equals(skuGoods == null ? null : skuGoods.getId())) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": goodsId and skuId do not match");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "商品IDとSKU IDが一致しません"));
             }
             goods = skuGoods;
         }
@@ -628,14 +655,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
             }
             if (sheet == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "template sheet not found");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_TEMPLATE_SHEET_NOT_FOUND);
             }
             DataFormatter formatter = new DataFormatter();
             Row headerRow = sheet.getRow(TEMPLATE_HEADER_ROW_INDEX);
             if (headerRow == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "header row is missing");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_HEADER_ROW_MISSING);
             }
             Map<String, Integer> headerIndexes = resolveHeaderIndexes(headerRow, formatter);
             List<GoodsBatchUpsertItemDTO> items = new ArrayList<>();
@@ -646,42 +671,41 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 }
                 GoodsBatchUpsertItemDTO item = new GoodsBatchUpsertItemDTO();
                 item.setRowNo(rowIndex + 1);
-                item.setGoodsId(readLong(row, headerIndexes.get("商品ID"), formatter));
-                item.setSkuId(readLong(row, headerIndexes.get("SKU ID"), formatter));
-                item.setName(readString(row, headerIndexes.get("商品名称"), formatter));
-                item.setEnglishName(readString(row, headerIndexes.get("英文名称"), formatter));
-                item.setBrandId(readLong(row, headerIndexes.get("品牌ID"), formatter));
-                item.setBrandName(readString(row, headerIndexes.get("品牌名称"), formatter));
-                item.setSeriesId(readLong(row, headerIndexes.get("系列ID"), formatter));
-                item.setSeriesName(readString(row, headerIndexes.get("系列名称"), formatter));
-                item.setCategoryId(readLong(row, headerIndexes.get("分类ID"), formatter));
-                item.setCategoryName(readString(row, headerIndexes.get("分类名称"), formatter));
-                item.setMakerId(readLong(row, headerIndexes.get("厂家ID"), formatter));
-                item.setMakerName(readString(row, headerIndexes.get("厂家名称"), formatter));
-                item.setDescription(readString(row, headerIndexes.get("说明"), formatter));
-                item.setIsHot(readString(row, headerIndexes.get("热门"), formatter));
-                item.setSort(readInteger(row, headerIndexes.get("排序"), formatter));
-                item.setSkuCode(readString(row, headerIndexes.get("SKU编码"), formatter));
-                item.setSkuName(readString(row, headerIndexes.get("SKU名称"), formatter));
-                item.setPrice(readDecimal(row, headerIndexes.get("价格"), formatter));
-                item.setCurrency(readString(row, headerIndexes.get("货币"), formatter));
-                item.setCostPrice(readDecimal(row, headerIndexes.get("成本价"), formatter));
-                item.setUpdatePrice(readDecimal(row, headerIndexes.get("调价"), formatter));
-                item.setPriceUpdateTime(readDateTime(row, headerIndexes.get("调价时间"), formatter));
-                item.setBarcode(readString(row, headerIndexes.get("条码"), formatter));
-                item.setWeight(readDecimal(row, headerIndexes.get("重量"), formatter));
-                item.setVolume(readDecimal(row, headerIndexes.get("体积"), formatter));
-                item.setSkuStatus(readString(row, headerIndexes.get("SKU状态"), formatter));
-                item.setImageId(readLong(row, headerIndexes.get("图片ID"), formatter));
-                item.setImageUrl(readString(row, headerIndexes.get("图片URL"), formatter));
-                item.setImageSort(readInteger(row, headerIndexes.get("图片排序"), formatter));
-                item.setStatus(readString(row, headerIndexes.get("商品状态"), formatter));
+                item.setGoodsId(readLong(row, headerIndexes.get(HEADER_GOODS_ID), formatter));
+                item.setSkuId(readLong(row, headerIndexes.get(HEADER_SKU_ID), formatter));
+                item.setName(readString(row, headerIndexes.get(HEADER_GOODS_NAME), formatter));
+                item.setEnglishName(readString(row, headerIndexes.get(HEADER_ENGLISH_NAME), formatter));
+                item.setBrandId(readLong(row, headerIndexes.get(HEADER_BRAND_ID), formatter));
+                item.setBrandName(readString(row, headerIndexes.get(HEADER_BRAND_NAME), formatter));
+                item.setSeriesId(readLong(row, headerIndexes.get(HEADER_SERIES_ID), formatter));
+                item.setSeriesName(readString(row, headerIndexes.get(HEADER_SERIES_NAME), formatter));
+                item.setCategoryId(readLong(row, headerIndexes.get(HEADER_CATEGORY_ID), formatter));
+                item.setCategoryName(readString(row, headerIndexes.get(HEADER_CATEGORY_NAME), formatter));
+                item.setMakerId(readLong(row, headerIndexes.get(HEADER_MAKER_ID), formatter));
+                item.setMakerName(readString(row, headerIndexes.get(HEADER_MAKER_NAME), formatter));
+                item.setDescription(readString(row, headerIndexes.get(HEADER_DESCRIPTION), formatter));
+                item.setIsHot(readString(row, headerIndexes.get(HEADER_IS_HOT), formatter));
+                item.setSort(readInteger(row, headerIndexes.get(HEADER_SORT), formatter));
+                item.setSkuCode(readString(row, headerIndexes.get(HEADER_SKU_CODE), formatter));
+                item.setSkuName(readString(row, headerIndexes.get(HEADER_SKU_NAME), formatter));
+                item.setPrice(readDecimal(row, headerIndexes.get(HEADER_PRICE), formatter));
+                item.setCurrency(readString(row, headerIndexes.get(HEADER_CURRENCY), formatter));
+                item.setCostPrice(readDecimal(row, headerIndexes.get(HEADER_COST_PRICE), formatter));
+                item.setUpdatePrice(readDecimal(row, headerIndexes.get(HEADER_UPDATE_PRICE), formatter));
+                item.setPriceUpdateTime(readDateTime(row, headerIndexes.get(HEADER_PRICE_UPDATE_TIME), formatter));
+                item.setBarcode(readString(row, headerIndexes.get(HEADER_BARCODE), formatter));
+                item.setWeight(readDecimal(row, headerIndexes.get(HEADER_WEIGHT), formatter));
+                item.setVolume(readDecimal(row, headerIndexes.get(HEADER_VOLUME), formatter));
+                item.setSkuStatus(readString(row, headerIndexes.get(HEADER_SKU_STATUS), formatter));
+                item.setImageId(readLong(row, headerIndexes.get(HEADER_IMAGE_ID), formatter));
+                item.setImageUrl(readString(row, headerIndexes.get(HEADER_IMAGE_URL), formatter));
+                item.setImageSort(readInteger(row, headerIndexes.get(HEADER_IMAGE_SORT), formatter));
+                item.setStatus(readString(row, headerIndexes.get(HEADER_GOODS_STATUS), formatter));
                 items.add(item);
             }
             return items;
         } catch (IOException ex) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "failed to read import file", ex);
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_IMPORT_FILE_READ_FAILED, ex);
         }
     }
 
@@ -709,7 +733,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(TEMPLATE_HEADERS.get(i));
             cell.setCellStyle(headerStyle);
-            sheet.setColumnWidth(i, 18 * 256);
+            sheet.setColumnWidth(i, EXCEL_COLUMN_WIDTH);
         }
 
         Row noteRow = sheet.createRow(TEMPLATE_NOTE_ROW_INDEX);
@@ -766,7 +790,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         for (int i = 0; i < instructions.size(); i++) {
             sheet.createRow(i).createCell(0).setCellValue(instructions.get(i));
         }
-        sheet.setColumnWidth(0, 90 * 256);
+        sheet.setColumnWidth(0, INSTRUCTION_COLUMN_WIDTH);
     }
 
     private void buildDictionarySheet(XSSFWorkbook workbook) {
@@ -788,9 +812,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 List.of("1", "有効", "normal"),
                 List.of("0", "無効", "disabled")
         ));
-        sheet.setColumnWidth(0, 20 * 256);
-        sheet.setColumnWidth(1, 28 * 256);
-        sheet.setColumnWidth(2, 20 * 256);
+        sheet.setColumnWidth(0, DICTIONARY_ID_COLUMN_WIDTH);
+        sheet.setColumnWidth(1, DICTIONARY_NAME_COLUMN_WIDTH);
+        sheet.setColumnWidth(2, DICTIONARY_ID_COLUMN_WIDTH);
     }
 
     private int writeDictionarySection(Sheet sheet, int rowIndex, String title, List<List<String>> rows) {
@@ -819,8 +843,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         for (String header : TEMPLATE_HEADERS) {
             if (!headerIndexes.containsKey(header)) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "missing template column: " + header);
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_TEMPLATE_COLUMN_MISSING + header);
             }
         }
         return headerIndexes;
@@ -886,48 +909,40 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private Long resolveBrandId(GoodsBatchUpsertItemDTO item) {
-        return resolveBrandId(item, true);
-    }
-
-    private Long resolveBrandId(GoodsBatchUpsertItemDTO item, boolean failWhenMissingName) {
         if (item.getBrandId() != null) {
             Brand brand = brandService.getByIdNotDeleted(item.getBrandId());
             if (brand == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": brand not found");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "ブランドが見つかりません"));
             }
             return brand.getId();
         }
         String brandName = trimToNull(item.getBrandName());
         if (!StringUtils.hasText(brandName)) {
-            return failWhenMissingName ? null : null;
+            return null;
         }
         Brand brand = brandService.getOne(new QueryWrapper<Brand>()
                 .eq("name", brandName)
                 .last("LIMIT 1"));
         if (brand == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": brand not found by name");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "ブランド名に該当するブランドが見つかりません"));
         }
         return brand.getId();
     }
 
     private Long resolveSeriesId(GoodsBatchUpsertItemDTO item, Long brandId) {
-        return resolveSeriesId(item, brandId, true);
-    }
-
-    private Long resolveSeriesId(GoodsBatchUpsertItemDTO item, Long brandId, boolean failWhenMissingName) {
         if (item.getSeriesId() != null) {
             Series series = seriesService.getByIdNotDeleted(item.getSeriesId());
             if (series == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": series not found");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "シリーズが見つかりません"));
             }
             return series.getId();
         }
         String seriesName = trimToNull(item.getSeriesName());
         if (!StringUtils.hasText(seriesName)) {
-            return failWhenMissingName ? null : null;
+            return null;
         }
         QueryWrapper<Series> wrapper = new QueryWrapper<Series>()
                 .eq("name", seriesName)
@@ -937,62 +952,54 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         Series series = seriesService.getOne(wrapper);
         if (series == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": series not found by name");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "シリーズ名に該当するシリーズが見つかりません"));
         }
         return series.getId();
     }
 
     private Long resolveCategoryId(GoodsBatchUpsertItemDTO item) {
-        return resolveCategoryId(item, true);
-    }
-
-    private Long resolveCategoryId(GoodsBatchUpsertItemDTO item, boolean failWhenMissingName) {
         if (item.getCategoryId() != null) {
             Category category = categoryService.getByIdNotDeleted(item.getCategoryId());
             if (category == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": category not found");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "カテゴリが見つかりません"));
             }
             return category.getId();
         }
         String categoryName = trimToNull(item.getCategoryName());
         if (!StringUtils.hasText(categoryName)) {
-            return failWhenMissingName ? null : null;
+            return null;
         }
         Category category = categoryService.getOne(new QueryWrapper<Category>()
                 .eq("name", categoryName)
                 .last("LIMIT 1"));
         if (category == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": category not found by name");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "カテゴリ名に該当するカテゴリが見つかりません"));
         }
         return category.getId();
     }
 
     private Long resolveMakerId(GoodsBatchUpsertItemDTO item) {
-        return resolveMakerId(item, true);
-    }
-
-    private Long resolveMakerId(GoodsBatchUpsertItemDTO item, boolean failWhenMissingName) {
         if (item.getMakerId() != null) {
             Maker maker = makerService.getByIdNotDeleted(item.getMakerId());
             if (maker == null) {
-                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                        "row " + item.getRowNo() + ": maker not found");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "メーカーが見つかりません"));
             }
             return maker.getId();
         }
         String makerName = trimToNull(item.getMakerName());
         if (!StringUtils.hasText(makerName)) {
-            return failWhenMissingName ? null : null;
+            return null;
         }
         Maker maker = makerService.getOne(new QueryWrapper<Maker>()
                 .eq("name", makerName)
                 .last("LIMIT 1"));
         if (maker == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "row " + item.getRowNo() + ": maker not found by name");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "メーカー名に該当するメーカーが見つかりません"));
         }
         return maker.getId();
     }
@@ -1015,8 +1022,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 || "inactive".equals(lower) || "無効".equals(normalized) || "无效".equals(normalized)) {
             return StatusEnum.FOBBIDEN;
         }
-        throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                "unsupported status value: " + value);
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "ステータス値が不正です: " + value);
     }
 
     private Integer parseFlag(String value) {
@@ -1037,8 +1043,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 || "n".equals(lower) || "否".equals(normalized)) {
             return 0;
         }
-        throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                "unsupported flag value: " + value);
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "フラグ値が不正です: " + value);
     }
 
     private LocalDateTime normalizePriceUpdateTime(BigDecimal updatePrice, LocalDateTime priceUpdateTime) {
@@ -1096,7 +1101,11 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 && current instanceof BusinessException == false) {
             current = current.getCause();
         }
-        return trimToNull(current.getMessage()) == null ? "unknown error" : current.getMessage();
+        return trimToNull(current.getMessage()) == null ? ERROR_UNKNOWN : current.getMessage();
+    }
+
+    private String rowMessage(GoodsBatchUpsertItemDTO item, String message) {
+        return ROW_PREFIX + item.getRowNo() + ": " + message;
     }
 
     private record ExistingGoodsTarget(Goods goods, GoodsSku sku, GoodsImage image) {
@@ -1105,7 +1114,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private void validatePriceUpdateFields(java.math.BigDecimal updatePrice, LocalDateTime priceUpdateTime) {
         if (updatePrice != null && priceUpdateTime == null) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    MessageKeyConstant.ERROR_RUNTIME,
                     "updatePrice入力時はpriceUpdateTimeが必須です"
             );
         }

@@ -15,27 +15,27 @@ public class UserToken extends BaseEntity {
     private String token;
 
     /**
-     * 逕ｨ謌ｷID
+     * ユーザーID
      */
     private Long userId;
 
     /**
-     * 逋ｻ蠖墓慮髣ｴ
+     * ログイン時間
      */
     private LocalDateTime loginTime;
 
     /**
-     * token霑・悄譌ｶ髣ｴ
+     * Token有効期限
      */
     private LocalDateTime expireTime;
 
     /**
-     * 逋ｻ蠖肘P
+     * ログインIP
      */
     private String loginIp;
 
     /**
-     * 迥ｶ諤・
+     * 状態
      */
     private Integer status;
 }

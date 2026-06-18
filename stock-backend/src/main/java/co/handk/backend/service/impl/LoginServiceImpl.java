@@ -83,7 +83,7 @@ public class LoginServiceImpl implements LoginService {
         if (Objects.isNull(userId)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "login session is required"
+                    "ログインセッションが必要です"
             );
         }
         String userKey = RedisKey.LOGIN_USER + userId;
@@ -91,7 +91,7 @@ public class LoginServiceImpl implements LoginService {
         if (StringUtils.isBlank(token)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
-                    "login session is invalid"
+                    "ログインセッションが無効です"
             );
         }
 

@@ -568,7 +568,7 @@ public class StockBatchServiceImpl implements StockBatchService {
 
     private long legacyBatchRefId(Long stockId) {
         if (stockId == null || stockId <= 0 || stockId >= LEGACY_BATCH_ID_BASE) {
-            throw new IllegalArgumentException("invalid stock id for legacy batch reconciliation");
+            throw new IllegalArgumentException("旧在庫バッチ調整用の在庫IDが不正です");
         }
         return LEGACY_BATCH_ID_BASE + stockId;
     }
@@ -576,7 +576,7 @@ public class StockBatchServiceImpl implements StockBatchService {
     private StockBatch requireBatch(Long batchId) {
         StockBatch batch = batchId == null ? null : stockBatchMapper.selectById(batchId);
         if (batch == null || batch.getDeleted() != DeleteEnum.UNDELETED.getCode()) {
-            throw new IllegalStateException("stock batch is missing");
+            throw new IllegalStateException("在庫バッチが見つかりません");
         }
         return batch;
     }
@@ -584,7 +584,7 @@ public class StockBatchServiceImpl implements StockBatchService {
     private GroupStock requireGroupStock(Long groupStockId) {
         GroupStock groupStock = groupStockId == null ? null : groupStockMapper.selectById(groupStockId);
         if (groupStock == null || groupStock.getDeleted() != DeleteEnum.UNDELETED.getCode()) {
-            throw new IllegalStateException("group stock row is missing");
+            throw new IllegalStateException("組別在庫行が見つかりません");
         }
         return groupStock;
     }
@@ -592,7 +592,7 @@ public class StockBatchServiceImpl implements StockBatchService {
     private Dept requireGroupDept(Long deptId) {
         Dept dept = deptId == null ? null : deptService.getByIdNotDeleted(deptId);
         if (dept == null || dept.getCode() == null || !allowedGroupCodes().contains(dept.getCode().trim().toUpperCase())) {
-            throw new IllegalArgumentException("department is not configured as stock group: "
+            throw new IllegalArgumentException("部署が在庫組として設定されていません: "
                     + (dept == null ? "null" : dept.getCode()));
         }
         return dept;
@@ -611,6 +611,6 @@ public class StockBatchServiceImpl implements StockBatchService {
     }
 
     private IllegalStateException changed() {
-        return new IllegalStateException("stock changed concurrently, please retry");
+        return new IllegalStateException("在庫が更新されました。再試行してください");
     }
 }

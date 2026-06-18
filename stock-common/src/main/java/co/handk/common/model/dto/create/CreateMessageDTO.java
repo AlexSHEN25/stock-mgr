@@ -8,7 +8,7 @@ public class CreateMessageDTO {
 
     private Integer type;
     private Long userId;
-    @NotBlank(message = "message is required")
+    @NotBlank(message = "メッセージは必須です")
     private String message;
     private Integer sourceId;
     private Integer isRead;

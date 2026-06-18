@@ -13,9 +13,9 @@ public class MybatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        // 蛻・｡ｵ謠剃ｻｶ
+        // ページネーションプラグイン
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-        // 荵占ｧる煤謠剃ｻｶ・・ersion 蟄玲ｮｵ・悟ｺ灘ｭ伜柱蝠・刀逕ｨ蛻ｰ・・
+        // 楽観ロックプラグイン。version フィールドを持つ在庫系データで使用する。
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
         return interceptor;
     }

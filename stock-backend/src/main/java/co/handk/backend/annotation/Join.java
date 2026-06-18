@@ -10,8 +10,8 @@ import java.lang.annotation.Target;
 public @interface Join {
 
     /**
-     * 逶ｴ謗･蜀・SQL JOIN 迚・ｮｵ
-     * 萓具ｼ哭EFT JOIN dept d ON t.dept_id = d.id
+     * SQL JOIN 句を直接指定する。
+     * 例: LEFT JOIN dept d ON t.dept_id = d.id
      */
     String value();
 }

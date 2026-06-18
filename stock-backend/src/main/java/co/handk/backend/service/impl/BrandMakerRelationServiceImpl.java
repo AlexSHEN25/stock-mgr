@@ -1,11 +1,13 @@
 package co.handk.backend.service.impl;
 
+import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.BrandMakerRelation;
 import co.handk.backend.mapper.BrandMakerRelationMapper;
 import co.handk.backend.service.BrandMakerRelationService;
 import co.handk.common.model.vo.BrandMakerRelationVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BrandMakerRelationServiceImpl extends BaseServiceImpl<BrandMakerRelationMapper, BrandMakerRelation, BrandMakerRelationVO>
@@ -29,5 +31,15 @@ public class BrandMakerRelationServiceImpl extends BaseServiceImpl<BrandMakerRel
         BrandMakerRelation entity = new BrandMakerRelation();
         BeanUtils.copyProperties(dto, entity);
         return entity;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public <C> boolean saveByDto(C dto) {
+        BrandMakerRelation entity = toEntity(dto);
+        if (entity == null || entity.getBrandId() == null || entity.getMakerId() == null) {
+            return super.saveByDto(dto);
+        }
+        return baseMapper.upsertRelation(entity.getBrandId(), entity.getMakerId(), UserContext.getUserIdOrDefault()) > 0;
     }
 }

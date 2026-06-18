@@ -169,17 +169,17 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         }
         StockRecord record = stockRecordService.getByIdNotDeleted(item.getStockRecordId());
         if (record == null) {
-            throw new RuntimeException("source stock record not found");
+            throw new RuntimeException("元在庫履歴が見つかりません");
         }
         StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
         if (orderItem == null) {
-            throw new RuntimeException("source stock order item not found");
+            throw new RuntimeException("元在庫伝票明細が見つかりません");
         }
         int originalQty = record.getChangeQty() == null ? 0 : record.getChangeQty();
         int currentQty = orderItem.getChangeQty() == null ? 0 : orderItem.getChangeQty();
         int nextQty = currentQty + requestQty;
         if (nextQty > originalQty) {
-            throw new RuntimeException("rollback qty exceeds original outbound qty");
+            throw new RuntimeException("差し戻し数量が元出庫数量を超えています");
         }
         int affected = stockOrderItemService.getBaseMapper().update(
                 null,
@@ -189,7 +189,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                         .set(StockOrderItem::getChangeQty, nextQty)
         );
         if (affected <= 0) {
-            throw new RuntimeException("source stock order item changed concurrently, please retry");
+            throw new RuntimeException("元在庫伝票明細が更新されました。再試行してください");
         }
 
         StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
@@ -203,7 +203,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                             .set(StockOrder::getTotalQty, totalQty + requestQty)
             );
             if (orderAffected <= 0) {
-                throw new RuntimeException("source stock order changed concurrently, please retry");
+                throw new RuntimeException("元在庫伝票が更新されました。再試行してください");
             }
         }
     }
@@ -224,10 +224,10 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                 .eq("id", requestId)
                 .last("LIMIT 1"));
         if (form == null) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request form not found");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "請求書が見つかりません");
         }
         if (!permissionQueryService.isSuperAdmin(userId) && !userId.equals(form.getUserId())) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "request item is not owned by current user");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの請求明細を操作できません");
         }
         return form;
     }
@@ -236,14 +236,14 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
         RequestForm form = requireOwnedRequest(requestId);
         if (form != null && Integer.valueOf(StockBizConstant.REQUEST_STATE_FINISHED).equals(form.getState())) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    "request form is completed and cannot be modified");
+                    "完了済みの請求書は変更できません");
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (form != null && !permissionQueryService.isSuperAdmin(userId)
                 && !Integer.valueOf(StockBizConstant.REQUEST_STATE_DRAFT).equals(form.getState())
                 && !Integer.valueOf(StockBizConstant.REQUEST_STATE_SUBMITTED).equals(form.getState())) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    "request form state is not editable for current user");
+                    "現在のユーザーはこの請求書状態を編集できません");
         }
         return form;
     }
@@ -281,7 +281,7 @@ public class RequestItemServiceImpl extends BaseServiceImpl<RequestItemMapper, R
                         .set(RequestForm::getTotalAmt, totalAmt)
         );
         if (affected <= 0) {
-            throw new RuntimeException("failed to recalculate request form summary");
+            throw new RuntimeException("請求書サマリーの再計算に失敗しました");
         }
     }
 

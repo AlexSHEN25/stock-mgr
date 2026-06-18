@@ -309,7 +309,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                 : sourceType.equals(StockBizConstant.SOURCE_TYPE_REQUEST)
                 || sourceType.equals(StockBizConstant.SOURCE_TYPE_MANUAL);
         if (!allowed) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "source type is not allowed for current user");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの元種別を設定できません");
         }
     }
 
@@ -322,7 +322,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                 : state.equals(StockBizConstant.ORDER_STATE_DRAFT)
                 || state.equals(StockBizConstant.ORDER_STATE_APPROVING);
         if (!allowed) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "stock order state is not allowed for current user");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの在庫伝票状態を設定できません");
         }
     }
 
@@ -351,7 +351,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                 return candidate;
             }
         }
-        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to generate stock order number");
+        throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫注文番号の生成に失敗しました");
     }
 
     private void requireOwned(StockOrder order) {
@@ -363,7 +363,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             return;
         }
         if (!userId.equals(order.getRequesterId()) && !userId.equals(order.getOperatorId())) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "stock order is not owned by current user");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの在庫注文を操作できません");
         }
     }
 

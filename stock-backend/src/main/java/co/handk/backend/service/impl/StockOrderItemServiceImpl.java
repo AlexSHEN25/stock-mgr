@@ -158,7 +158,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(item.getOrderId());
         if (order == null) {
-            throw new RuntimeException("stock order not found");
+            throw new RuntimeException("在庫伝票が見つかりません");
         }
         if (!Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())
                 && !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
@@ -172,13 +172,13 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                 .eq(StockRecord::getOrderItemId, item.getId())
                 .last("LIMIT 1"));
         if (record == null || record.getStockId() == null) {
-            throw new RuntimeException("stock record not found for stock order item");
+            throw new RuntimeException("在庫伝票明細に対応する在庫履歴が見つかりません");
         }
         Stock stock = stockMapper.selectOne(new QueryWrapper<Stock>()
                 .eq("id", record.getStockId())
                 .last("LIMIT 1"));
         if (stock == null) {
-            throw new RuntimeException("stock not found");
+            throw new RuntimeException("在庫が見つかりません");
         }
 
         int qty = item.getChangeQty() == null ? 0 : item.getChangeQty();
@@ -190,7 +190,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                 ? currentQty - qty
                 : currentQty + qty;
         if (nextQty < 0) {
-            throw new RuntimeException("rollback stock quantity would be negative");
+            throw new RuntimeException("在庫数量の差し戻し後に数量がマイナスになります");
         }
         long oldVersion = stock.getVersion() == null ? 0L : stock.getVersion();
         int affected = stockMapper.update(
@@ -202,7 +202,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                 .set(Stock::getVersion, oldVersion + 1)
         );
         if (affected <= 0) {
-            throw new RuntimeException("stock changed concurrently, please retry");
+            throw new RuntimeException("在庫が更新されました。再試行してください");
         }
     }
 
@@ -219,7 +219,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         if (order == null) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "stock order not found");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "在庫伝票が見つかりません");
         }
     }
 
@@ -245,7 +245,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                         .set(StockOrder::getTotalQty, nextTotalQty)
         );
         if (affected <= 0) {
-            throw new RuntimeException("stock order changed concurrently, please retry");
+            throw new RuntimeException("在庫伝票が更新されました。再試行してください");
         }
     }
 
@@ -266,7 +266,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         if (!stockOrderService.update(new LambdaUpdateWrapper<StockOrder>()
                 .eq(StockOrder::getId, orderId)
                 .set(StockOrder::getTotalQty, totalQty))) {
-            throw new RuntimeException("failed to recalculate stock order total qty");
+            throw new RuntimeException("在庫伝票の合計数量再計算に失敗しました");
         }
     }
 }

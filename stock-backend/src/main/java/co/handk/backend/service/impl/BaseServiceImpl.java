@@ -35,6 +35,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.time.temporal.Temporal;
 import java.util.*;
+import java.util.Collection;
 import java.util.stream.Collectors;
 
 public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEntity, V extends BaseVO>
@@ -568,6 +569,9 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         for (Field f : fields) {
             String name = f.getName();
             if ("serialVersionUID".equals(name) || name.endsWith("Desc")) {
+                continue;
+            }
+            if (Collection.class.isAssignableFrom(f.getType()) || Map.class.isAssignableFrom(f.getType())) {
                 continue;
             }
             JoinSelect joinSelect = f.getAnnotation(JoinSelect.class);

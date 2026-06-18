@@ -1,20 +1,26 @@
 package co.handk.common.model.dto.create;
 
+import co.handk.common.enums.StatusEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import co.handk.common.enums.StatusEnum;
 import lombok.Data;
-import jakarta.validation.constraints.PositiveOrZero;
+
+import java.util.List;
 
 @Data
 public class CreateSeriesDTO {
 
-    @NotBlank(message = "必須項目です")
+    @NotBlank(message = "name is required")
     private String name;
-    private String englishName;
-    @NotNull(message = "必須項目です")
-    private Long brandId;
-    private String content;
-    private StatusEnum status;
 
+    private String englishName;
+
+    @NotNull(message = "brandId is required")
+    private Long brandId;
+
+    private List<Long> brandIds;
+
+    private String content;
+
+    private StatusEnum status;
 }
