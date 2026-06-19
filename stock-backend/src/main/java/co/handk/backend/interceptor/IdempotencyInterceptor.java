@@ -57,6 +57,12 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
 
     private boolean isStockOutboundRequest(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        return uri != null && uri.startsWith("/api/stock") && uri.endsWith("/outbound");
+        if (uri == null || !uri.startsWith("/api/stock")) {
+            return false;
+        }
+        return uri.endsWith("/outbound")
+                || uri.endsWith("/outbound/batch")
+                || uri.endsWith("/inbound/batch")
+                || uri.endsWith("/submit");
     }
 }

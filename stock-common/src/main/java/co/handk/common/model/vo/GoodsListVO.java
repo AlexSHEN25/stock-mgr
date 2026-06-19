@@ -5,7 +5,8 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-public class GoodsListVO extends BaseVO {
+public class GoodsListVO {
+    private Long id;
     private String name;
     private String englishName;
     private Long skuId;
@@ -13,9 +14,6 @@ public class GoodsListVO extends BaseVO {
     private String skuName;
     private BigDecimal price;
     private String currency;
-    private Integer currentQty;
-    private Boolean inboundDone;
-    private Integer outboundMaxQty;
     private Long brandId;
     private String brandName;
     private Long seriesId;

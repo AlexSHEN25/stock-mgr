@@ -2,6 +2,7 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.Stock;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
+import co.handk.common.model.dto.create.StockBatchOperateDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
@@ -24,6 +25,10 @@ public interface StockService extends BaseService<Stock, StockVO> {
     Long inbound(StockOperateDTO dto);
 
     Long outbound(StockOperateDTO dto);
+
+    Long batchInbound(StockBatchOperateDTO dto);
+
+    Long batchOutbound(StockBatchOperateDTO dto);
 
     java.util.List<Long> allocateToGroups(StockGroupAllocateDTO dto);
 

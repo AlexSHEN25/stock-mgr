@@ -20,13 +20,6 @@
         LEFT JOIN t_series s ON s.id = g.series_id AND <include refid="aliasNotDeleted"><property name="alias" value="s"/></include>
         LEFT JOIN t_category c ON c.id = g.category_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         LEFT JOIN t_maker m ON m.id = g.maker_id AND <include refid="aliasNotDeleted"><property name="alias" value="m"/></include>
-        LEFT JOIN (
-            SELECT goods_id, sku_id, SUM(current_qty) AS current_qty
-            FROM t_stock
-            WHERE <include refid="notDeleted"/>
-            GROUP BY goods_id, sku_id
-        ) stock_summary ON stock_summary.goods_id = g.id
-            AND stock_summary.sku_id = gs.id
         WHERE <include refid="aliasNotDeleted"><property name="alias" value="g"/></include>
         <if test="q != null">
             <if test="q.name != null and q.name != ''">
@@ -104,30 +97,13 @@
         WHEN g.status = 0 THEN 'Disabled'
         ELSE NULL
         END AS status_desc,
-        g.deleted,
-        g.created_by,
-        g.updated_by,
-        g.create_time,
-        g.update_time,
         gs.id AS sku_id,
         gs.sku_code,
         gs.sku_name,
         gs.price,
-        gs.currency,
-        COALESCE(stock_summary.current_qty, 0) AS current_qty,
-        CASE
-            WHEN EXISTS (
-                SELECT 1
-                FROM t_stock st
-                WHERE <include refid="aliasNotDeleted"><property name="alias" value="st"/></include>
-                  AND st.goods_id = g.id
-                  AND st.sku_id = gs.id
-            ) THEN TRUE
-            ELSE FALSE
-        END AS inbound_done,
-        COALESCE(stock_summary.current_qty, 0) AS outbound_max_qty
+        gs.currency
         <include refid="fromAndWhere"/>
-        ORDER BY g.update_time DESC, gs.update_time DESC
+        ORDER BY g.sort ASC, g.update_time DESC, g.id ASC, gs.update_time DESC, gs.id ASC
         LIMIT #{offset}, #{size}
     </select>
 

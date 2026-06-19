@@ -149,7 +149,7 @@ public final class ModuleMeta {
     private static final Set<String> ALWAYS_HIDDEN_COLUMNS = Set.of("beforeqty", "afterqty");
     private static final Set<String> GOODS_HIDDEN_ID_COLUMNS = Set.of("brandid", "seriesid", "categoryid", "makerid");
     private static final Set<String> GOODS_DETAIL_ONLY_COLUMNS = Set.of("costprice", "updateprice", "priceupdatetime", "barcode", "weight", "volume", "imageurl");
-    private static final Set<String> GOODS_READONLY_FIELDS = Set.of("currentqty", "inbounddone", "outboundmaxqty");
+    private static final Set<String> GOODS_READONLY_FIELDS = Set.of();
 
     private static final Map<String, List<String>> QUERY_FIELDS = new HashMap<>();
     private static final Map<String, List<String>> FORM_FIELDS = new HashMap<>();
@@ -168,7 +168,7 @@ public final class ModuleMeta {
     private static final Map<String, Map<String, Map<String, String>>> INITIAL_RELATION_FILTERS = new HashMap<>();
     private static final List<String> INLINE_READONLY_FIELDS = List.of(
             "id", "createTime", "updateTime", "statusDesc", "beforeQty", "afterQty",
-            "currentQty", "inboundDone", "outboundMaxQty"
+            "currentQty"
     );
     private static final ResourceBundle UI_BUNDLE = ResourceBundle.getBundle("i18n.ui", Locale.JAPAN);
 
@@ -376,9 +376,9 @@ public final class ModuleMeta {
                 "skuId", "goodsName", "name", "goodsId", "englishName", "customerCode", "brandName", "seriesName",
                 "categoryName", "makerName", "stockTypeName", "skuCode", "skuName", "specSummary", "barcode",
                 "weight", "volume", "price", "costPrice", "updatePrice", "oldPrice", "newPrice", "discount",
-                "currency", "currentQty", "lockQty", "beforeQty", "changeQty", "afterQty", "statusDesc", "status",
+                "currency", "lockQty", "beforeQty", "changeQty", "afterQty", "statusDesc", "status",
                 "mainImage", "imageUrl", "priceUpdateTime", "effectiveTime", "expireTime", "remark", "description",
-                "sort", "version", "createdBy", "updatedBy", "createTime", "updateTime"
+                "sort"
         ));
 
         ACTION_POLICIES.put(MODULE_STOCK_RECORD, new ModuleActionPolicy(false, false, false, true, true));

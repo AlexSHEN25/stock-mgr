@@ -13,6 +13,8 @@ import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.create.StockBatchOperateDTO;
+import co.handk.common.model.dto.create.StockBatchOperateItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
@@ -79,8 +81,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private static final DateTimeFormatter EXPORT_DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String[] SELF_STOCK_EXPORT_HEADERS = {
-            "ID", "商品ID", "商品名", "SKU ID", "SKUコード", "倉庫ID", "倉庫名",
-            "在庫区分ID", "在庫区分", "現在数量", "ロック数量", "価格", "通貨", "価格更新日時", "状態"
+            "ID", "商品名", "SKUコード", "SKU ID", "在庫区分", "現在数量",
+            "ロック数量", "価格", "通貨", "価格更新日時", "倉庫名", "状態"
     };
 
     @Autowired
@@ -236,6 +238,18 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public Long batchInbound(StockBatchOperateDTO dto) {
+        return submitBatchOrder(dto, StockBizConstant.ORDER_TYPE_INBOUND);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long batchOutbound(StockBatchOperateDTO dto) {
+        return submitBatchOrder(dto, StockBizConstant.ORDER_TYPE_OUTBOUND);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<Long> allocateToGroups(StockGroupAllocateDTO dto) {
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
@@ -339,19 +353,16 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 Row row = sheet.createRow(i + 1);
                 int column = 0;
                 writeExportCell(row, column++, item.getId());
-                writeExportCell(row, column++, item.getGoodsId());
                 writeExportCell(row, column++, item.getGoodsName());
-                writeExportCell(row, column++, item.getSkuId());
                 writeExportCell(row, column++, item.getSkuCode());
-                writeExportCell(row, column++, item.getWarehouseId());
-                writeExportCell(row, column++, item.getWarehouseName());
-                writeExportCell(row, column++, item.getStockTypeId());
+                writeExportCell(row, column++, item.getSkuId());
                 writeExportCell(row, column++, item.getStockTypeName());
                 writeExportCell(row, column++, item.getCurrentQty());
                 writeExportCell(row, column++, item.getLockQty());
                 writeExportCell(row, column++, item.getPrice());
                 writeExportCell(row, column++, item.getCurrency());
                 writeExportCell(row, column++, item.getPriceUpdateTime());
+                writeExportCell(row, column++, item.getWarehouseName());
                 writeExportCell(row, column, item.getStatusDesc());
             }
             writeWorkbookResponse(workbook, response, EXPORT_SELF_STOCK_FILE_NAME);
@@ -1013,6 +1024,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long submitOrder(StockOrderSubmitDTO dto) {
+        String idempotencyKey = requireSubmitOrderIdempotency(dto.getOrderType());
+        StockOrder existingOrder = findExistingSubmitOrder(dto.getOrderType(), idempotencyKey);
+        if (existingOrder != null) {
+            return existingOrder.getId();
+        }
         int orderType = dto.getOrderType() == null ? StockBizConstant.ORDER_TYPE_INBOUND : dto.getOrderType();
         if (orderType != StockBizConstant.ORDER_TYPE_INBOUND && orderType != StockBizConstant.ORDER_TYPE_OUTBOUND) {
             throw new co.handk.backend.exception.BusinessException(
@@ -1088,6 +1104,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setOrderType(orderType);
         order.setWarehouseId(warehouseId);
         order.setSourceType(sourceType);
+        order.setIdempotencyKey(idempotencyKey);
         order.setTotalQty(totalQty);
         order.setStockTypeId(stockTypeId);
         order.setState(needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
@@ -1185,6 +1202,41 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
         }
         return order.getId();
+    }
+
+    private Long submitBatchOrder(StockBatchOperateDTO dto, int orderType) {
+        StockOrderSubmitDTO submitDTO = new StockOrderSubmitDTO();
+        submitDTO.setOrderType(orderType);
+        submitDTO.setSourceType(dto.getSourceType());
+        submitDTO.setRemark(dto.getRemark());
+        List<StockOrderSubmitItemDTO> submitItems = new ArrayList<>();
+        for (StockBatchOperateItemDTO itemDTO : dto.getItems()) {
+            StockOrderSubmitItemDTO submitItem = new StockOrderSubmitItemDTO();
+            submitItem.setQuantity(itemDTO.getQuantity());
+            submitItem.setRemark(itemDTO.getRemark());
+            if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
+                if (itemDTO.getStockId() != null) {
+                    submitItem.setStockId(itemDTO.getStockId());
+                } else {
+                    StockOperateDTO inbound = new StockOperateDTO();
+                    inbound.setGoodsId(itemDTO.getGoodsId());
+                    inbound.setSkuId(itemDTO.getSkuId());
+                    inbound.setWarehouseId(itemDTO.getWarehouseId());
+                    inbound.setStockTypeId(itemDTO.getStockTypeId());
+                    inbound.setQuantity(itemDTO.getQuantity());
+                    submitItem.setStockId(resolveInboundStock(inbound).getId());
+                }
+            } else {
+                if (itemDTO.getStockId() == null) {
+                    throw new co.handk.backend.exception.BusinessException(
+                            co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "一括出庫では在庫IDが必須です");
+                }
+                submitItem.setStockId(itemDTO.getStockId());
+            }
+            submitItems.add(submitItem);
+        }
+        submitDTO.setItems(submitItems);
+        return submitOrder(submitDTO);
     }
 
     private Stock requireStock(Long stockId) {
@@ -1572,6 +1624,43 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .eq("requester_id", userId)
                 .eq("idempotency_key", "OUTBOUND:" + headerKey.trim())
                 .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                .orderByDesc("id")
+                .last("LIMIT 1"));
+    }
+
+    private String requireSubmitOrderIdempotency(Integer orderType) {
+        String headerKey = currentIdempotencyKey();
+        if (!hasText(headerKey)) {
+            return null;
+        }
+        String normalizedType = Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(orderType)
+                ? "OUTBOUND_BATCH"
+                : "INBOUND_BATCH";
+        String requestKey = normalizedType + ":" + headerKey.trim();
+        Long userId = UserContext.getUserIdOrDefault();
+        String redisKey = RedisKey.IDEMPOTENCY_REQUEST + "stock:submit:" + userId + ":" + requestKey;
+        Boolean accepted = stringRedisUtil.setIfAbsent(redisKey, "1", 300L, TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(accepted)) {
+            StockOrder existing = findExistingSubmitOrder(orderType, requestKey);
+            if (existing != null) {
+                return requestKey;
+            }
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "duplicate batch stock request detected, please retry later");
+        }
+        return requestKey;
+    }
+
+    private StockOrder findExistingSubmitOrder(Integer orderType, String idempotencyKey) {
+        if (!hasText(idempotencyKey) || orderType == null) {
+            return null;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        return stockOrderService.getOne(new QueryWrapper<StockOrder>()
+                .eq("requester_id", userId)
+                .eq("idempotency_key", idempotencyKey)
+                .eq("order_type", orderType)
                 .orderByDesc("id")
                 .last("LIMIT 1"));
     }

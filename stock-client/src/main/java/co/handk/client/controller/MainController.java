@@ -1249,7 +1249,7 @@ public class MainController {
     }
 
     private boolean isStockOperationModule() {
-        return Module.STOCK.equals(currentModule) || Module.GOODS.equals(currentModule);
+        return Module.STOCK.equals(currentModule);
     }
 
     private JSONObject sanitizeStockOperationPayload(JSONObject dto) {

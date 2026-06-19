@@ -5,6 +5,7 @@ import co.handk.backend.exception.BusinessException;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.StockOperateDTO;
+import co.handk.common.model.dto.create.StockBatchOperateDTO;
 import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
@@ -58,6 +59,11 @@ public class StockController {
         return stockService.inbound(dto);
     }
 
+    @PostMapping("/inbound/batch")
+    public Long batchInbound(@RequestBody @NotNull @Valid StockBatchOperateDTO dto) {
+        return stockService.batchInbound(dto);
+    }
+
     @PostMapping("/outbound")
     public Long outbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
         Long legacyAllocationOrderId = tryHandleLegacyGroupAllocation(dto);
@@ -65,6 +71,11 @@ public class StockController {
             return legacyAllocationOrderId;
         }
         return stockService.outbound(dto);
+    }
+
+    @PostMapping("/outbound/batch")
+    public Long batchOutbound(@RequestBody @NotNull @Valid StockBatchOperateDTO dto) {
+        return stockService.batchOutbound(dto);
     }
 
     /**

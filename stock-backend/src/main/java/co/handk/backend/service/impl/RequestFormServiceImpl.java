@@ -532,8 +532,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             }
         }
 
-        int totalQty = form.getTotalQty() == null ? 0 : form.getTotalQty();
-        BigDecimal totalAmt = form.getTotalAmt() == null ? BigDecimal.ZERO : form.getTotalAmt();
         for (StockOrderItem orderItem : selectedItems) {
             StockRecord stockRecord = stockRecordService.getOne(new QueryWrapper<StockRecord>()
                     .eq("order_id", outboundOrder.getId())
@@ -558,6 +556,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     throw fail("failed to save request item");
                 }
             } else {
+                int currentRequestQty = existing.getRequestQty() == null ? 0 : Math.abs(existing.getRequestQty());
+                applyOutboundRemainderByRequested(stockRecord, requestQty, currentRequestQty);
                 existing.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
                 existing.setRequestQty(requestQty);
                 existing.setOutQty(requestQty);
@@ -572,17 +572,12 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     throw fail("failed to update request item");
                 }
             }
-            totalQty += requestQty;
-            totalAmt = totalAmt.add(safeAmount(stockRecord.getPrice()).multiply(BigDecimal.valueOf(requestQty)));
         }
-
-        form.setTotalQty(totalQty);
-        form.setRequestQty(totalQty);
-        form.setTotalAmt(totalAmt);
         form.setApproveRemark(remark);
         if (!this.updateById(form)) {
             throw fail("failed to update request form");
         }
+        recalculateRequestFormSummary(form.getId());
         validateSourceBalance(form);
         return form.getId();
     }

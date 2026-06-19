@@ -106,9 +106,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final String EXPORT_GOODS_SHEET_NAME = "商品一覧";
     private static final String ERROR_EXPORT_FAILED = "Excel出力に失敗しました";
     private static final String[] GOODS_EXPORT_HEADERS = {
-            "ID", "商品名", "英語名", "SKU ID", "SKUコード", "SKU名",
-            "ブランド", "シリーズ", "カテゴリ", "メーカー", "価格", "通貨",
-            "現在数量", "入庫完了", "出庫可能数量", "人気商品", "表示順", "状態", "説明"
+            "ID", "商品名", "英語名", "ブランド", "シリーズ", "カテゴリ",
+            "メーカー", "SKUコード", "SKU名", "価格", "通貨", "状態", "説明", "表示順"
     };
     private static final String ROW_PREFIX = "行 ";
     private static final String ERROR_IMPORT_FILE_REQUIRED = "インポートファイルを選択してください";
@@ -1165,25 +1164,20 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 GoodsListVO item = records.get(i);
                 Row row = sheet.createRow(i + 1);
                 int column = 0;
-                writeExportCell(row, column++, item.getId());
+                writeExportCell(row, column++, item.getSkuId());
                 writeExportCell(row, column++, item.getName());
                 writeExportCell(row, column++, item.getEnglishName());
-                writeExportCell(row, column++, item.getSkuId());
-                writeExportCell(row, column++, item.getSkuCode());
-                writeExportCell(row, column++, item.getSkuName());
                 writeExportCell(row, column++, item.getBrandName());
                 writeExportCell(row, column++, item.getSeriesName());
                 writeExportCell(row, column++, item.getCategoryName());
                 writeExportCell(row, column++, item.getMakerName());
+                writeExportCell(row, column++, item.getSkuCode());
+                writeExportCell(row, column++, item.getSkuName());
                 writeExportCell(row, column++, item.getPrice());
                 writeExportCell(row, column++, item.getCurrency());
-                writeExportCell(row, column++, item.getCurrentQty());
-                writeExportCell(row, column++, Boolean.TRUE.equals(item.getInboundDone()) ? "完了" : "未完了");
-                writeExportCell(row, column++, item.getOutboundMaxQty());
-                writeExportCell(row, column++, Objects.equals(item.getIsHot(), NumberConstant.ONE) ? "はい" : "いいえ");
-                writeExportCell(row, column++, item.getSort());
                 writeExportCell(row, column++, item.getStatusDesc());
-                writeExportCell(row, column, item.getDescription());
+                writeExportCell(row, column++, item.getDescription());
+                writeExportCell(row, column, item.getSort());
             }
             writeWorkbookResponse(workbook, response, EXPORT_GOODS_FILE_NAME);
         } catch (IOException ex) {

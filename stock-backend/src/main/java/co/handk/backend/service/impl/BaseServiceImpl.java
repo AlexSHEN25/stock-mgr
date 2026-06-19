@@ -79,6 +79,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
             return joined;
         }
         QueryWrapper<T> wrapper = buildWrapper(dto);
+        applyDefaultEntityOrder(wrapper);
         List<V> voList = list(wrapper).stream()
                 .map(this::toVO)
                 .peek(this::fillStatusDesc)
@@ -94,12 +95,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         }
         Page<T> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         QueryWrapper<T> wrapper = buildWrapper(dto);
-        boolean asc = "asc".equalsIgnoreCase(dto.getSortOrder());
-        if (FieldNameConstant.SORT_BY_CREATE_TIME.equals(dto.getSortBy())) {
-            wrapper.orderBy(true, asc, FieldNameConstant.COLUMN_CREATE_TIME);
-        } else {
-            wrapper.orderBy(true, asc, FieldNameConstant.COLUMN_UPDATE_TIME);
-        }
+        applyDefaultEntityOrder(wrapper);
         Page<T> result = this.page(page, wrapper);
         List<V> voList = result.getRecords().stream()
                 .map(this::toVO)
@@ -556,8 +552,7 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
         String whereSql = buildJoinWhereSql(dto);
         String selectSql = buildJoinSelectSql();
         MapSqlParameterSource params = buildJoinParams(dto);
-        String sql = selectSql + " " + fromSql + " " + whereSql + " ORDER BY "
-                + this.getClass().getAnnotation(JoinQueryConfig.class).baseAlias() + ".update_time DESC";
+        String sql = selectSql + " " + fromSql + " " + whereSql + " " + buildJoinOrderSql(null);
         return jdbc.query(sql, params, BeanPropertyRowMapper.newInstance(getVoClass()));
     }
 
@@ -704,12 +699,32 @@ public abstract class BaseServiceImpl<M extends BaseMapper<T>, T extends BaseEnt
 
     private String buildJoinOrderSql(PageQuery dto) {
         JoinQueryConfig cfg = this.getClass().getAnnotation(JoinQueryConfig.class);
-        boolean asc = "asc".equalsIgnoreCase(dto.getSortOrder());
+        if (hasSortField(resolveEntityClass())) {
+            return "ORDER BY " + cfg.baseAlias() + "." + FieldNameConstant.COLUMN_SORT + " ASC, "
+                    + cfg.baseAlias() + "." + FieldNameConstant.COLUMN_UPDATE_TIME + " DESC, "
+                    + cfg.baseAlias() + "." + FieldNameConstant.COLUMN_ID + " ASC";
+        }
+        boolean asc = dto != null && "asc".equalsIgnoreCase(dto.getSortOrder());
         String column = FieldNameConstant.COLUMN_UPDATE_TIME;
-        if (FieldNameConstant.SORT_BY_CREATE_TIME.equals(dto.getSortBy())) {
+        if (dto != null && FieldNameConstant.SORT_BY_CREATE_TIME.equals(dto.getSortBy())) {
             column = FieldNameConstant.COLUMN_CREATE_TIME;
         }
         return "ORDER BY " + cfg.baseAlias() + "." + column + (asc ? " ASC" : " DESC");
+    }
+
+    private void applyDefaultEntityOrder(QueryWrapper<T> wrapper) {
+        if (hasSortField(resolveEntityClass())) {
+            wrapper.orderByAsc(FieldNameConstant.COLUMN_SORT)
+                    .orderByDesc(FieldNameConstant.COLUMN_UPDATE_TIME)
+                    .orderByAsc(FieldNameConstant.COLUMN_ID);
+            return;
+        }
+        wrapper.orderByDesc(FieldNameConstant.COLUMN_UPDATE_TIME)
+                .orderByAsc(FieldNameConstant.COLUMN_ID);
+    }
+
+    private boolean hasSortField(Class<?> clazz) {
+        return findField(clazz, FieldNameConstant.SORT) != null;
     }
 
     private List<Field> collectAllFields(Class<?> clazz) {
