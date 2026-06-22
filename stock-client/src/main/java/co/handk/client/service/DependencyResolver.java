@@ -7,6 +7,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -35,12 +36,44 @@ public class DependencyResolver {
 
             parentCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
                 String parentValue = newVal == null ? "" : newVal.value();
-                Map<String, String> filters = parentValue.isBlank() ? Map.of() : Map.of(rule.queryParam, parentValue);
+                Map<String, String> filters = buildFilters(rule, controls, parentValue);
                 childCombo.getItems().setAll(optionLoader.apply(rule.sourceModule, filters));
                 childCombo.setValue(null);
                 clearCascade(controls, rule.cascadeClearFields);
             });
         }
+    }
+
+    private Map<String, String> buildFilters(ModuleMeta.DependencyRule rule, Map<String, Control> controls, String parentValue) {
+        if (parentValue == null || parentValue.isBlank()) {
+            return Map.of();
+        }
+        Map<String, String> filters = new LinkedHashMap<>();
+        filters.put(rule.queryParam, parentValue);
+        for (Map.Entry<String, String> entry : rule.additionalQueryParams.entrySet()) {
+            String value = controlValue(controls.get(entry.getValue()));
+            if (value != null && !value.isBlank()) {
+                filters.put(entry.getKey(), value);
+            }
+        }
+        return filters;
+    }
+
+    private String controlValue(Control control) {
+        if (control instanceof TextField tf) {
+            return tf.getText();
+        }
+        if (control instanceof TextArea ta) {
+            return ta.getText();
+        }
+        if (control instanceof ComboBox<?> combo) {
+            Object value = combo.getValue();
+            if (value instanceof OptionValue optionValue) {
+                return optionValue.value();
+            }
+            return value == null ? "" : String.valueOf(value);
+        }
+        return "";
     }
 
     private void clearCascade(Map<String, Control> controls, List<String> fields) {
@@ -57,4 +90,3 @@ public class DependencyResolver {
         }
     }
 }
-

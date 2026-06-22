@@ -52,8 +52,14 @@ class WebPageAlignmentTest {
     @Test
     void seriesAndStockRecordMetadataMatchWebPagePresets() {
         assertEquals(
-                List.of("id", "name", "englishName", "brandId", "content", "status"),
+                List.of("id", "name", "englishName", "brandName", "content", "status"),
                 ModuleMeta.queryFields("series"));
+        assertEquals(
+                List.of("id", "name", "englishName", "seriesName", "brandName", "status"),
+                ModuleMeta.queryFields("maker"));
+        assertEquals(
+                List.of("name", "englishName", "seriesId", "status"),
+                ModuleMeta.formFields("maker"));
         assertTrue(ModuleMeta.formFields("stockRecord").containsAll(List.of(
                 "bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId",
                 "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price")));

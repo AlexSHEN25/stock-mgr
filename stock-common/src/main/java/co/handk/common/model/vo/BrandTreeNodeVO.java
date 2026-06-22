@@ -2,17 +2,19 @@ package co.handk.common.model.vo;
 
 import lombok.Data;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class BrandVO extends BaseVO {
+public class BrandTreeNodeVO {
+    private Long id;
     private String name;
     private String englishName;
     private String image;
     private String content;
+    private String nodeType;
     private Integer status;
-    private String statusDesc;
-    private List<Long> seriesIds;
-    private List<String> seriesNames;
-    private Long seriesCount;
+    private Long brandId;
+    private Long seriesId;
+    private List<BrandTreeNodeVO> children = new ArrayList<>();
 }

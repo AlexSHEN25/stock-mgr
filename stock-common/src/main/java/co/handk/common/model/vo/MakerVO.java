@@ -2,13 +2,14 @@ package co.handk.common.model.vo;
 
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 public class MakerVO extends BaseVO {
     private String name;
+    private String englishName;
+    private Long seriesId;
+    private String seriesName;
+    private Long brandId;
+    private String brandName;
     private Integer status;
     private String statusDesc;
-    private List<Long> brandIds;
-    private List<String> brandNames;
 }

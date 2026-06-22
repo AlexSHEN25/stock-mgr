@@ -13,5 +13,7 @@ public class GoodsBatchUpsertResultVO {
     private Integer createdCount;
     private Integer updatedCount;
     private Integer failureCount;
+    private String errorReportFileName;
+    private String errorReportBase64;
     private List<GoodsBatchUpsertRowResultVO> rows = new ArrayList<>();
 }

@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 public class UpdateMakerDTO {
     @NotNull(message = "id is required")
@@ -15,7 +13,10 @@ public class UpdateMakerDTO {
     @NotBlank(message = "name is required")
     private String name;
 
-    private StatusEnum status;
+    private String englishName;
 
-    private List<Long> brandIds;
+    @NotNull(message = "seriesId is required")
+    private Long seriesId;
+
+    private StatusEnum status;
 }

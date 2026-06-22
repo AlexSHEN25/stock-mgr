@@ -7,7 +7,9 @@ import lombok.Data;
 @Data
 public class MakerQueryDTO extends PageQuery {
 
-
     private String name;
+    private String englishName;
+    private Long brandId;
+    private Long seriesId;
     private StatusEnum status;
 }

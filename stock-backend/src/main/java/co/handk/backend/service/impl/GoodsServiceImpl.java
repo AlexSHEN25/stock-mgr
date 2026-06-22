@@ -4,27 +4,24 @@ import co.handk.backend.entity.Goods;
 import co.handk.backend.entity.GoodsImage;
 import co.handk.backend.entity.GoodsSku;
 import co.handk.backend.entity.Brand;
+import co.handk.backend.entity.BrandSeriesMakerRelation;
 import co.handk.backend.entity.Category;
 import co.handk.backend.entity.Maker;
-import co.handk.backend.entity.BrandMakerRelation;
 import co.handk.backend.entity.Series;
-import co.handk.backend.entity.SeriesBrandRelation;
 import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.exception.BusinessException;
+import co.handk.backend.mapper.BrandSeriesMakerRelationMapper;
 import co.handk.backend.mapper.GoodsMapper;
-import co.handk.backend.mapper.BrandMakerRelationMapper;
-import co.handk.backend.mapper.SeriesBrandRelationMapper;
 import co.handk.backend.constant.UploadBizType;
+import co.handk.backend.service.BrandSeriesMakerRelationService;
 import co.handk.backend.service.BrandService;
 import co.handk.backend.service.CategoryService;
 import co.handk.backend.service.FileStorageService;
-import co.handk.backend.service.BrandMakerRelationService;
 import co.handk.backend.service.GoodsImageService;
 import co.handk.backend.service.GoodsService;
 import co.handk.backend.service.GoodsSkuService;
 import co.handk.backend.service.MakerService;
 import co.handk.backend.service.SeriesService;
-import co.handk.backend.service.SeriesBrandRelationService;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.GoodsImportConstant;
 import co.handk.common.constant.NumberConstant;
@@ -46,15 +43,21 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.Name;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
@@ -67,6 +70,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -78,8 +83,10 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -101,8 +108,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final int INSTRUCTION_COLUMN_WIDTH = 90 * 256;
     private static final int DICTIONARY_ID_COLUMN_WIDTH = 20 * 256;
     private static final int DICTIONARY_NAME_COLUMN_WIDTH = 28 * 256;
+    private static final int TEMPLATE_VALIDATION_MAX_ROW = 5000;
     private static final long EXPORT_MAX_ROWS = 10_000L;
     private static final String EXPORT_GOODS_FILE_NAME = "goods_export.xlsx";
+    private static final String TEMPLATE_VALIDATION_SHEET_NAME = "_goods_validation";
+    private static final String IMPORT_RESULT_ACTION_HEADER = "Import Action";
+    private static final String IMPORT_RESULT_MESSAGE_HEADER = "Import Message";
     private static final String EXPORT_GOODS_SHEET_NAME = "商品一覧";
     private static final String ERROR_EXPORT_FAILED = "Excel出力に失敗しました";
     private static final String[] GOODS_EXPORT_HEADERS = {
@@ -151,37 +162,59 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final String HEADER_IMAGE_URL = "图片URL";
     private static final String HEADER_IMAGE_SORT = "图片排序";
     private static final String HEADER_GOODS_STATUS = "商品状态";
+    private static final String TEMPLATE_HEADER_GOODS_ID = "商品ID";
+    private static final String TEMPLATE_HEADER_SKU_ID = "SKU ID";
+    private static final String TEMPLATE_HEADER_GOODS_NAME = "商品名";
+    private static final String TEMPLATE_HEADER_ENGLISH_NAME = "英語名";
+    private static final String TEMPLATE_HEADER_BRAND_NAME = "ブランド名";
+    private static final String TEMPLATE_HEADER_SERIES_NAME = "シリーズ名";
+    private static final String TEMPLATE_HEADER_CATEGORY_NAME = "分類名";
+    private static final String TEMPLATE_HEADER_MAKER_NAME = "メーカー名";
+    private static final String TEMPLATE_HEADER_DESCRIPTION = "説明";
+    private static final String TEMPLATE_HEADER_IS_HOT = "人気商品";
+    private static final String TEMPLATE_HEADER_SORT = "並び順";
+    private static final String TEMPLATE_HEADER_SKU_CODE = "SKUコード";
+    private static final String TEMPLATE_HEADER_SKU_NAME = "SKU名";
+    private static final String TEMPLATE_HEADER_PRICE = "販売価格";
+    private static final String TEMPLATE_HEADER_CURRENCY = "通貨";
+    private static final String TEMPLATE_HEADER_COST_PRICE = "原価";
+    private static final String TEMPLATE_HEADER_UPDATE_PRICE = "更新価格";
+    private static final String TEMPLATE_HEADER_PRICE_UPDATE_TIME = "価格更新日時";
+    private static final String TEMPLATE_HEADER_BARCODE = "バーコード";
+    private static final String TEMPLATE_HEADER_WEIGHT = "重量";
+    private static final String TEMPLATE_HEADER_VOLUME = "体積";
+    private static final String TEMPLATE_HEADER_SKU_STATUS = "SKU状態";
+    private static final String TEMPLATE_HEADER_IMAGE_ID = "画像ID";
+    private static final String TEMPLATE_HEADER_IMAGE_URL = "画像URL";
+    private static final String TEMPLATE_HEADER_IMAGE_SORT = "画像順";
+    private static final String TEMPLATE_HEADER_GOODS_STATUS = "商品状態";
     private static final List<String> TEMPLATE_HEADERS = List.of(
-            HEADER_GOODS_ID,
-            HEADER_SKU_ID,
-            HEADER_GOODS_NAME,
-            HEADER_ENGLISH_NAME,
-            HEADER_BRAND_ID,
-            HEADER_BRAND_NAME,
-            HEADER_SERIES_ID,
-            HEADER_SERIES_NAME,
-            HEADER_CATEGORY_ID,
-            HEADER_CATEGORY_NAME,
-            HEADER_MAKER_ID,
-            HEADER_MAKER_NAME,
-            HEADER_DESCRIPTION,
-            HEADER_IS_HOT,
-            HEADER_SORT,
-            HEADER_SKU_CODE,
-            HEADER_SKU_NAME,
-            HEADER_PRICE,
-            HEADER_CURRENCY,
-            HEADER_COST_PRICE,
-            HEADER_UPDATE_PRICE,
-            HEADER_PRICE_UPDATE_TIME,
-            HEADER_BARCODE,
-            HEADER_WEIGHT,
-            HEADER_VOLUME,
-            HEADER_SKU_STATUS,
-            HEADER_IMAGE_ID,
-            HEADER_IMAGE_URL,
-            HEADER_IMAGE_SORT,
-            HEADER_GOODS_STATUS
+            TEMPLATE_HEADER_GOODS_ID,
+            TEMPLATE_HEADER_SKU_ID,
+            TEMPLATE_HEADER_GOODS_NAME,
+            TEMPLATE_HEADER_ENGLISH_NAME,
+            TEMPLATE_HEADER_BRAND_NAME,
+            TEMPLATE_HEADER_SERIES_NAME,
+            TEMPLATE_HEADER_CATEGORY_NAME,
+            TEMPLATE_HEADER_MAKER_NAME,
+            TEMPLATE_HEADER_DESCRIPTION,
+            TEMPLATE_HEADER_IS_HOT,
+            TEMPLATE_HEADER_SORT,
+            TEMPLATE_HEADER_SKU_CODE,
+            TEMPLATE_HEADER_SKU_NAME,
+            TEMPLATE_HEADER_PRICE,
+            TEMPLATE_HEADER_CURRENCY,
+            TEMPLATE_HEADER_COST_PRICE,
+            TEMPLATE_HEADER_UPDATE_PRICE,
+            TEMPLATE_HEADER_PRICE_UPDATE_TIME,
+            TEMPLATE_HEADER_BARCODE,
+            TEMPLATE_HEADER_WEIGHT,
+            TEMPLATE_HEADER_VOLUME,
+            TEMPLATE_HEADER_SKU_STATUS,
+            TEMPLATE_HEADER_IMAGE_ID,
+            TEMPLATE_HEADER_IMAGE_URL,
+            TEMPLATE_HEADER_IMAGE_SORT,
+            TEMPLATE_HEADER_GOODS_STATUS
     );
 
     private final GoodsSkuService goodsSkuService;
@@ -191,10 +224,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private final SeriesService seriesService;
     private final CategoryService categoryService;
     private final MakerService makerService;
-    private final BrandMakerRelationService brandMakerRelationService;
-    private final SeriesBrandRelationService seriesBrandRelationService;
-    private final BrandMakerRelationMapper brandMakerRelationMapper;
-    private final SeriesBrandRelationMapper seriesBrandRelationMapper;
+    private final BrandSeriesMakerRelationService brandSeriesMakerRelationService;
+    private final BrandSeriesMakerRelationMapper brandSeriesMakerRelationMapper;
     private final ApplicationContext applicationContext;
     private final PlatformTransactionManager transactionManager;
 
@@ -370,15 +401,34 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     @Override
     public GoodsBatchUpsertResultVO importGoods(MultipartFile file) {
+        return importGoods(file, null);
+    }
+
+    @Override
+    public GoodsBatchUpsertResultVO importGoods(MultipartFile file, GoodsQueryDTO query) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_IMPORT_FILE_REQUIRED);
         }
-        return batchUpsertItems(parseGoodsImportFile(file));
+        try {
+            byte[] fileBytes = file.getBytes();
+            GoodsBatchUpsertResultVO result = batchUpsertItems(parseGoodsImportFile(fileBytes), query);
+            if (result.getFailureCount() != null && result.getFailureCount() > 0) {
+                attachImportErrorReport(file.getOriginalFilename(), fileBytes, result);
+            }
+            return result;
+        } catch (IOException ex) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_IMPORT_FILE_READ_FAILED, ex);
+        }
     }
 
     @Override
     public void downloadBatchTemplate(HttpServletResponse response) {
-        try (XSSFWorkbook workbook = buildBatchTemplateWorkbook()) {
+        downloadBatchTemplate(null, response);
+    }
+
+    @Override
+    public void downloadBatchTemplate(GoodsQueryDTO query, HttpServletResponse response) {
+        try (XSSFWorkbook workbook = buildBatchTemplateWorkbook(query)) {
             String fileName = GoodsImportConstant.TEMPLATE_FILE_NAME;
             response.setContentType(GoodsImportConstant.EXCEL_CONTENT_TYPE);
             response.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -396,42 +446,25 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private void syncCascadingRelations(Long brandId, Long seriesId, Long makerId) {
-        if (brandId != null && seriesId != null) {
-            seriesBrandRelationMapper.upsertRelation(seriesId, brandId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
-        }
-        if (brandId != null && makerId != null) {
-            brandMakerRelationMapper.upsertRelation(brandId, makerId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
-        }
+        // The canonical hierarchy now lives on series.brand_id and maker.series_id.
     }
 
     private void cleanupCascadingRelations(Long brandId, Long seriesId, Long makerId) {
-        if (brandId != null && seriesId != null && !existsGoodsWithSeriesBrand(brandId, seriesId)) {
-            seriesBrandRelationMapper.update(null, new UpdateWrapper<SeriesBrandRelation>()
-                    .eq("brand_id", brandId)
-                    .eq("series_id", seriesId)
-                    .set("deleted", DeleteEnum.DELETED.getCode()));
-        }
-        if (brandId != null && makerId != null && !existsGoodsWithBrandMaker(brandId, makerId)) {
-            brandMakerRelationMapper.update(null, new UpdateWrapper<BrandMakerRelation>()
-                    .eq("brand_id", brandId)
-                    .eq("maker_id", makerId)
-                    .set("deleted", DeleteEnum.DELETED.getCode()));
-        }
+        // Legacy relation cleanup is intentionally disabled after the hierarchy switch.
     }
 
-    private boolean existsGoodsWithSeriesBrand(Long brandId, Long seriesId) {
+    private boolean existsGoodsWithRelation(Long brandId, Long seriesId, Long makerId) {
         return this.count(new QueryWrapper<Goods>()
                 .eq("brand_id", brandId)
-                .eq("series_id", seriesId)) > 0;
-    }
-
-    private boolean existsGoodsWithBrandMaker(Long brandId, Long makerId) {
-        return this.count(new QueryWrapper<Goods>()
-                .eq("brand_id", brandId)
+                .eq("series_id", seriesId)
                 .eq("maker_id", makerId)) > 0;
     }
 
     private GoodsBatchUpsertResultVO batchUpsertItems(List<GoodsBatchUpsertItemDTO> items) {
+        return batchUpsertItems(items, null);
+    }
+
+    private GoodsBatchUpsertResultVO batchUpsertItems(List<GoodsBatchUpsertItemDTO> items, GoodsQueryDTO scopeQuery) {
         List<GoodsBatchUpsertItemDTO> safeItems = items == null ? List.of() : items.stream()
                 .filter(Objects::nonNull)
                 .toList();
@@ -445,33 +478,39 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             return result;
         }
 
+        List<PreparedBatchItem> preparedItems = new ArrayList<>();
+        Map<String, Integer> skuCodeRows = new HashMap<>();
+        Map<Long, Integer> goodsIdRows = new HashMap<>();
+        Map<Long, Integer> skuIdRows = new HashMap<>();
         for (int index = 0; index < safeItems.size(); index++) {
             GoodsBatchUpsertItemDTO item = safeItems.get(index);
             int rowNo = item.getRowNo() == null ? index + 1 : item.getRowNo();
             item.setRowNo(rowNo);
-            GoodsBatchUpsertRowResultVO rowResult = new GoodsBatchUpsertRowResultVO();
-            rowResult.setRowNo(rowNo);
-            rowResult.setSkuCode(trimToNull(item.getSkuCode()));
             try {
-                GoodsBatchUpsertRowResultVO committed = executeBatchRowInNewTransaction(item);
-                rowResult.setSuccess(true);
-                rowResult.setAction(committed.getAction());
-                rowResult.setGoodsId(committed.getGoodsId());
-                rowResult.setSkuId(committed.getSkuId());
-                rowResult.setMessage(committed.getMessage());
-                result.setSuccessCount(result.getSuccessCount() + 1);
-                if (GoodsBatchActionEnum.CREATED.getCode().equals(committed.getAction())) {
-                    result.setCreatedCount(result.getCreatedCount() + 1);
-                } else {
-                    result.setUpdatedCount(result.getUpdatedCount() + 1);
-                }
+                validateBatchIdentityUniqueness(item, skuCodeRows, goodsIdRows, skuIdRows);
+                validateItemWithinScope(item, scopeQuery);
+                preparedItems.add(prepareBatchItem(item));
             } catch (Exception ex) {
-                rowResult.setSuccess(false);
-                rowResult.setAction(GoodsBatchActionEnum.FAILED.getCode());
-                rowResult.setMessage(resolveExceptionMessage(ex));
+                result.getRows().add(buildFailedRowResult(item, resolveExceptionMessage(ex)));
                 result.setFailureCount(result.getFailureCount() + 1);
             }
-            result.getRows().add(rowResult);
+        }
+        if (result.getFailureCount() > 0) {
+            return result;
+        }
+
+        try {
+            executeBatchItemsInSingleTransaction(preparedItems, result);
+        } catch (Exception ex) {
+            String message = "batch rolled back: " + resolveExceptionMessage(ex);
+            result.setRows(new ArrayList<>());
+            result.setSuccessCount(0);
+            result.setCreatedCount(0);
+            result.setUpdatedCount(0);
+            result.setFailureCount(preparedItems.size());
+            for (PreparedBatchItem preparedItem : preparedItems) {
+                result.getRows().add(buildFailedRowResult(preparedItem.item(), message));
+            }
         }
         return result;
     }
@@ -480,23 +519,52 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return applicationContext.getBean(GoodsService.class);
     }
 
-    private GoodsBatchUpsertRowResultVO executeBatchRowInNewTransaction(GoodsBatchUpsertItemDTO item) {
+    private void executeBatchItemsInSingleTransaction(List<PreparedBatchItem> preparedItems, GoodsBatchUpsertResultVO result) {
         TransactionTemplate template = new TransactionTemplate(transactionManager);
-        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        return template.execute(status -> upsertSingleItem(item));
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
+        template.executeWithoutResult(status -> {
+            for (PreparedBatchItem preparedItem : preparedItems) {
+                GoodsBatchUpsertRowResultVO committed = persistPreparedBatchItem(preparedItem);
+                result.getRows().add(committed);
+                result.setSuccessCount(result.getSuccessCount() + 1);
+                if (GoodsBatchActionEnum.CREATED.getCode().equals(committed.getAction())) {
+                    result.setCreatedCount(result.getCreatedCount() + 1);
+                } else {
+                    result.setUpdatedCount(result.getUpdatedCount() + 1);
+                }
+            }
+        });
     }
 
-    private GoodsBatchUpsertRowResultVO upsertSingleItem(GoodsBatchUpsertItemDTO item) {
+    private PreparedBatchItem prepareBatchItem(GoodsBatchUpsertItemDTO item) {
+        ExistingGoodsTarget target = resolveExistingTarget(item);
+        if (target == null) {
+            return new PreparedBatchItem(
+                    item,
+                    GoodsBatchActionEnum.CREATED.getCode(),
+                    buildCreateGoodsDto(item),
+                    null
+            );
+        }
+        return new PreparedBatchItem(
+                item,
+                GoodsBatchActionEnum.UPDATED.getCode(),
+                null,
+                buildUpdateGoodsDto(item, target)
+        );
+    }
+
+    private GoodsBatchUpsertRowResultVO persistPreparedBatchItem(PreparedBatchItem preparedItem) {
+        GoodsBatchUpsertItemDTO item = preparedItem.item();
         GoodsBatchUpsertRowResultVO rowResult = new GoodsBatchUpsertRowResultVO();
         rowResult.setRowNo(item.getRowNo());
         rowResult.setSkuCode(trimToNull(item.getSkuCode()));
-        ExistingGoodsTarget target = resolveExistingTarget(item);
-        if (target == null) {
-            CreateGoodsDTO createDto = buildCreateGoodsDto(item);
-            if (!goodsServiceProxy().saveGoods(createDto)) {
+        if (GoodsBatchActionEnum.CREATED.getCode().equals(preparedItem.action())) {
+            if (!goodsServiceProxy().saveGoods(preparedItem.createDto())) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_CREATE_GOODS_FAILED);
             }
             ExistingGoodsTarget saved = resolveExistingTarget(item);
+            rowResult.setSuccess(true);
             rowResult.setAction(GoodsBatchActionEnum.CREATED.getCode());
             rowResult.setGoodsId(saved == null || saved.goods() == null ? null : saved.goods().getId());
             rowResult.setSkuId(saved == null || saved.sku() == null ? null : saved.sku().getId());
@@ -504,11 +572,11 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             return rowResult;
         }
 
-        UpdateGoodsDTO updateDto = buildUpdateGoodsDto(item, target);
-        if (!goodsServiceProxy().updateGoods(updateDto)) {
+        if (!goodsServiceProxy().updateGoods(preparedItem.updateDto())) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_UPDATE_GOODS_FAILED);
         }
         ExistingGoodsTarget updated = resolveExistingTarget(item);
+        rowResult.setSuccess(true);
         rowResult.setAction(GoodsBatchActionEnum.UPDATED.getCode());
         rowResult.setGoodsId(updated == null || updated.goods() == null ? null : updated.goods().getId());
         rowResult.setSkuId(updated == null || updated.sku() == null ? null : updated.sku().getId());
@@ -516,12 +584,50 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return rowResult;
     }
 
+    private GoodsBatchUpsertRowResultVO buildFailedRowResult(GoodsBatchUpsertItemDTO item, String message) {
+        GoodsBatchUpsertRowResultVO rowResult = new GoodsBatchUpsertRowResultVO();
+        rowResult.setRowNo(item.getRowNo());
+        rowResult.setSkuCode(trimToNull(item.getSkuCode()));
+        rowResult.setSuccess(false);
+        rowResult.setAction(GoodsBatchActionEnum.FAILED.getCode());
+        rowResult.setMessage(message);
+        return rowResult;
+    }
+
+    private void validateBatchIdentityUniqueness(GoodsBatchUpsertItemDTO item,
+                                                 Map<String, Integer> skuCodeRows,
+                                                 Map<Long, Integer> goodsIdRows,
+                                                 Map<Long, Integer> skuIdRows) {
+        String skuCode = trimToNull(item.getSkuCode());
+        if (skuCode != null) {
+            Integer existingRow = skuCodeRows.putIfAbsent(skuCode, item.getRowNo());
+            if (existingRow != null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "duplicate skuCode in batch, first row: " + existingRow));
+            }
+        }
+        if (item.getGoodsId() != null) {
+            Integer existingRow = goodsIdRows.putIfAbsent(item.getGoodsId(), item.getRowNo());
+            if (existingRow != null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "duplicate goodsId in batch, first row: " + existingRow));
+            }
+        }
+        if (item.getSkuId() != null) {
+            Integer existingRow = skuIdRows.putIfAbsent(item.getSkuId(), item.getRowNo());
+            if (existingRow != null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                        rowMessage(item, "duplicate skuId in batch, first row: " + existingRow));
+            }
+        }
+    }
+
     private CreateGoodsDTO buildCreateGoodsDto(GoodsBatchUpsertItemDTO item) {
         CreateGoodsDTO dto = new CreateGoodsDTO();
-        Long brandId = resolveBrandId(item);
-        Long categoryId = resolveCategoryId(item);
-        Long seriesId = resolveSeriesId(item, brandId);
-        Long makerId = resolveMakerId(item);
+        Long brandId = resolveOrCreateBrandId(item);
+        Long categoryId = resolveOrCreateCategoryId(item);
+        Long seriesId = resolveOrCreateSeriesId(item, brandId);
+        Long makerId = resolveOrCreateMakerId(item, seriesId);
         String skuCode = trimToNull(item.getSkuCode());
         String name = firstNonBlank(item.getName(), item.getSkuName(), skuCode);
         if (!StringUtils.hasText(name)) {
@@ -575,12 +681,13 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         dto.setName(firstNonBlank(item.getName(), goods.getName(), sku == null ? null : sku.getSkuName(),
                 item.getSkuCode(), sku == null ? null : sku.getSkuCode()));
         dto.setEnglishName(firstNonBlank(item.getEnglishName(), goods.getEnglishName(), dto.getName()));
-        Long brandId = firstNonNull(resolveBrandId(item), goods.getBrandId());
-        Long categoryId = firstNonNull(resolveCategoryId(item), goods.getCategoryId());
+        Long brandId = firstNonNull(resolveOrCreateBrandId(item), goods.getBrandId());
+        Long categoryId = firstNonNull(resolveOrCreateCategoryId(item), goods.getCategoryId());
+        Long seriesId = firstNonNull(resolveOrCreateSeriesId(item, brandId), goods.getSeriesId());
         dto.setBrandId(brandId);
-        dto.setSeriesId(firstNonNull(resolveSeriesId(item, brandId), goods.getSeriesId()));
+        dto.setSeriesId(seriesId);
         dto.setCategoryId(categoryId);
-        dto.setMakerId(firstNonNull(resolveMakerId(item), goods.getMakerId()));
+        dto.setMakerId(firstNonNull(resolveOrCreateMakerId(item, seriesId), goods.getMakerId()));
         dto.setDescription(firstNonNull(trimToNull(item.getDescription()), goods.getDescription()));
         dto.setIsHot(firstNonNull(parseFlag(item.getIsHot(), false), goods.getIsHot()));
         dto.setSort(firstNonNull(item.getSort(), goods.getSort()));
@@ -658,70 +765,85 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private List<GoodsBatchUpsertItemDTO> parseGoodsImportFile(MultipartFile file) {
         try (InputStream inputStream = file.getInputStream();
              Workbook workbook = WorkbookFactory.create(inputStream)) {
-            Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
-            if (sheet == null) {
-                sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
-            }
-            if (sheet == null) {
-                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_TEMPLATE_SHEET_NOT_FOUND);
-            }
-            DataFormatter formatter = new DataFormatter();
-            Row headerRow = sheet.getRow(TEMPLATE_HEADER_ROW_INDEX);
-            if (headerRow == null) {
-                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_HEADER_ROW_MISSING);
-            }
-            Map<String, Integer> headerIndexes = resolveHeaderIndexes(headerRow, formatter);
-            List<GoodsBatchUpsertItemDTO> items = new ArrayList<>();
-            for (int rowIndex = TEMPLATE_DATA_START_ROW_INDEX; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
-                if (row == null || isTemplateDataRowEmpty(row, formatter, headerIndexes)) {
-                    continue;
-                }
-                GoodsBatchUpsertItemDTO item = new GoodsBatchUpsertItemDTO();
-                item.setRowNo(rowIndex + 1);
-                item.setGoodsId(readLong(row, headerIndexes.get(HEADER_GOODS_ID), formatter));
-                item.setSkuId(readLong(row, headerIndexes.get(HEADER_SKU_ID), formatter));
-                item.setName(readString(row, headerIndexes.get(HEADER_GOODS_NAME), formatter));
-                item.setEnglishName(readString(row, headerIndexes.get(HEADER_ENGLISH_NAME), formatter));
-                item.setBrandId(readLong(row, headerIndexes.get(HEADER_BRAND_ID), formatter));
-                item.setBrandName(readString(row, headerIndexes.get(HEADER_BRAND_NAME), formatter));
-                item.setSeriesId(readLong(row, headerIndexes.get(HEADER_SERIES_ID), formatter));
-                item.setSeriesName(readString(row, headerIndexes.get(HEADER_SERIES_NAME), formatter));
-                item.setCategoryId(readLong(row, headerIndexes.get(HEADER_CATEGORY_ID), formatter));
-                item.setCategoryName(readString(row, headerIndexes.get(HEADER_CATEGORY_NAME), formatter));
-                item.setMakerId(readLong(row, headerIndexes.get(HEADER_MAKER_ID), formatter));
-                item.setMakerName(readString(row, headerIndexes.get(HEADER_MAKER_NAME), formatter));
-                item.setDescription(readString(row, headerIndexes.get(HEADER_DESCRIPTION), formatter));
-                item.setIsHot(readString(row, headerIndexes.get(HEADER_IS_HOT), formatter));
-                item.setSort(readInteger(row, headerIndexes.get(HEADER_SORT), formatter));
-                item.setSkuCode(readString(row, headerIndexes.get(HEADER_SKU_CODE), formatter));
-                item.setSkuName(readString(row, headerIndexes.get(HEADER_SKU_NAME), formatter));
-                item.setPrice(readDecimal(row, headerIndexes.get(HEADER_PRICE), formatter));
-                item.setCurrency(readString(row, headerIndexes.get(HEADER_CURRENCY), formatter));
-                item.setCostPrice(readDecimal(row, headerIndexes.get(HEADER_COST_PRICE), formatter));
-                item.setUpdatePrice(readDecimal(row, headerIndexes.get(HEADER_UPDATE_PRICE), formatter));
-                item.setPriceUpdateTime(readDateTime(row, headerIndexes.get(HEADER_PRICE_UPDATE_TIME), formatter));
-                item.setBarcode(readString(row, headerIndexes.get(HEADER_BARCODE), formatter));
-                item.setWeight(readDecimal(row, headerIndexes.get(HEADER_WEIGHT), formatter));
-                item.setVolume(readDecimal(row, headerIndexes.get(HEADER_VOLUME), formatter));
-                item.setSkuStatus(readString(row, headerIndexes.get(HEADER_SKU_STATUS), formatter));
-                item.setImageId(readLong(row, headerIndexes.get(HEADER_IMAGE_ID), formatter));
-                item.setImageUrl(readString(row, headerIndexes.get(HEADER_IMAGE_URL), formatter));
-                item.setImageSort(readInteger(row, headerIndexes.get(HEADER_IMAGE_SORT), formatter));
-                item.setStatus(readString(row, headerIndexes.get(HEADER_GOODS_STATUS), formatter));
-                items.add(item);
-            }
-            return items;
+            return parseGoodsImportWorkbook(workbook);
         } catch (IOException ex) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_IMPORT_FILE_READ_FAILED, ex);
         }
     }
 
+    private List<GoodsBatchUpsertItemDTO> parseGoodsImportFile(byte[] fileBytes) {
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(fileBytes))) {
+            return parseGoodsImportWorkbook(workbook);
+        } catch (IOException ex) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_IMPORT_FILE_READ_FAILED, ex);
+        }
+    }
+
+    private List<GoodsBatchUpsertItemDTO> parseGoodsImportWorkbook(Workbook workbook) {
+        Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
+        if (sheet == null) {
+            sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
+        }
+        if (sheet == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_TEMPLATE_SHEET_NOT_FOUND);
+        }
+        DataFormatter formatter = new DataFormatter();
+        Row headerRow = sheet.getRow(TEMPLATE_HEADER_ROW_INDEX);
+        if (headerRow == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_HEADER_ROW_MISSING);
+        }
+        Map<String, Integer> headerIndexes = resolveHeaderIndexes(headerRow, formatter);
+        List<GoodsBatchUpsertItemDTO> items = new ArrayList<>();
+        for (int rowIndex = TEMPLATE_DATA_START_ROW_INDEX; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null || isTemplateDataRowEmpty(row, formatter, headerIndexes)) {
+                continue;
+            }
+            GoodsBatchUpsertItemDTO item = new GoodsBatchUpsertItemDTO();
+            item.setRowNo(rowIndex + 1);
+            item.setGoodsId(readLong(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_ID), formatter));
+            item.setSkuId(readLong(row, headerIndexes.get(TEMPLATE_HEADER_SKU_ID), formatter));
+            item.setName(readString(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_NAME), formatter));
+            item.setEnglishName(readString(row, headerIndexes.get(TEMPLATE_HEADER_ENGLISH_NAME), formatter));
+            item.setBrandName(readString(row, headerIndexes.get(TEMPLATE_HEADER_BRAND_NAME), formatter));
+            item.setSeriesName(readString(row, headerIndexes.get(TEMPLATE_HEADER_SERIES_NAME), formatter));
+            item.setCategoryName(readString(row, headerIndexes.get(TEMPLATE_HEADER_CATEGORY_NAME), formatter));
+            item.setMakerName(readString(row, headerIndexes.get(TEMPLATE_HEADER_MAKER_NAME), formatter));
+            item.setDescription(readString(row, headerIndexes.get(TEMPLATE_HEADER_DESCRIPTION), formatter));
+            item.setIsHot(readString(row, headerIndexes.get(TEMPLATE_HEADER_IS_HOT), formatter));
+            item.setSort(readInteger(row, headerIndexes.get(TEMPLATE_HEADER_SORT), formatter));
+            item.setSkuCode(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_CODE), formatter));
+            item.setSkuName(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_NAME), formatter));
+            item.setPrice(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_PRICE), formatter));
+            item.setCurrency(readString(row, headerIndexes.get(TEMPLATE_HEADER_CURRENCY), formatter));
+            item.setCostPrice(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_COST_PRICE), formatter));
+            item.setUpdatePrice(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_UPDATE_PRICE), formatter));
+            item.setPriceUpdateTime(readDateTime(row, headerIndexes.get(TEMPLATE_HEADER_PRICE_UPDATE_TIME), formatter));
+            item.setBarcode(readString(row, headerIndexes.get(TEMPLATE_HEADER_BARCODE), formatter));
+            item.setWeight(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_WEIGHT), formatter));
+            item.setVolume(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_VOLUME), formatter));
+            item.setSkuStatus(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_STATUS), formatter));
+            item.setImageId(readLong(row, headerIndexes.get(TEMPLATE_HEADER_IMAGE_ID), formatter));
+            item.setImageUrl(readString(row, headerIndexes.get(TEMPLATE_HEADER_IMAGE_URL), formatter));
+            item.setImageSort(readInteger(row, headerIndexes.get(TEMPLATE_HEADER_IMAGE_SORT), formatter));
+            item.setStatus(readString(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_STATUS), formatter));
+            items.add(item);
+        }
+        return items;
+    }
+
     private XSSFWorkbook buildBatchTemplateWorkbook() {
+        return buildBatchTemplateWorkbook(null);
+    }
+
+    private XSSFWorkbook buildBatchTemplateWorkbook(GoodsQueryDTO scopeQuery) {
         XSSFWorkbook workbook = new XSSFWorkbook();
+        TemplateScope scope = loadTemplateScope(scopeQuery);
         buildTemplateSheet(workbook);
         buildInstructionSheet(workbook);
-        buildDictionarySheet(workbook);
+        buildDictionarySheet(workbook, scope);
+        buildValidationSheet(workbook, scope);
+        applyTemplateValidations(workbook);
         return workbook;
     }
 
@@ -780,6 +902,22 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         for (int i = 0; i < notes.length; i++) {
             noteRow.createCell(i).setCellValue(notes[i]);
         }
+        String[] japaneseNotes = new String[TEMPLATE_HEADERS.size()];
+        java.util.Arrays.fill(japaneseNotes, "任意");
+        if (japaneseNotes.length > 0) japaneseNotes[0] = "更新時のみ";
+        if (japaneseNotes.length > 1) japaneseNotes[1] = "更新時のみ";
+        if (japaneseNotes.length > 4) japaneseNotes[4] = "候補から選択 / 未登録なら導入時に作成";
+        if (japaneseNotes.length > 5) japaneseNotes[5] = "ブランドに応じて候補表示";
+        if (japaneseNotes.length > 6) japaneseNotes[6] = "候補から選択 / 未登録なら導入時に作成";
+        if (japaneseNotes.length > 7) japaneseNotes[7] = "シリーズに応じて候補表示";
+        if (japaneseNotes.length > 11) japaneseNotes[11] = "必須";
+        if (japaneseNotes.length > 14) japaneseNotes[14] = "既定値 JPY";
+        if (japaneseNotes.length > 21) japaneseNotes[21] = "1/0 または normal/disabled";
+        if (japaneseNotes.length > 22) japaneseNotes[22] = "更新時のみ";
+        if (japaneseNotes.length > 25) japaneseNotes[25] = "1/0 または normal/disabled";
+        for (int i = 0; i < japaneseNotes.length; i++) {
+            noteRow.getCell(i).setCellValue(japaneseNotes[i]);
+        }
         sheet.createFreezePane(0, TEMPLATE_DATA_START_ROW_INDEX);
     }
 
@@ -798,12 +936,50 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         for (int i = 0; i < instructions.size(); i++) {
             sheet.createRow(i).createCell(0).setCellValue(instructions.get(i));
         }
+        List<String> japaneseInstructions = List.of(
+                "1. 商品ID と SKU ID を入力すると既存データ更新、未入力なら新規作成です。",
+                "2. ブランド名 / シリーズ名 / 分類名 / メーカー名 は名称で判定します。",
+                "3. 主データが未登録の場合は、導入トランザクション内で自動作成します。",
+                "4. シリーズはブランド配下、メーカーはシリーズ配下として自動的に関連付けます。",
+                "5. SKUコードは新規作成時に必須です。",
+                "6. 人気商品は 1/0 または true/false を入力できます。",
+                "7. 商品状態・SKU状態は 1/0 または normal/disabled を入力できます。",
+                "8. 価格更新日時は yyyy-MM-dd HH:mm:ss 形式です。"
+        );
+        for (int i = 0; i < japaneseInstructions.size(); i++) {
+            sheet.getRow(i).getCell(0).setCellValue(japaneseInstructions.get(i));
+        }
         sheet.setColumnWidth(0, INSTRUCTION_COLUMN_WIDTH);
     }
 
-    private void buildDictionarySheet(XSSFWorkbook workbook) {
+    private void buildDictionarySheet(XSSFWorkbook workbook, TemplateScope scope) {
         Sheet sheet = workbook.createSheet(DICTIONARY_SHEET_NAME);
         int rowIndex = 0;
+        if (scope != null) {
+            rowIndex = writeDictionarySection(sheet, rowIndex, "brand", scope.brands().stream()
+                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus())))
+                    .toList());
+            rowIndex = writeDictionarySection(sheet, rowIndex + 1, "series", scope.series().stream()
+                    .map(item -> List.of(
+                            String.valueOf(item.getId()),
+                            item.getName(),
+                            item.getBrandId() == null ? "" : String.valueOf(item.getBrandId())))
+                    .toList());
+            rowIndex = writeDictionarySection(sheet, rowIndex + 1, "category", scope.categories().stream()
+                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus())))
+                    .toList());
+            rowIndex = writeDictionarySection(sheet, rowIndex + 1, "maker", scope.makers().stream()
+                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus())))
+                    .toList());
+            writeDictionarySection(sheet, rowIndex + 1, "status", List.of(
+                    List.of("1", "normal", "normal"),
+                    List.of("0", "disabled", "disabled")
+            ));
+            sheet.setColumnWidth(0, DICTIONARY_ID_COLUMN_WIDTH);
+            sheet.setColumnWidth(1, DICTIONARY_NAME_COLUMN_WIDTH);
+            sheet.setColumnWidth(2, DICTIONARY_ID_COLUMN_WIDTH);
+            return;
+        }
         rowIndex = writeDictionarySection(sheet, rowIndex, "品牌", brandService.list(new QueryWrapper<Brand>()
                 .orderByAsc("id")).stream().map(item -> List.of(
                 String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus()))).toList());
@@ -823,6 +999,218 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         sheet.setColumnWidth(0, DICTIONARY_ID_COLUMN_WIDTH);
         sheet.setColumnWidth(1, DICTIONARY_NAME_COLUMN_WIDTH);
         sheet.setColumnWidth(2, DICTIONARY_ID_COLUMN_WIDTH);
+    }
+
+    private void buildValidationSheet(XSSFWorkbook workbook, TemplateScope scope) {
+        Sheet sheet = workbook.createSheet(TEMPLATE_VALIDATION_SHEET_NAME);
+        int rowIndex = 0;
+
+        List<Brand> brands = brandService.list(new QueryWrapper<Brand>().orderByAsc("id"));
+        List<Category> categories = categoryService.list(new QueryWrapper<Category>().orderByAsc("id"));
+        List<Series> allSeries = seriesService.list(new QueryWrapper<Series>().orderByAsc("id"));
+        List<Maker> allMakers = makerService.list(new QueryWrapper<Maker>().orderByAsc("id"));
+        if (scope != null) {
+            brands = scope.brands();
+            categories = scope.categories();
+            allSeries = scope.series();
+            allMakers = scope.makers();
+        }
+        rowIndex = writeValidationBlock(sheet, rowIndex, "BRAND_ID", brands.stream()
+                .map(item -> String.valueOf(item.getId()))
+                .toList());
+        rowIndex = writeValidationBlock(sheet, rowIndex, "BRAND_NAME", brands.stream()
+                .map(Brand::getName)
+                .toList());
+        rowIndex = writeValidationBlock(sheet, rowIndex, "CATEGORY_ID", categories.stream()
+                .map(item -> String.valueOf(item.getId()))
+                .toList());
+        rowIndex = writeValidationBlock(sheet, rowIndex, "CATEGORY_NAME", categories.stream()
+                .map(Category::getName)
+                .toList());
+        rowIndex = writeValidationBlock(sheet, rowIndex, "HOT_FLAG", List.of("1", "0"));
+        rowIndex = writeValidationBlock(sheet, rowIndex, "CURRENCY", List.of(CommonConstant.DEFAULT_CURRENCY_JPY));
+        rowIndex = writeValidationBlock(sheet, rowIndex, "STATUS_FLAG", List.of("1", "0"));
+
+        Map<Long, List<Series>> seriesByBrand = new LinkedHashMap<>();
+        for (Series series : allSeries) {
+            if (series.getBrandId() == null) {
+                continue;
+            }
+            seriesByBrand.computeIfAbsent(series.getBrandId(), key -> new ArrayList<>()).add(series);
+        }
+
+        for (Brand brand : brands) {
+            Long brandId = brand.getId();
+            List<Series> brandSeries = deduplicateSeries(seriesByBrand.getOrDefault(brandId, List.of()));
+            List<Long> brandSeriesIds = brandSeries.stream().map(Series::getId).toList();
+            List<Maker> brandMakers = deduplicateMakers((allMakers == null ? List.<Maker>of() : allMakers).stream()
+                    .filter(item -> item.getSeriesId() != null && brandSeriesIds.contains(item.getSeriesId()))
+                    .toList());
+            rowIndex = writeValidationBlock(sheet, rowIndex, "SERIES_ID_" + brandId, brandSeries.stream()
+                    .map(item -> String.valueOf(item.getId()))
+                    .toList());
+            rowIndex = writeValidationBlock(sheet, rowIndex, "SERIES_NAME_" + brandId, brandSeries.stream()
+                    .map(Series::getName)
+                    .toList());
+            rowIndex = writeValidationBlock(sheet, rowIndex, "MAKER_ID_" + brandId, brandMakers.stream()
+                    .map(item -> String.valueOf(item.getId()))
+                    .toList());
+            rowIndex = writeValidationBlock(sheet, rowIndex, "MAKER_NAME_" + brandId, brandMakers.stream()
+                    .map(Maker::getName)
+                    .toList());
+        }
+
+        workbook.setSheetHidden(workbook.getSheetIndex(sheet), true);
+    }
+
+    private void applyTemplateValidations(XSSFWorkbook workbook) {
+        Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
+        if (sheet == null) {
+            return;
+        }
+        int firstRow = TEMPLATE_DATA_START_ROW_INDEX;
+        int lastRow = TEMPLATE_VALIDATION_MAX_ROW;
+        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_BRAND_NAME), "BRAND_NAME");
+        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_CATEGORY_NAME), "CATEGORY_NAME");
+        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_IS_HOT), "HOT_FLAG");
+        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_CURRENCY), "CURRENCY");
+        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_SKU_STATUS), "STATUS_FLAG");
+        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_GOODS_STATUS), "STATUS_FLAG");
+        addFormulaListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_SERIES_NAME),
+                "IF($E%d=\"\",\"\",INDIRECT(\"SERIES_NAME_\"&$E%d))");
+        addFormulaListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_MAKER_NAME),
+                "IF($E%d=\"\",\"\",INDIRECT(\"MAKER_NAME_\"&$E%d))");
+    }
+
+    private int writeValidationBlock(Sheet sheet, int rowIndex, String rangeName, List<String> values) {
+        Row headerRow = sheet.createRow(rowIndex);
+        headerRow.createCell(0).setCellValue(rangeName);
+        int startRow = rowIndex + 1;
+        int currentRow = startRow;
+        for (String value : values) {
+            if (!StringUtils.hasText(value)) {
+                continue;
+            }
+            Row row = sheet.createRow(currentRow++);
+            row.createCell(0).setCellValue(value);
+        }
+        if (currentRow == startRow) {
+            Row row = sheet.createRow(currentRow++);
+            row.createCell(0).setCellValue("__EMPTY__");
+        }
+        Name name = sheet.getWorkbook().createName();
+        name.setNameName(rangeName);
+        name.setRefersToFormula("'" + TEMPLATE_VALIDATION_SHEET_NAME + "'!$A$" + startRow + ":$A$" + (currentRow - 1));
+        return currentRow + 1;
+    }
+
+    private void addExplicitListValidation(Sheet sheet, int firstRow, int lastRow, int columnIndex, String namedRange) {
+        DataValidationHelper helper = sheet.getDataValidationHelper();
+        DataValidationConstraint constraint = helper.createFormulaListConstraint(namedRange);
+        CellRangeAddressList addressList = new CellRangeAddressList(firstRow, lastRow, columnIndex, columnIndex);
+        DataValidation validation = helper.createValidation(constraint, addressList);
+        validation.setSuppressDropDownArrow(false);
+        validation.setShowErrorBox(true);
+        sheet.addValidationData(validation);
+    }
+
+    private void addFormulaListValidation(Sheet sheet, int firstRow, int lastRow, int columnIndex, String formulaTemplate) {
+        DataValidationHelper helper = sheet.getDataValidationHelper();
+        for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
+            int excelRow = rowIndex + 1;
+            String formula = String.format(Locale.ROOT, formulaTemplate, excelRow, excelRow);
+            DataValidationConstraint constraint = helper.createFormulaListConstraint(formula);
+            CellRangeAddressList addressList = new CellRangeAddressList(rowIndex, rowIndex, columnIndex, columnIndex);
+            DataValidation validation = helper.createValidation(constraint, addressList);
+            validation.setSuppressDropDownArrow(false);
+            validation.setShowErrorBox(true);
+            sheet.addValidationData(validation);
+        }
+    }
+
+    private List<Maker> deduplicateMakers(List<Maker> makers) {
+        Map<Long, Maker> unique = new LinkedHashMap<>();
+        for (Maker maker : makers) {
+            if (maker != null && maker.getId() != null) {
+                unique.put(maker.getId(), maker);
+            }
+        }
+        return new ArrayList<>(unique.values());
+    }
+
+    private TemplateScope loadTemplateScope(GoodsQueryDTO scopeQuery) {
+        QueryWrapper<Goods> wrapper = new QueryWrapper<Goods>()
+                .select("brand_id", "series_id", "category_id", "maker_id");
+        if (scopeQuery != null) {
+            if (scopeQuery.getBrandId() != null) {
+                wrapper.eq("brand_id", scopeQuery.getBrandId());
+            }
+            if (scopeQuery.getSeriesId() != null) {
+                wrapper.eq("series_id", scopeQuery.getSeriesId());
+            }
+            if (scopeQuery.getCategoryId() != null) {
+                wrapper.eq("category_id", scopeQuery.getCategoryId());
+            }
+            if (scopeQuery.getMakerId() != null) {
+                wrapper.eq("maker_id", scopeQuery.getMakerId());
+            }
+        }
+        List<Goods> scopedGoods = list(wrapper);
+        List<Long> brandIds = distinctIds(scopedGoods.stream().map(Goods::getBrandId).toList());
+        List<Long> seriesIds = distinctIds(scopedGoods.stream().map(Goods::getSeriesId).toList());
+        List<Long> categoryIds = distinctIds(scopedGoods.stream().map(Goods::getCategoryId).toList());
+        List<Long> makerIds = distinctIds(scopedGoods.stream().map(Goods::getMakerId).toList());
+        return new TemplateScope(
+                loadBrandsByIds(brandIds),
+                loadSeriesByIds(seriesIds),
+                loadCategoriesByIds(categoryIds),
+                loadMakersByIds(makerIds)
+        );
+    }
+
+    private List<Long> distinctIds(List<Long> ids) {
+        return ids == null ? List.of() : ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    private List<Brand> loadBrandsByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return brandService.list(new QueryWrapper<Brand>().in("id", ids).orderByAsc("id"));
+    }
+
+    private List<Series> loadSeriesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return seriesService.list(new QueryWrapper<Series>().in("id", ids).orderByAsc("id"));
+    }
+
+    private List<Category> loadCategoriesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return categoryService.list(new QueryWrapper<Category>().in("id", ids).orderByAsc("id"));
+    }
+
+    private List<Maker> loadMakersByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return makerService.list(new QueryWrapper<Maker>().in("id", ids).orderByAsc("id"));
+    }
+
+    private List<Series> deduplicateSeries(List<Series> seriesList) {
+        Map<Long, Series> unique = new LinkedHashMap<>();
+        for (Series series : seriesList) {
+            if (series != null && series.getId() != null) {
+                unique.put(series.getId(), series);
+            }
+        }
+        return new ArrayList<>(unique.values());
     }
 
     private int writeDictionarySection(Sheet sheet, int rowIndex, String title, List<List<String>> rows) {
@@ -1012,6 +1400,223 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return maker.getId();
     }
 
+    private void validateItemWithinScope(GoodsBatchUpsertItemDTO item, GoodsQueryDTO scopeQuery) {
+        if (!hasScopeFilter(scopeQuery)) {
+            return;
+        }
+        ExistingGoodsTarget target = resolveExistingTarget(item);
+        Goods targetGoods = target == null ? null : target.goods();
+        Long brandId = firstNonNull(findExistingBrandId(item), targetGoods == null ? null : targetGoods.getBrandId());
+        Long seriesId = firstNonNull(findExistingSeriesId(item, brandId), targetGoods == null ? null : targetGoods.getSeriesId());
+        Long categoryId = firstNonNull(findExistingCategoryId(item), targetGoods == null ? null : targetGoods.getCategoryId());
+        Long makerId = firstNonNull(findExistingMakerId(item, seriesId), targetGoods == null ? null : targetGoods.getMakerId());
+        validateScopeMatch(item, "brand", scopeQuery.getBrandId(), brandId);
+        validateScopeMatch(item, "series", scopeQuery.getSeriesId(), seriesId);
+        validateScopeMatch(item, "category", scopeQuery.getCategoryId(), categoryId);
+        validateScopeMatch(item, "maker", scopeQuery.getMakerId(), makerId);
+    }
+
+    private boolean hasScopeFilter(GoodsQueryDTO scopeQuery) {
+        return scopeQuery != null
+                && (scopeQuery.getBrandId() != null
+                || scopeQuery.getSeriesId() != null
+                || scopeQuery.getCategoryId() != null
+                || scopeQuery.getMakerId() != null);
+    }
+
+    private void validateScopeMatch(GoodsBatchUpsertItemDTO item, String fieldName, Long expectedId, Long actualId) {
+        if (expectedId == null) {
+            return;
+        }
+        if (!Objects.equals(expectedId, actualId)) {
+            throw new BusinessException(
+                    MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, fieldName + " is outside selected filter scope")
+            );
+        }
+    }
+
+    private Long resolveOrCreateBrandId(GoodsBatchUpsertItemDTO item) {
+        Long brandId = findExistingBrandId(item);
+        if (brandId != null) {
+            return brandId;
+        }
+        String brandName = trimToNull(item.getBrandName());
+        if (!StringUtils.hasText(brandName)) {
+            return null;
+        }
+        Brand created = new Brand();
+        created.setName(brandName);
+        created.setEnglishName(brandName);
+        created.setStatus(StatusEnum.NOMAL.getCode());
+        if (!brandService.save(created)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "ブランドの作成に失敗しました"));
+        }
+        return created.getId();
+    }
+
+    private Long resolveOrCreateSeriesId(GoodsBatchUpsertItemDTO item, Long brandId) {
+        Long seriesId = findExistingSeriesId(item, brandId);
+        if (seriesId != null) {
+            Series current = seriesService.getByIdNotDeleted(seriesId);
+            return attachSeriesBrandIfNecessary(current, brandId).getId();
+        }
+        String seriesName = trimToNull(item.getSeriesName());
+        if (!StringUtils.hasText(seriesName)) {
+            return null;
+        }
+        Series sameName = seriesService.getOne(new QueryWrapper<Series>()
+                .eq("name", seriesName)
+                .last("LIMIT 1"));
+        if (sameName != null) {
+            return attachSeriesBrandIfNecessary(sameName, brandId).getId();
+        }
+        Series created = new Series();
+        created.setName(seriesName);
+        created.setEnglishName(seriesName);
+        created.setBrandId(brandId);
+        created.setStatus(StatusEnum.NOMAL.getCode());
+        if (!seriesService.save(created)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "シリーズの作成に失敗しました"));
+        }
+        return created.getId();
+    }
+
+    private Long resolveOrCreateCategoryId(GoodsBatchUpsertItemDTO item) {
+        Long categoryId = findExistingCategoryId(item);
+        if (categoryId != null) {
+            return categoryId;
+        }
+        String categoryName = trimToNull(item.getCategoryName());
+        if (!StringUtils.hasText(categoryName)) {
+            return null;
+        }
+        Category created = new Category();
+        created.setName(categoryName);
+        created.setStatus(StatusEnum.NOMAL.getCode());
+        if (!categoryService.save(created)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "分類の作成に失敗しました"));
+        }
+        return created.getId();
+    }
+
+    private Long resolveOrCreateMakerId(GoodsBatchUpsertItemDTO item, Long seriesId) {
+        Long makerId = findExistingMakerId(item, seriesId);
+        if (makerId != null) {
+            Maker current = makerService.getByIdNotDeleted(makerId);
+            return attachMakerSeriesIfNecessary(current, seriesId).getId();
+        }
+        String makerName = trimToNull(item.getMakerName());
+        if (!StringUtils.hasText(makerName)) {
+            return null;
+        }
+        Maker sameName = makerService.getOne(new QueryWrapper<Maker>()
+                .eq("name", makerName)
+                .last("LIMIT 1"));
+        if (sameName != null) {
+            return attachMakerSeriesIfNecessary(sameName, seriesId).getId();
+        }
+        Maker created = new Maker();
+        created.setName(makerName);
+        created.setEnglishName(makerName);
+        created.setSeriesId(seriesId);
+        created.setStatus(StatusEnum.NOMAL.getCode());
+        if (!makerService.save(created)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
+                    rowMessage(item, "メーカーの作成に失敗しました"));
+        }
+        return created.getId();
+    }
+
+    private Series attachSeriesBrandIfNecessary(Series series, Long brandId) {
+        if (series == null || brandId == null || Objects.equals(series.getBrandId(), brandId)) {
+            return series;
+        }
+        if (series.getBrandId() == null) {
+            series.setBrandId(brandId);
+            seriesService.updateById(series);
+        }
+        return series;
+    }
+
+    private Maker attachMakerSeriesIfNecessary(Maker maker, Long seriesId) {
+        if (maker == null || seriesId == null || Objects.equals(maker.getSeriesId(), seriesId)) {
+            return maker;
+        }
+        if (maker.getSeriesId() == null) {
+            maker.setSeriesId(seriesId);
+            makerService.updateById(maker);
+        }
+        return maker;
+    }
+
+    private Long findExistingBrandId(GoodsBatchUpsertItemDTO item) {
+        if (item.getBrandId() != null) {
+            return item.getBrandId();
+        }
+        String brandName = trimToNull(item.getBrandName());
+        if (!StringUtils.hasText(brandName)) {
+            return null;
+        }
+        Brand brand = brandService.getOne(new QueryWrapper<Brand>().eq("name", brandName).last("LIMIT 1"));
+        return brand == null ? null : brand.getId();
+    }
+
+    private Long findExistingSeriesId(GoodsBatchUpsertItemDTO item, Long brandId) {
+        if (item.getSeriesId() != null) {
+            return item.getSeriesId();
+        }
+        String seriesName = trimToNull(item.getSeriesName());
+        if (!StringUtils.hasText(seriesName)) {
+            return null;
+        }
+        QueryWrapper<Series> wrapper = new QueryWrapper<Series>().eq("name", seriesName);
+        if (brandId != null) {
+            wrapper.eq("brand_id", brandId);
+        }
+        Series series = seriesService.getOne(wrapper.last("LIMIT 1"));
+        if (series != null) {
+            return series.getId();
+        }
+        Series sameName = seriesService.getOne(new QueryWrapper<Series>().eq("name", seriesName).last("LIMIT 1"));
+        return sameName == null ? null : sameName.getId();
+    }
+
+    private Long findExistingCategoryId(GoodsBatchUpsertItemDTO item) {
+        if (item.getCategoryId() != null) {
+            return item.getCategoryId();
+        }
+        String categoryName = trimToNull(item.getCategoryName());
+        if (!StringUtils.hasText(categoryName)) {
+            return null;
+        }
+        Category category = categoryService.getOne(new QueryWrapper<Category>().eq("name", categoryName).last("LIMIT 1"));
+        return category == null ? null : category.getId();
+    }
+
+    private Long findExistingMakerId(GoodsBatchUpsertItemDTO item, Long seriesId) {
+        if (item.getMakerId() != null) {
+            return item.getMakerId();
+        }
+        String makerName = trimToNull(item.getMakerName());
+        if (!StringUtils.hasText(makerName)) {
+            return null;
+        }
+        QueryWrapper<Maker> wrapper = new QueryWrapper<Maker>().eq("name", makerName);
+        if (seriesId != null) {
+            wrapper.eq("series_id", seriesId);
+        }
+        Maker maker = makerService.getOne(wrapper.last("LIMIT 1"));
+        if (maker != null) {
+            return maker.getId();
+        }
+        Maker sameName = makerService.getOne(new QueryWrapper<Maker>().eq("name", makerName).last("LIMIT 1"));
+        return sameName == null ? null : sameName.getId();
+    }
+
     private StatusEnum parseStatus(String value) {
         return parseStatus(value, true);
     }
@@ -1119,6 +1724,20 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private record ExistingGoodsTarget(Goods goods, GoodsSku sku, GoodsImage image) {
     }
 
+    private record PreparedBatchItem(
+            GoodsBatchUpsertItemDTO item,
+            String action,
+            CreateGoodsDTO createDto,
+            UpdateGoodsDTO updateDto) {
+    }
+
+    private record TemplateScope(
+            List<Brand> brands,
+            List<Series> series,
+            List<Category> categories,
+            List<Maker> makers) {
+    }
+
     private void validatePriceUpdateFields(java.math.BigDecimal updatePrice, LocalDateTime priceUpdateTime) {
         if (updatePrice != null && priceUpdateTime == null) {
             throw new co.handk.backend.exception.BusinessException(
@@ -1156,28 +1775,14 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         exportQuery.setPageSize(EXPORT_MAX_ROWS);
 
         List<GoodsListVO> records = pageGoods(exportQuery).getRecords();
-        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet(EXPORT_GOODS_SHEET_NAME);
-            CellStyle headerStyle = createExportHeaderStyle(workbook);
-            writeExportHeader(sheet, headerStyle, GOODS_EXPORT_HEADERS);
+        try (XSSFWorkbook workbook = buildBatchTemplateWorkbook(exportQuery)) {
+            Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
             for (int i = 0; i < records.size(); i++) {
-                GoodsListVO item = records.get(i);
-                Row row = sheet.createRow(i + 1);
-                int column = 0;
-                writeExportCell(row, column++, item.getSkuId());
-                writeExportCell(row, column++, item.getName());
-                writeExportCell(row, column++, item.getEnglishName());
-                writeExportCell(row, column++, item.getBrandName());
-                writeExportCell(row, column++, item.getSeriesName());
-                writeExportCell(row, column++, item.getCategoryName());
-                writeExportCell(row, column++, item.getMakerName());
-                writeExportCell(row, column++, item.getSkuCode());
-                writeExportCell(row, column++, item.getSkuName());
-                writeExportCell(row, column++, item.getPrice());
-                writeExportCell(row, column++, item.getCurrency());
-                writeExportCell(row, column++, item.getStatusDesc());
-                writeExportCell(row, column++, item.getDescription());
-                writeExportCell(row, column, item.getSort());
+                Row row = sheet.getRow(TEMPLATE_DATA_START_ROW_INDEX + i);
+                if (row == null) {
+                    row = sheet.createRow(TEMPLATE_DATA_START_ROW_INDEX + i);
+                }
+                writeTemplateDataRow(row, toTemplateItem(records.get(i)));
             }
             writeWorkbookResponse(workbook, response, EXPORT_GOODS_FILE_NAME);
         } catch (IOException ex) {
@@ -1185,27 +1790,74 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
     }
 
-    private CellStyle createExportHeaderStyle(XSSFWorkbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        style.setFillForegroundColor((short) 22);
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        return style;
+    private GoodsBatchUpsertItemDTO toTemplateItem(GoodsListVO record) {
+        GoodsBatchUpsertItemDTO item = new GoodsBatchUpsertItemDTO();
+        item.setGoodsId(record.getId());
+        item.setSkuId(record.getSkuId());
+        item.setName(record.getName());
+        item.setEnglishName(record.getEnglishName());
+        item.setBrandName(record.getBrandName());
+        item.setSeriesName(record.getSeriesName());
+        item.setCategoryName(record.getCategoryName());
+        item.setMakerName(record.getMakerName());
+        item.setDescription(record.getDescription());
+        item.setIsHot(record.getIsHot() == null ? null : String.valueOf(record.getIsHot()));
+        item.setSort(record.getSort());
+        item.setSkuCode(record.getSkuCode());
+        item.setSkuName(record.getSkuName());
+        item.setPrice(record.getPrice());
+        item.setCurrency(record.getCurrency());
+        item.setCostPrice(record.getCostPrice());
+        item.setUpdatePrice(record.getUpdatePrice());
+        item.setPriceUpdateTime(record.getPriceUpdateTime());
+        item.setBarcode(record.getBarcode());
+        item.setWeight(record.getWeight());
+        item.setVolume(record.getVolume());
+        item.setSkuStatus(record.getSkuStatus() == null ? null : String.valueOf(record.getSkuStatus()));
+        item.setImageId(record.getImageId());
+        item.setImageUrl(StringUtils.hasText(record.getImageUrl())
+                ? fileStorageService.toApiPath(UploadBizType.GOODS, record.getImageUrl())
+                : null);
+        item.setImageSort(record.getImageSort());
+        item.setStatus(record.getStatus() == null ? null : String.valueOf(record.getStatus()));
+        return item;
     }
 
-    private void writeExportHeader(Sheet sheet, CellStyle headerStyle, String[] headers) {
-        Row headerRow = sheet.createRow(0);
-        for (int i = 0; i < headers.length; i++) {
-            Cell cell = headerRow.createCell(i);
-            cell.setCellValue(headers[i]);
-            cell.setCellStyle(headerStyle);
-            sheet.setColumnWidth(i, EXCEL_COLUMN_WIDTH);
+    private void writeTemplateDataRow(Row row, GoodsBatchUpsertItemDTO item) {
+        int column = 0;
+        writeCell(row, column++, item.getGoodsId());
+        writeCell(row, column++, item.getSkuId());
+        writeCell(row, column++, item.getName());
+        writeCell(row, column++, item.getEnglishName());
+        writeCell(row, column++, item.getBrandName());
+        writeCell(row, column++, item.getSeriesName());
+        writeCell(row, column++, item.getCategoryName());
+        writeCell(row, column++, item.getMakerName());
+        writeCell(row, column++, item.getDescription());
+        writeCell(row, column++, item.getIsHot());
+        writeCell(row, column++, item.getSort());
+        writeCell(row, column++, item.getSkuCode());
+        writeCell(row, column++, item.getSkuName());
+        writeCell(row, column++, item.getPrice());
+        writeCell(row, column++, item.getCurrency());
+        writeCell(row, column++, item.getCostPrice());
+        writeCell(row, column++, item.getUpdatePrice());
+        writeCell(row, column++, item.getPriceUpdateTime());
+        writeCell(row, column++, item.getBarcode());
+        writeCell(row, column++, item.getWeight());
+        writeCell(row, column++, item.getVolume());
+        writeCell(row, column++, item.getSkuStatus());
+        writeCell(row, column++, item.getImageId());
+        writeCell(row, column++, item.getImageUrl());
+        writeCell(row, column++, item.getImageSort());
+        writeCell(row, column, item.getStatus());
+    }
+
+    private void writeCell(Row row, int columnIndex, Object value) {
+        Cell cell = row.getCell(columnIndex);
+        if (cell == null) {
+            cell = row.createCell(columnIndex);
         }
-    }
-
-    private void writeExportCell(Row row, int columnIndex, Object value) {
-        Cell cell = row.createCell(columnIndex);
         if (value == null) {
             cell.setBlank();
             return;
@@ -1219,6 +1871,74 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             return;
         }
         cell.setCellValue(String.valueOf(value));
+    }
+
+    private void attachImportErrorReport(String originalFileName, byte[] fileBytes, GoodsBatchUpsertResultVO result) {
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(fileBytes));
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
+            if (sheet == null) {
+                sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
+            }
+            if (sheet == null) {
+                return;
+            }
+            annotateImportResultSheet(workbook, sheet, result);
+            workbook.write(outputStream);
+            result.setErrorReportBase64(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
+            result.setErrorReportFileName(resolveImportResultFileName(originalFileName, workbook));
+        } catch (Exception ex) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_EXPORT_FAILED, ex);
+        }
+    }
+
+    private void annotateImportResultSheet(Workbook workbook, Sheet sheet, GoodsBatchUpsertResultVO result) {
+        Row headerRow = sheet.getRow(TEMPLATE_HEADER_ROW_INDEX);
+        if (headerRow == null) {
+            headerRow = sheet.createRow(TEMPLATE_HEADER_ROW_INDEX);
+        }
+        int actionColumnIndex = TEMPLATE_HEADERS.size();
+        int messageColumnIndex = TEMPLATE_HEADERS.size() + 1;
+        headerRow.createCell(actionColumnIndex).setCellValue(IMPORT_RESULT_ACTION_HEADER);
+        headerRow.createCell(messageColumnIndex).setCellValue(IMPORT_RESULT_MESSAGE_HEADER);
+
+        CellStyle failedStyle = workbook.createCellStyle();
+        failedStyle.setFillForegroundColor(IndexedColors.ROSE.getIndex());
+        failedStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+        for (GoodsBatchUpsertRowResultVO rowResult : result.getRows()) {
+            if (rowResult.getRowNo() == null) {
+                continue;
+            }
+            Row row = sheet.getRow(rowResult.getRowNo() - 1);
+            if (row == null) {
+                row = sheet.createRow(rowResult.getRowNo() - 1);
+            }
+            writeCell(row, actionColumnIndex, rowResult.getAction());
+            writeCell(row, messageColumnIndex, rowResult.getMessage());
+            if (Boolean.FALSE.equals(rowResult.getSuccess())) {
+                int cellCount = Math.max(messageColumnIndex + 1, row.getLastCellNum());
+                for (int columnIndex = 0; columnIndex < cellCount; columnIndex++) {
+                    Cell cell = row.getCell(columnIndex);
+                    if (cell == null) {
+                        cell = row.createCell(columnIndex);
+                    }
+                    cell.setCellStyle(failedStyle);
+                }
+            }
+        }
+    }
+
+    private String resolveImportResultFileName(String originalFileName, Workbook workbook) {
+        String defaultExtension = workbook instanceof XSSFWorkbook ? ".xlsx" : ".xls";
+        if (!StringUtils.hasText(originalFileName)) {
+            return "goods_import_result" + defaultExtension;
+        }
+        int dotIndex = originalFileName.lastIndexOf('.');
+        if (dotIndex < 0) {
+            return originalFileName + "_result" + defaultExtension;
+        }
+        return originalFileName.substring(0, dotIndex) + "_result" + originalFileName.substring(dotIndex);
     }
 
     private void writeWorkbookResponse(XSSFWorkbook workbook, HttpServletResponse response, String fileName)

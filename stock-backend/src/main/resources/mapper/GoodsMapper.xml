@@ -101,7 +101,22 @@
         gs.sku_code,
         gs.sku_name,
         gs.price,
-        gs.currency
+        gs.currency,
+        gs.cost_price,
+        gs.update_price,
+        gs.price_update_time,
+        gs.barcode,
+        gs.weight,
+        gs.volume,
+        gs.status AS sku_status,
+        CASE
+        WHEN gs.status = 1 THEN 'Normal'
+        WHEN gs.status = 0 THEN 'Disabled'
+        ELSE NULL
+        END AS sku_status_desc,
+        gi.id AS image_id,
+        gi.image_url,
+        gi.sort AS image_sort
         <include refid="fromAndWhere"/>
         ORDER BY g.sort ASC, g.update_time DESC, g.id ASC, gs.update_time DESC, gs.id ASC
         LIMIT #{offset}, #{size}

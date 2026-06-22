@@ -4,6 +4,7 @@ import co.handk.client.MainApp;
 import co.handk.client.constant.UiText;
 import co.handk.client.model.Session;
 import co.handk.client.service.ModuleDataService;
+import co.handk.client.service.DependencyResolver;
 import co.handk.client.service.TableActionService;
 import co.handk.client.service.TableRowService;
 import co.handk.client.service.UiFeedbackService;
@@ -36,12 +37,14 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -51,6 +54,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Base64;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -92,6 +96,7 @@ public class MainController {
     @FXML private Button stockOrderItemTabButton;
     @FXML private TableView<Map<String, Object>> dataTable;
     @FXML private FlowPane queryFieldsPane;
+    @FXML private VBox requestCustomerMenu;
 
     private MainApp app;
     private String currentModule = Module.USER;
@@ -99,11 +104,13 @@ public class MainController {
     private static final int PAGE_SIZE = 10;
     private final Map<String, Control> queryControls = new LinkedHashMap<>();
     private final ModuleDataService dataService = new ModuleDataService();
+    private final DependencyResolver dependencyResolver = new DependencyResolver();
     private final TableActionService tableActionService = new TableActionService();
     private final TableRowService tableRowService = new TableRowService();
     private final UiFeedbackService uiFeedback = new UiFeedbackService();
     private final UserAccountService userAccountService = new UserAccountService();
     private final Map<String, Integer> pageNumByModule = new HashMap<>();
+    private final Map<String, String> fixedQueryParams = new LinkedHashMap<>();
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
     private String pendingStockOperation;
@@ -116,6 +123,7 @@ public class MainController {
         dataTable.setEditable(true);
         dataTable.setTableMenuButtonVisible(true);
         dataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        rebuildRequestCustomerMenu();
         rebuildQueryFields();
         applyActionPolicy();
         messageLabel.setText(UiText.MSG_FIRST_GUIDE);
@@ -205,7 +213,11 @@ public class MainController {
             return;
         }
         try {
-            byte[] bytes = dataService.downloadGoodsTemplate();
+            Map<String, String> filters = showGoodsCascadeFilterDialog("商品テンプレート絞り込み");
+            if (filters == null) {
+                return;
+            }
+            byte[] bytes = dataService.downloadGoodsTemplate(filters);
             FileChooser chooser = new FileChooser();
             chooser.setTitle(UiText.TITLE_SAVE_FILE);
             chooser.setInitialFileName(UiText.GOODS_TEMPLATE_FILENAME);
@@ -229,6 +241,10 @@ public class MainController {
         if (!Module.GOODS.equals(currentModule)) {
             return;
         }
+        Map<String, String> filters = showGoodsCascadeFilterDialog("商品一括取込絞り込み");
+        if (filters == null) {
+            return;
+        }
         FileChooser chooser = new FileChooser();
         chooser.setTitle(UiText.TITLE_SELECT_IMPORT_FILE);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"));
@@ -239,7 +255,7 @@ public class MainController {
             return;
         }
         try {
-            JSONObject json = dataService.importGoods(file);
+            JSONObject json = dataService.importGoods(file, filters);
             if (!uiFeedback.isSuccess(json)) {
                 messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_GOODS_IMPORT_FAILED));
                 return;
@@ -250,6 +266,7 @@ public class MainController {
                 return;
             }
             showGoodsImportResultDialog(data);
+            saveGoodsImportErrorReport(data);
             messageLabel.setText(UiText.MSG_GOODS_IMPORT_SUCCESS);
             loadData();
         } catch (Exception ex) {
@@ -464,9 +481,17 @@ public class MainController {
     }
 
     private void switchModule(String module, String title) {
+        switchModule(module, title, Map.of());
+    }
+
+    private void switchModule(String module, String title, Map<String, String> presetFilters) {
         pageNumByModule.put(currentModule, pageNum);
         currentModule = module;
         pageNum = pageNumByModule.getOrDefault(module, 1);
+        fixedQueryParams.clear();
+        if (presetFilters != null) {
+            fixedQueryParams.putAll(presetFilters);
+        }
         pageTitleLabel.setText(title);
         inlineEditingRow = null;
         inlineBackup = null;
@@ -499,6 +524,8 @@ public class MainController {
             queryFieldsPane.getChildren().add(control);
             queryControls.put(field, control);
         }
+        dependencyResolver.bind(currentModule, queryControls, this::fetchRelationOptions);
+        applyFixedQueryParams();
         Platform.runLater(this::focusFirstQueryField);
     }
 
@@ -618,6 +645,18 @@ public class MainController {
         return options;
     }
 
+    private List<Option> fetchRelationOptions(String relationModule, Map<String, String> filters) {
+        List<Option> options = new ArrayList<>();
+        try {
+            for (Map<String, String> item : dataService.fetchSimpleRelationOptions(relationModule, filters == null ? Map.of() : filters)) {
+                options.add(new Option(item.get("label"), item.get("value")));
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load relation options failed. module=" + relationModule + ", filters=" + filters, ex);
+        }
+        return options;
+    }
+
     private void resetQueryControls() {
         for (Control control : queryControls.values()) {
             if (control instanceof TextField tf) {
@@ -626,10 +665,11 @@ public class MainController {
                 cb.setValue(null);
             }
         }
+        applyFixedQueryParams();
     }
 
     private Map<String, String> buildQueryParams() {
-        Map<String, String> params = new LinkedHashMap<>();
+        Map<String, String> params = new LinkedHashMap<>(fixedQueryParams);
         for (Map.Entry<String, Control> entry : queryControls.entrySet()) {
             String field = entry.getKey();
             String value = readControlValue(entry.getValue());
@@ -640,6 +680,89 @@ public class MainController {
             params.put(mapId.isBlank() ? field : mapId, value);
         }
         return params;
+    }
+
+    private void applyFixedQueryParams() {
+        for (Map.Entry<String, Control> entry : queryControls.entrySet()) {
+            String field = entry.getKey();
+            Control control = entry.getValue();
+            String fixedValue = fixedQueryParams.get(field);
+            String mappedField = ModuleMeta.mapNameFieldToIdField(field);
+            if ((fixedValue == null || fixedValue.isBlank()) && mappedField != null && !mappedField.isBlank()) {
+                fixedValue = fixedQueryParams.get(mappedField);
+            }
+            control.setDisable(fixedValue != null && !fixedValue.isBlank());
+            if (fixedValue == null || fixedValue.isBlank()) {
+                continue;
+            }
+            if (control instanceof TextField tf) {
+                tf.setText(fixedValue);
+                continue;
+            }
+            if (control instanceof ComboBox<?> cb) {
+                selectComboValue(cb, fixedValue);
+            }
+        }
+    }
+
+    private void selectComboValue(ComboBox<?> comboBox, String value) {
+        for (Object item : comboBox.getItems()) {
+            if (item instanceof Option option && value.equals(option.value)) {
+                @SuppressWarnings("unchecked")
+                ComboBox<Option> typedCombo = (ComboBox<Option>) comboBox;
+                typedCombo.setValue(option);
+                return;
+            }
+        }
+    }
+
+    private void rebuildRequestCustomerMenu() {
+        if (requestCustomerMenu == null) {
+            return;
+        }
+        requestCustomerMenu.getChildren().clear();
+        try {
+            for (Map<String, String> customer : dataService.fetchSimpleRelationOptions("customer", Map.of())) {
+                String customerId = customer.get("value");
+                String customerName = customer.get("label");
+                if (customerId == null || customerId.isBlank() || customerName == null || customerName.isBlank()) {
+                    continue;
+                }
+                requestCustomerMenu.getChildren().add(createRequestCustomerPane(customerId, customerName));
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load request customer menu failed.", ex);
+        }
+    }
+
+    private TitledPane createRequestCustomerPane(String customerId, String customerName) {
+        VBox childMenu = new VBox(6);
+        childMenu.getChildren().add(createRequestCustomerButton(
+                UiText.byKey("main.menu.deliverySchedule"),
+                "stockRecord",
+                customerId,
+                customerName
+        ));
+        childMenu.getChildren().add(createRequestCustomerButton(
+                UiText.byKey("main.menu.requestForm"),
+                Module.REQUEST_FORM,
+                customerId,
+                customerName
+        ));
+        TitledPane pane = new TitledPane(customerName, childMenu);
+        pane.setExpanded(false);
+        return pane;
+    }
+
+    private Button createRequestCustomerButton(String label, String module, String customerId, String customerName) {
+        Button button = new Button(label);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setOnAction(event -> switchModule(
+                module,
+                UiText.byKey("main.group.request") + " / " + customerName + " / " + label,
+                Map.of("customerId", customerId)
+        ));
+        return button;
     }
 
     private String readControlValue(Control control) {
@@ -656,12 +779,166 @@ public class MainController {
         return "";
     }
 
+    private Map<String, String> showGoodsCascadeFilterDialog(String title) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText("ブランド / シリーズ / 分類 / メーカーを選択してください");
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
+
+        ComboBox<Option> brandCombo = new ComboBox<>();
+        ComboBox<Option> seriesCombo = new ComboBox<>();
+        ComboBox<Option> categoryCombo = new ComboBox<>();
+        ComboBox<Option> makerCombo = new ComboBox<>();
+        brandCombo.setPrefWidth(240);
+        seriesCombo.setPrefWidth(240);
+        categoryCombo.setPrefWidth(240);
+        makerCombo.setPrefWidth(240);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.add(new Label(ModuleMeta.normalizeTitle("brandId")), 0, 0);
+        grid.add(brandCombo, 1, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("seriesId")), 0, 1);
+        grid.add(seriesCombo, 1, 1);
+        grid.add(new Label(ModuleMeta.normalizeTitle("categoryId")), 0, 2);
+        grid.add(categoryCombo, 1, 2);
+        grid.add(new Label(ModuleMeta.normalizeTitle("makerId")), 0, 3);
+        grid.add(makerCombo, 1, 3);
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        Map<String, String> preferred = currentGoodsCascadeSelections();
+        final boolean[] refreshing = {false};
+        Runnable refresh = () -> {
+            if (refreshing[0]) {
+                return;
+            }
+            refreshing[0] = true;
+            try {
+                String preferredBrand = preferred.remove("brandId");
+                String preferredSeries = preferred.remove("seriesId");
+                String preferredCategory = preferred.remove("categoryId");
+                String preferredMaker = preferred.remove("makerId");
+                String brandValue = currentOrPreferredValue(brandCombo, preferredBrand);
+                String seriesValue = currentOrPreferredValue(seriesCombo, preferredSeries);
+                String categoryValue = currentOrPreferredValue(categoryCombo, preferredCategory);
+                String makerValue = currentOrPreferredValue(makerCombo, preferredMaker);
+                JSONObject json = dataService.fetchGoodsCascadeFilterOptions(Map.of(
+                        "brandId", blankToEmpty(brandValue),
+                        "seriesId", blankToEmpty(seriesValue),
+                        "categoryId", blankToEmpty(categoryValue),
+                        "makerId", blankToEmpty(makerValue)
+                ));
+                JSONObject data = json.optJSONObject("data");
+                if (data == null) {
+                    return;
+                }
+                applyCascadeOptions(brandCombo, data.optJSONArray("brandOptions"), brandValue);
+                applyCascadeOptions(seriesCombo, data.optJSONArray("seriesOptions"), seriesValue);
+                applyCascadeOptions(categoryCombo, data.optJSONArray("categoryOptions"), categoryValue);
+                applyCascadeOptions(makerCombo, data.optJSONArray("makerOptions"), makerValue);
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, "Load goods cascade filters failed.", ex);
+            } finally {
+                refreshing[0] = false;
+            }
+        };
+
+        brandCombo.valueProperty().addListener((obs, oldValue, newValue) -> refresh.run());
+        seriesCombo.valueProperty().addListener((obs, oldValue, newValue) -> refresh.run());
+        categoryCombo.valueProperty().addListener((obs, oldValue, newValue) -> refresh.run());
+        makerCombo.valueProperty().addListener((obs, oldValue, newValue) -> refresh.run());
+        refresh.run();
+
+        Optional<ButtonType> selection = dialog.showAndWait();
+        if (selection.isEmpty() || selection.get() != ButtonType.OK) {
+            return null;
+        }
+        return buildGoodsCascadeFilterParams(brandCombo, seriesCombo, categoryCombo, makerCombo);
+    }
+
+    private Map<String, String> currentGoodsCascadeSelections() {
+        Map<String, String> filters = new LinkedHashMap<>();
+        if (!Module.GOODS.equals(currentModule)) {
+            return filters;
+        }
+        copySelectedFilter(filters, "brandId");
+        copySelectedFilter(filters, "seriesId");
+        copySelectedFilter(filters, "categoryId");
+        copySelectedFilter(filters, "makerId");
+        return filters;
+    }
+
+    private void copySelectedFilter(Map<String, String> filters, String field) {
+        String value = readControlValue(queryControls.get(field));
+        if (value != null && !value.isBlank()) {
+            filters.put(field, value);
+        }
+    }
+
+    private void applyCascadeOptions(ComboBox<Option> combo, JSONArray rows, String selectedValue) {
+        List<Option> options = new ArrayList<>();
+        if (rows != null) {
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                options.add(new Option(row.optString("name", ""), String.valueOf(row.opt("id"))));
+            }
+        }
+        combo.getItems().setAll(options);
+        if (selectedValue == null || selectedValue.isBlank()) {
+            combo.setValue(null);
+            return;
+        }
+        for (Option option : combo.getItems()) {
+            if (selectedValue.equals(option.value)) {
+                combo.setValue(option);
+                return;
+            }
+        }
+        combo.setValue(null);
+    }
+
+    private Map<String, String> buildGoodsCascadeFilterParams(ComboBox<Option> brandCombo,
+                                                              ComboBox<Option> seriesCombo,
+                                                              ComboBox<Option> categoryCombo,
+                                                              ComboBox<Option> makerCombo) {
+        Map<String, String> filters = new LinkedHashMap<>();
+        putComboFilter(filters, "brandId", brandCombo);
+        putComboFilter(filters, "seriesId", seriesCombo);
+        putComboFilter(filters, "categoryId", categoryCombo);
+        putComboFilter(filters, "makerId", makerCombo);
+        return filters;
+    }
+
+    private void putComboFilter(Map<String, String> filters, String key, ComboBox<Option> combo) {
+        String value = combo == null || combo.getValue() == null ? "" : combo.getValue().value;
+        if (value != null && !value.isBlank()) {
+            filters.put(key, value);
+        }
+    }
+
+    private String currentOrPreferredValue(ComboBox<Option> combo, String preferred) {
+        if (combo != null && combo.getValue() != null && combo.getValue().value != null && !combo.getValue().value.isBlank()) {
+            return combo.getValue().value;
+        }
+        return preferred;
+    }
+
+    private String blankToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
     private void openFormDialog(String action, boolean editMode) {
         openFormDialog(action, editMode, currentModule, editMode ? currentWorkingRow() : null);
     }
 
     private void openFormDialog(String action, boolean editMode, String formModule, Map<String, Object> source) {
         try {
+            Map<String, Object> formSource = resolveFormSource(formModule, editMode, source);
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/module-form.fxml"));
             Parent root = loader.load();
             Stage modal = new Stage();
@@ -677,7 +954,7 @@ public class MainController {
                     formModule,
                     action + " " + pageTitleLabel.getText(),
                     editMode,
-                    source,
+                    formSource,
                     tableRowService.visibleKeys(dataTable.getItems(), SELECTED_KEY));
             modal.setOnCloseRequest(e -> formController.markCanceled());
             modal.showAndWait();
@@ -686,6 +963,31 @@ public class MainController {
             }
         } catch (Exception ex) {
             messageLabel.setText(uiFeedback.formOpenFailed(ex));
+        }
+    }
+
+    private Map<String, Object> resolveFormSource(String formModule, boolean editMode, Map<String, Object> source) {
+        if (!editMode || source == null) {
+            return source;
+        }
+        String id = tableRowService.resolveRecordId(source);
+        if (id.isBlank()) {
+            return source;
+        }
+        try {
+            JSONObject json = dataService.fetchDetail(formModule, id);
+            JSONObject data = json.optJSONObject("data");
+            if (data == null) {
+                return source;
+            }
+            Map<String, Object> detail = new LinkedHashMap<>(source);
+            for (String key : data.keySet()) {
+                detail.put(key, data.opt(key));
+            }
+            return detail;
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Fetch form detail failed. module=" + formModule + ", id=" + id, ex);
+            return source;
         }
     }
 
@@ -736,6 +1038,9 @@ public class MainController {
 
             JSONArray records = data.optJSONArray("records");
             buildTable(records == null ? new JSONArray() : records);
+            if ("customer".equals(currentModule)) {
+                rebuildRequestCustomerMenu();
+            }
             messageLabel.setText(records == null || records.isEmpty() ? UiText.MSG_EMPTY_RESULT : UiText.MSG_LOAD_SUCCESS);
 
             if (totalPages > 0 && pageNum > totalPages) {
@@ -1372,6 +1677,42 @@ public class MainController {
         alert.showAndWait();
     }
 
+    private void saveGoodsImportErrorReport(JSONObject data) {
+        String base64 = data.optString("errorReportBase64", "");
+        if (base64 == null || base64.isBlank()) {
+            return;
+        }
+        String fileName = data.optString("errorReportFileName", "goods_import_result.xlsx");
+        Alert prompt = new Alert(Alert.AlertType.CONFIRMATION);
+        prompt.setTitle(UiText.TITLE_SAVE_FILE);
+        prompt.setHeaderText(null);
+        prompt.setContentText("商品导入存在失败行，是否保存错误报告？");
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        if (owner != null) {
+            prompt.initOwner(owner);
+        }
+        Optional<ButtonType> selection = prompt.showAndWait();
+        if (selection.isEmpty() || selection.get() != ButtonType.OK) {
+            return;
+        }
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(UiText.TITLE_SAVE_FILE);
+        chooser.setInitialFileName(fileName);
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"));
+        File target = chooser.showSaveDialog(owner);
+        if (target == null) {
+            return;
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(target)) {
+            fos.write(Base64.getDecoder().decode(base64));
+            messageLabel.setText("商品导入完成，错误报告已保存。");
+        } catch (Exception ex) {
+            messageLabel.setText("错误报告保存失败: " + ex.getMessage());
+        }
+    }
+
     private String buildGoodsImportResultText(JSONArray rows) {
         if (rows == null || rows.isEmpty()) {
             return UiText.MSG_GOODS_IMPORT_RESULT_EMPTY;
@@ -1391,7 +1732,7 @@ public class MainController {
         return builder.toString();
     }
 
-    private static final class Option {
+    private static final class Option implements DependencyResolver.OptionValue {
         private final String label;
         private final String value;
 
@@ -1403,6 +1744,11 @@ public class MainController {
         @Override
         public String toString() {
             return label;
+        }
+
+        @Override
+        public String value() {
+            return value;
         }
     }
 

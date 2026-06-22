@@ -60,8 +60,7 @@
                     <TitledPane text="%main.group.request">
                         <content>
                             <VBox spacing="6" styleClass="menu-group">
-                                <Button text="%main.menu.requestForm" userData="requestForm" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
-                                <Button text="%main.menu.requestItem" userData="requestItem" onAction="#onNavSelect" maxWidth="1.7976931348623157E308"/>
+                                <VBox fx:id="requestCustomerMenu" spacing="6"/>
                             </VBox>
                         </content>
                     </TitledPane>

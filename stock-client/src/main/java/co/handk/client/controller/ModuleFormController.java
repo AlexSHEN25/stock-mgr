@@ -12,6 +12,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -148,6 +149,11 @@ public class ModuleFormController {
     }
 
     private Control createControl(String module, String field) {
+        if (isJsonArrayField(field)) {
+            TextArea area = new TextArea();
+            area.setPrefRowCount("relationItems".equals(field) ? 6 : 2);
+            return area;
+        }
         if (ModuleMeta.fieldType(module, field) == ModuleMeta.FieldType.RELATION) {
             ComboBox<Option> combo = new ComboBox<>();
             combo.setEditable(false);
@@ -228,7 +234,7 @@ public class ModuleFormController {
             if (c instanceof TextField tf) {
                 tf.setText(String.valueOf(val));
             } else if (c instanceof TextArea ta) {
-                ta.setText(String.valueOf(val));
+                ta.setText(formatTextAreaValue(key, val));
             } else if (c instanceof ComboBox<?> combo) {
                 @SuppressWarnings("unchecked")
                 ComboBox<Option> cb = (ComboBox<Option>) combo;
@@ -264,7 +270,14 @@ public class ModuleFormController {
             }
             @SuppressWarnings("unchecked")
             ComboBox<Option> childCombo = (ComboBox<Option>) childCtrl;
-            Map<String, String> filters = Map.of(rule.queryParam, String.valueOf(parentVal));
+            Map<String, String> filters = new LinkedHashMap<>();
+            filters.put(rule.queryParam, String.valueOf(parentVal));
+            for (Map.Entry<String, String> entry : rule.additionalQueryParams.entrySet()) {
+                Object extraValue = sourceValues.get(entry.getValue());
+                if (extraValue != null && !String.valueOf(extraValue).isBlank()) {
+                    filters.put(entry.getKey(), String.valueOf(extraValue));
+                }
+            }
             childCombo.getItems().setAll(fetchRelationOptions(rule.sourceModule, filters));
         }
     }
@@ -281,6 +294,11 @@ public class ModuleFormController {
 
             String text = String.valueOf(val).trim();
             if (text.isEmpty()) {
+                continue;
+            }
+
+            if (isJsonArrayField(key)) {
+                dto.put(key, parseJsonArrayField(key, text));
                 continue;
             }
 
@@ -376,6 +394,57 @@ public class ModuleFormController {
             return selected == null ? "" : String.valueOf(selected);
         }
         return null;
+    }
+
+    private boolean isJsonArrayField(String field) {
+        return "relationItems".equals(field) || field.endsWith("Ids");
+    }
+
+    private Object parseJsonArrayField(String field, String text) {
+        if ("relationItems".equals(field)) {
+            return new JSONArray(text);
+        }
+        JSONArray array = new JSONArray();
+        String normalized = text.replace("\r", "\n");
+        for (String token : normalized.split("[,\\n]")) {
+            String value = token == null ? "" : token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                array.put(Long.parseLong(value));
+            } catch (NumberFormatException ex) {
+                array.put(value);
+            }
+        }
+        return array;
+    }
+
+    private String formatTextAreaValue(String field, Object value) {
+        if (value == null) {
+            return "";
+        }
+        if ("relationItems".equals(field)) {
+            if (value instanceof JSONArray jsonArray) {
+                return jsonArray.toString(2);
+            }
+            if (value instanceof List<?> list) {
+                return new JSONArray(list).toString(2);
+            }
+        }
+        if (field.endsWith("Ids")) {
+            if (value instanceof JSONArray jsonArray) {
+                List<String> lines = new ArrayList<>();
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    lines.add(String.valueOf(jsonArray.opt(i)));
+                }
+                return String.join(", ", lines);
+            }
+            if (value instanceof List<?> list) {
+                return String.join(", ", list.stream().map(String::valueOf).toList());
+            }
+        }
+        return String.valueOf(value);
     }
 
     private static final class Option implements DependencyResolver.OptionValue {

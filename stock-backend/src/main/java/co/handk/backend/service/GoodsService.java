@@ -36,5 +36,9 @@ public interface GoodsService extends BaseService<Goods, GoodsVO> {
 
     GoodsBatchUpsertResultVO importGoods(@NotNull MultipartFile file);
 
+    GoodsBatchUpsertResultVO importGoods(@NotNull MultipartFile file, GoodsQueryDTO query);
+
     void downloadBatchTemplate(HttpServletResponse response);
+
+    void downloadBatchTemplate(GoodsQueryDTO query, HttpServletResponse response);
 }

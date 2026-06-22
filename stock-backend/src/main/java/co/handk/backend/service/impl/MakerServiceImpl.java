@@ -1,36 +1,33 @@
 package co.handk.backend.service.impl;
 
-import co.handk.backend.entity.Maker;
-import co.handk.backend.entity.BrandMakerRelation;
 import co.handk.backend.entity.Brand;
+import co.handk.backend.entity.Maker;
+import co.handk.backend.entity.Series;
 import co.handk.backend.mapper.BrandMapper;
-import co.handk.backend.mapper.BrandMakerRelationMapper;
 import co.handk.backend.mapper.MakerMapper;
-import co.handk.backend.service.BrandMakerRelationService;
+import co.handk.backend.mapper.SeriesMapper;
 import co.handk.backend.service.MakerService;
-import co.handk.common.model.dto.create.CreateMakerDTO;
-import co.handk.common.model.dto.update.UpdateMakerDTO;
+import co.handk.common.model.dto.query.MakerQueryDTO;
 import co.handk.common.model.vo.MakerVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class MakerServiceImpl extends BaseServiceImpl<MakerMapper, Maker, MakerVO>
         implements MakerService {
 
-    private final BrandMakerRelationService brandMakerRelationService;
+    private final SeriesMapper seriesMapper;
     private final BrandMapper brandMapper;
-    private final BrandMakerRelationMapper brandMakerRelationMapper;
+
+    public MakerServiceImpl(SeriesMapper seriesMapper, BrandMapper brandMapper) {
+        this.seriesMapper = seriesMapper;
+        this.brandMapper = brandMapper;
+    }
 
     @Override
     protected MakerVO toVO(Maker entity) {
@@ -39,7 +36,7 @@ public class MakerServiceImpl extends BaseServiceImpl<MakerMapper, Maker, MakerV
         }
         MakerVO vo = new MakerVO();
         BeanUtils.copyProperties(entity, vo);
-        fillBrandIds(entity.getId(), vo);
+        fillRelations(entity, vo);
         return vo;
     }
 
@@ -54,133 +51,104 @@ public class MakerServiceImpl extends BaseServiceImpl<MakerMapper, Maker, MakerV
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public <C> boolean saveByDto(C dto) {
-        if (dto instanceof CreateMakerDTO createDto) {
-            Maker entity = toEntity(createDto);
-            boolean saved = this.save(entity);
-            if (!saved) {
-                return false;
+    protected <Q> QueryWrapper<Maker> buildWrapper(Q dto) {
+        if (!(dto instanceof MakerQueryDTO query)) {
+            return super.buildWrapper(dto);
+        }
+        QueryWrapper<Maker> wrapper = new QueryWrapper<>();
+        if (query.getName() != null && !query.getName().isBlank()) {
+            wrapper.like("name", query.getName().trim());
+        }
+        if (query.getEnglishName() != null && !query.getEnglishName().isBlank()) {
+            wrapper.like("english_name", query.getEnglishName().trim());
+        }
+        if (query.getSeriesId() != null) {
+            wrapper.eq("series_id", query.getSeriesId());
+        }
+        if (query.getBrandId() != null) {
+            List<Long> seriesIds = seriesMapper.selectList(new QueryWrapper<Series>()
+                            .eq("brand_id", query.getBrandId())
+                            .eq("deleted", 0))
+                    .stream()
+                    .map(Series::getId)
+                    .toList();
+            if (seriesIds.isEmpty()) {
+                wrapper.eq("id", -1L);
+            } else {
+                wrapper.in("series_id", seriesIds);
             }
-            syncBrandRelations(entity.getId(), createDto.getBrandIds());
-            return true;
         }
-        return super.saveByDto(dto);
+        if (query.getStatus() != null) {
+            wrapper.eq("status", query.getStatus().getCode());
+        }
+        return wrapper;
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public <U> boolean updateByDto(U dto) {
-        if (dto instanceof UpdateMakerDTO updateDto) {
-            boolean updated = super.updateByDto(updateDto);
-            if (!updated) {
-                return false;
-            }
-            syncBrandRelations(updateDto.getId(), updateDto.getBrandIds());
-            return true;
-        }
-        return super.updateByDto(dto);
+    public <Q> List<MakerVO> list(Q dto) {
+        List<MakerVO> records = super.list(dto);
+        fillRelations(records);
+        return records;
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int deleteByIdLogic(Long id) {
-        int deleted = super.deleteByIdLogic(id);
-        if (deleted > 0) {
-            brandMakerRelationService.update(null, new UpdateWrapper<BrandMakerRelation>()
-                    .eq("maker_id", id)
-                    .set("deleted", 1));
-        }
-        return deleted;
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public int deleteBatchLogic(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return 0;
-        }
-        int rows = 0;
-        for (Long id : ids) {
-            rows += deleteByIdLogic(id);
-        }
-        return rows;
-    }
-
-    private void fillBrandIds(Long makerId, MakerVO vo) {
-        if (makerId == null || vo == null) {
+    private void fillRelations(Maker entity, MakerVO vo) {
+        if (entity == null || vo == null || entity.getSeriesId() == null) {
             return;
         }
-        List<Long> brandIds = brandMakerRelationService.list(new QueryWrapper<BrandMakerRelation>()
-                        .eq("maker_id", makerId)
-                        .eq("deleted", 0)
-                        .orderByAsc("id"))
-                .stream()
-                .map(BrandMakerRelation::getBrandId)
+        Series series = seriesMapper.selectById(entity.getSeriesId());
+        if (series == null || (series.getDeleted() != null && series.getDeleted() != 0)) {
+            return;
+        }
+        vo.setSeriesId(series.getId());
+        vo.setSeriesName(series.getName());
+        vo.setBrandId(series.getBrandId());
+        if (series.getBrandId() != null) {
+            Brand brand = brandMapper.selectById(series.getBrandId());
+            if (brand != null && (brand.getDeleted() == null || brand.getDeleted() == 0)) {
+                vo.setBrandName(brand.getName());
+            }
+        }
+    }
+
+    private void fillRelations(List<MakerVO> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<Long> seriesIds = records.stream()
+                .map(MakerVO::getSeriesId)
                 .filter(id -> id != null)
                 .distinct()
                 .toList();
-        vo.setBrandIds(brandIds);
-        vo.setBrandNames(resolveBrandNames(brandIds));
-    }
-
-    private void syncBrandRelations(Long makerId, List<Long> brandIds) {
-        Set<Long> targetBrandIds = normalizeIds(brandIds);
-        List<BrandMakerRelation> existing = brandMakerRelationService.list(new QueryWrapper<BrandMakerRelation>()
-                .eq("maker_id", makerId));
-        Set<Long> activeBrandIds = existing.stream()
-                .filter(item -> item.getDeleted() != null && item.getDeleted() == 0)
-                .map(BrandMakerRelation::getBrandId)
-                .collect(Collectors.toSet());
-
-        for (BrandMakerRelation relation : existing) {
-            Long brandId = relation.getBrandId();
-            if (brandId == null) {
-                continue;
-            }
-            if (!targetBrandIds.contains(brandId) && relation.getDeleted() != null && relation.getDeleted() == 0) {
-                relation.setDeleted(1);
-                brandMakerRelationService.updateById(relation);
-                continue;
-            }
-            if (targetBrandIds.contains(brandId) && relation.getDeleted() != null && relation.getDeleted() != 0) {
-                relation.setDeleted(0);
-                brandMakerRelationService.updateById(relation);
-            }
-        }
-
-        for (Long brandId : targetBrandIds) {
-            if (activeBrandIds.contains(brandId)) {
-                continue;
-            }
-            ensureBrandMakerRelation(brandId, makerId);
-        }
-    }
-
-    private Set<Long> normalizeIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new LinkedHashSet<>();
-        }
-        return ids.stream()
-                .filter(id -> id != null)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    private List<String> resolveBrandNames(List<Long> brandIds) {
-        if (brandIds == null || brandIds.isEmpty()) {
-            return List.of();
-        }
-        return brandMapper.selectList(new QueryWrapper<Brand>()
-                        .in("id", brandIds)
-                        .eq("deleted", 0)
-                        .orderByAsc("id"))
+        Map<Long, Series> seriesMap = seriesIds.isEmpty()
+                ? Map.of()
+                : seriesMapper.selectList(new QueryWrapper<Series>()
+                        .in("id", seriesIds)
+                        .eq("deleted", 0))
                 .stream()
-                .map(Brand::getName)
-                .filter(name -> name != null && !name.isBlank())
+                .collect(Collectors.toMap(Series::getId, item -> item, (left, right) -> left));
+        List<Long> brandIds = seriesMap.values().stream()
+                .map(Series::getBrandId)
+                .filter(id -> id != null)
+                .distinct()
                 .toList();
-    }
-
-    private void ensureBrandMakerRelation(Long brandId, Long makerId) {
-        brandMakerRelationMapper.upsertRelation(brandId, makerId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
+        Map<Long, String> brandNameMap = brandIds.isEmpty()
+                ? Map.of()
+                : brandMapper.selectList(new QueryWrapper<Brand>()
+                        .in("id", brandIds)
+                        .eq("deleted", 0))
+                .stream()
+                .collect(Collectors.toMap(Brand::getId, Brand::getName, (left, right) -> left));
+        for (MakerVO record : records) {
+            if (record == null || record.getSeriesId() == null) {
+                continue;
+            }
+            Series series = seriesMap.get(record.getSeriesId());
+            if (series == null) {
+                continue;
+            }
+            record.setSeriesName(series.getName());
+            record.setBrandId(series.getBrandId());
+            record.setBrandName(brandNameMap.get(series.getBrandId()));
+        }
     }
 }

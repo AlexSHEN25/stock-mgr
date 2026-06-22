@@ -52,13 +52,20 @@ public final class ModuleMeta {
         public final String sourceModule;
         public final String queryParam;
         public final List<String> cascadeClearFields;
+        public final Map<String, String> additionalQueryParams;
 
         public DependencyRule(String parentField, String childField, String sourceModule, String queryParam, List<String> cascadeClearFields) {
+            this(parentField, childField, sourceModule, queryParam, cascadeClearFields, Map.of());
+        }
+
+        public DependencyRule(String parentField, String childField, String sourceModule, String queryParam,
+                              List<String> cascadeClearFields, Map<String, String> additionalQueryParams) {
             this.parentField = parentField;
             this.childField = childField;
             this.sourceModule = sourceModule;
             this.queryParam = queryParam;
             this.cascadeClearFields = cascadeClearFields;
+            this.additionalQueryParams = additionalQueryParams == null ? Map.of() : additionalQueryParams;
         }
     }
 
@@ -145,6 +152,8 @@ public final class ModuleMeta {
     private static final String MODULE_USER_ROLE = "userRole";
     private static final String MODULE_ROLE_PERMISSION = "rolePermission";
     private static final String MODULE_USER_TOKEN = "userToken";
+    private static final String GOODS_SERIES_OPTIONS = "_goodsSeriesOptions";
+    private static final String GOODS_MAKER_OPTIONS = "_goodsMakerOptions";
     private static final String DEFAULT_FIELD_TITLE = "項目";
     private static final Set<String> ALWAYS_HIDDEN_COLUMNS = Set.of("beforeqty", "afterqty");
     private static final Set<String> GOODS_HIDDEN_ID_COLUMNS = Set.of("brandid", "seriesid", "categoryid", "makerid");
@@ -179,10 +188,10 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(MODULE_ROLE, List.of(ID, "name", "code", "permissionNames", "remark", "status"));
         QUERY_FIELDS.put(MODULE_PERMISSION, List.of(ID, "name", "code", "module", "type", "parentId", "path", "sort", "icon", "component", "status"));
         QUERY_FIELDS.put(GOODS, List.of("name", "skuCode", "brandId", "seriesId", "categoryId", "makerId", "status"));
-        QUERY_FIELDS.put(MODULE_MAKER, List.of(ID, "name", "status"));
+        QUERY_FIELDS.put(MODULE_MAKER, List.of(ID, "name", "englishName", "seriesName", "brandName", "status"));
         QUERY_FIELDS.put(MODULE_BRAND, List.of(ID, "name", "englishName", "image", "content", "status"));
         QUERY_FIELDS.put(MODULE_CATEGORY, List.of(ID, "name", "status"));
-        QUERY_FIELDS.put(SERIES, List.of(ID, "name", "englishName", "brandId", "content", "status"));
+        QUERY_FIELDS.put(SERIES, List.of(ID, "name", "englishName", "brandName", "content", "status"));
         QUERY_FIELDS.put(MODULE_STOCK, List.of(ID, "goodsId", "goodsName", "skuCode", "skuId", "stockTypeId", "currentQty", "lockQty", "price", "priceUpdateTime", "currency", "warehouseId", "stockScope", "groupCode", "status"));
         QUERY_FIELDS.put(MODULE_STOCK_TYPE, List.of(ID, "name", "status"));
         QUERY_FIELDS.put(STOCK_ORDER, List.of(ID, "orderNo", "orderType", "bizDate", "stockTypeId", "warehouseId", "sourceType", "sourceId", "totalQty", "state", "requesterId", "requesterName", "operatorId", "operatorName", "approverId", "approverName", "approveTime", "finishTime", "remark"));
@@ -215,7 +224,7 @@ public final class ModuleMeta {
         FORM_FIELDS.put(MODULE_WAREHOUSE, List.of("name", "code", "address", "managerId", "status"));
         FORM_FIELDS.put(MODULE_STOCK_TYPE, List.of("name", "status"));
         FORM_FIELDS.put(MODULE_ROLE, List.of("name", "code", "permissionIds", "remark", "status"));
-        FORM_FIELDS.put(MODULE_MAKER, List.of("name", "status"));
+        FORM_FIELDS.put(MODULE_MAKER, List.of("name", "englishName", "seriesId", "status"));
         FORM_FIELDS.put(MODULE_BRAND, List.of("name", "englishName", "image", "content", "status"));
         FORM_FIELDS.put(MODULE_CATEGORY, List.of("name", "status"));
         FORM_FIELDS.put(SERIES, List.of("name", "englishName", "brandId", "content", "status"));
@@ -232,7 +241,7 @@ public final class ModuleMeta {
         REQUIRED_FORM_FIELDS.put(REQUEST_ITEM, List.of("requestId", "goodsId", "skuId"));
         REQUIRED_FORM_FIELDS.put(MODULE_WAREHOUSE, List.of("name", "code", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_ROLE, List.of("name", "code", "status"));
-        REQUIRED_FORM_FIELDS.put(MODULE_MAKER, List.of("name", "status"));
+        REQUIRED_FORM_FIELDS.put(MODULE_MAKER, List.of("name", "seriesId", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_BRAND, List.of("name", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_CATEGORY, List.of("name", "status"));
         REQUIRED_FORM_FIELDS.put(SERIES, List.of("name", "brandId", "status"));
@@ -337,7 +346,9 @@ public final class ModuleMeta {
         ));
 
         DEPENDENCY_RULES.put(GOODS, List.of(
-                new DependencyRule("brandId", "seriesId", SERIES, "brandId", List.of("goodsId", "skuId")),
+                new DependencyRule("brandId", "seriesId", GOODS_SERIES_OPTIONS, "brandId", List.of("makerId", "goodsId", "skuId")),
+                new DependencyRule("seriesId", "makerId", GOODS_MAKER_OPTIONS, "seriesId", List.of("goodsId", "skuId"),
+                        Map.of("brandId", "brandId")),
                 new DependencyRule("seriesId", "goodsId", GOODS, "seriesId", List.of("skuId")),
                 new DependencyRule("categoryId", "goodsId", GOODS, "categoryId", List.of("skuId")),
                 new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())

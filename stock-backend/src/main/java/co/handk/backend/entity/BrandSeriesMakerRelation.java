@@ -5,13 +5,11 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class Maker extends BaseEntity {
+public class BrandSeriesMakerRelation extends BaseEntity {
 
-    private String name;
-
-    private String englishName;
+    private Long brandId;
 
     private Long seriesId;
 
-    private Integer status;
+    private Long makerId;
 }

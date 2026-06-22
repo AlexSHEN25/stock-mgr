@@ -26,6 +26,7 @@ public class ApiClient {
     private static final String HEADER_CONTENT_TYPE = "Content-Type";
     private static final String HEADER_ACCEPT_LANGUAGE = "Accept-Language";
     private static final String HEADER_X_LANG = "X-Lang";
+    private static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
     private static final String LANG_JA_JP = "ja-JP";
     private static final String HEADER_AUTHORIZATION = "Authorization";
     private static final String CONTENT_TYPE_JSON = "application/json";
@@ -110,9 +111,14 @@ public class ApiClient {
     }
 
     public static byte[] getBytes(String path) throws Exception {
-        HttpURLConnection conn = open(path, METHOD_GET);
+        return getBytes(path, Map.of());
+    }
+
+    public static byte[] getBytes(String path, Map<String, String> queryParams) throws Exception {
+        String fullPath = path + toQueryString(queryParams);
+        HttpURLConnection conn = open(fullPath, METHOD_GET);
         long start = System.currentTimeMillis();
-        debugRequest(METHOD_GET, path, EMPTY, conn);
+        debugRequest(METHOD_GET, fullPath, EMPTY, conn);
         int status = conn.getResponseCode();
         InputStream is = status >= HTTP_BAD_REQUEST ? conn.getErrorStream() : conn.getInputStream();
         if (is == null) {
@@ -125,7 +131,7 @@ public class ApiClient {
             bos.write(buffer, 0, len);
         }
         byte[] bytes = bos.toByteArray();
-        debugResponse(METHOD_GET, path, status, System.currentTimeMillis() - start, "binary(" + bytes.length + ")");
+        debugResponse(METHOD_GET, fullPath, status, System.currentTimeMillis() - start, "binary(" + bytes.length + ")");
         if (status >= HTTP_BAD_REQUEST) {
             String body = new String(bytes, StandardCharsets.UTF_8);
             throw new IOException(body.isBlank() ? ("HTTP " + status) : body);
@@ -134,13 +140,25 @@ public class ApiClient {
     }
 
     public static String postMultipart(String path, String fieldName, File file) throws Exception {
+        return postMultipart(path, fieldName, file, Map.of());
+    }
+
+    public static String postMultipart(String path, String fieldName, File file, Map<String, String> headers) throws Exception {
+        return postMultipart(path, fieldName, file, headers, Map.of());
+    }
+
+    public static String postMultipart(String path, String fieldName, File file,
+                                       Map<String, String> headers,
+                                       Map<String, String> queryParams) throws Exception {
+        String fullPath = path + toQueryString(queryParams);
         String boundary = "----StockClientBoundary" + System.currentTimeMillis();
-        HttpURLConnection conn = open(path, METHOD_POST);
+        HttpURLConnection conn = open(fullPath, METHOD_POST);
         conn.setRequestProperty(HEADER_CONTENT_TYPE, "multipart/form-data; boundary=" + boundary);
+        applyHeaders(conn, headers);
         conn.setDoOutput(true);
 
         long start = System.currentTimeMillis();
-        debugRequest(METHOD_POST, path, "multipart:" + file.getName(), conn);
+        debugRequest(METHOD_POST, fullPath, "multipart:" + file.getName(), conn);
 
         String contentType = Files.probeContentType(file.toPath());
         if (contentType == null || contentType.isBlank()) {
@@ -159,7 +177,7 @@ public class ApiClient {
             writer.append("--").append(boundary).append("--\r\n").flush();
         }
 
-        return read(conn, start, METHOD_POST, path);
+        return read(conn, start, METHOD_POST, fullPath);
     }
 
     private static HttpURLConnection open(String path, String method) throws Exception {
@@ -181,6 +199,17 @@ public class ApiClient {
             conn.setRequestProperty(HEADER_AUTHORIZATION, AUTH_BEARER_PREFIX + token);
         }
         return conn;
+    }
+
+    private static void applyHeaders(HttpURLConnection conn, Map<String, String> headers) {
+        if (headers == null || headers.isEmpty()) {
+            return;
+        }
+        headers.forEach((key, value) -> {
+            if (key != null && value != null && !key.isBlank() && !value.isBlank()) {
+                conn.setRequestProperty(key, value);
+            }
+        });
     }
 
     private static synchronized void refreshTokenIfNecessary(String path) throws Exception {
@@ -280,6 +309,7 @@ public class ApiClient {
         System.out.println("[HTTP-REQ] headers={" + HEADER_ACCEPT_LANGUAGE + "=" + conn.getRequestProperty(HEADER_ACCEPT_LANGUAGE)
                 + ", " + HEADER_X_LANG + "=" + conn.getRequestProperty(HEADER_X_LANG)
                 + ", " + HEADER_CONTENT_TYPE + "=" + conn.getRequestProperty(HEADER_CONTENT_TYPE)
+                + ", " + HEADER_IDEMPOTENCY_KEY + "=" + conn.getRequestProperty(HEADER_IDEMPOTENCY_KEY)
                 + ", " + HEADER_AUTHORIZATION + "=" + maskedAuth + "}");
         if (body != null && !body.isBlank()) {
             System.out.println("[HTTP-REQ] body=" + body);

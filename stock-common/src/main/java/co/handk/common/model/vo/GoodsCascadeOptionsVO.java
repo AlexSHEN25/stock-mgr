@@ -8,5 +8,6 @@ import java.util.List;
 public class GoodsCascadeOptionsVO {
     private List<OptionVO> brandOptions;
     private List<OptionVO> seriesOptions;
+    private List<OptionVO> categoryOptions;
     private List<OptionVO> makerOptions;
 }

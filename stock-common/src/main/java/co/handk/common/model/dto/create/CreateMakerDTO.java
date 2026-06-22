@@ -2,9 +2,8 @@ package co.handk.common.model.dto.create;
 
 import co.handk.common.enums.StatusEnum;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-
-import java.util.List;
 
 @Data
 public class CreateMakerDTO {
@@ -12,7 +11,10 @@ public class CreateMakerDTO {
     @NotBlank(message = "name is required")
     private String name;
 
-    private StatusEnum status;
+    private String englishName;
 
-    private List<Long> brandIds;
+    @NotNull(message = "seriesId is required")
+    private Long seriesId;
+
+    private StatusEnum status;
 }

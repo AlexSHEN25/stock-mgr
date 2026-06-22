@@ -1,26 +1,25 @@
 package co.handk.backend.controller;
 
-import jakarta.validation.constraints.NotNull;
-
-import co.handk.common.constant.NumberConstant;
-
 import co.handk.backend.service.SeriesService;
-import co.handk.backend.service.BrandService;
+import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateSeriesDTO;
 import co.handk.common.model.dto.query.SeriesQueryDTO;
 import co.handk.common.model.dto.update.UpdateSeriesDTO;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import co.handk.backend.entity.Brand;
-import co.handk.common.enums.StatusEnum;
+import co.handk.common.model.vo.SeriesVO;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @Validated
@@ -28,7 +27,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SeriesController {
     private final SeriesService seriesService;
-    private final BrandService brandService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateSeriesDTO dto) {
@@ -38,15 +36,6 @@ public class SeriesController {
     @GetMapping("/{id}")
     public SeriesVO get(@PathVariable("id") @NotNull Long id) {
         return seriesService.getVOById(id);
-    }
-
-    @GetMapping("/form/options")
-    public MasterRelationOptionsVO formOptions() {
-        MasterRelationOptionsVO vo = new MasterRelationOptionsVO();
-        vo.setBrandOptions(brandService.list(new QueryWrapper<Brand>()
-                .eq("status", StatusEnum.NOMAL.getCode())
-                .orderByAsc("id")).stream().map(item -> new OptionVO(item.getId(), item.getName())).toList());
-        return vo;
     }
 
     @PutMapping
@@ -69,4 +58,3 @@ public class SeriesController {
         return seriesService.page(query);
     }
 }
-

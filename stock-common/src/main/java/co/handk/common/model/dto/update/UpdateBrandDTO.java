@@ -1,13 +1,9 @@
 package co.handk.common.model.dto.update;
 
-import jakarta.validation.constraints.NotBlank;
 import co.handk.common.enums.StatusEnum;
-
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import jakarta.validation.constraints.PositiveOrZero;
-
-import java.util.List;
 
 @Data
 public class UpdateBrandDTO {
@@ -20,6 +16,4 @@ public class UpdateBrandDTO {
     private String image;
     private String content;
     private StatusEnum status;
-    private List<Long> seriesIds;
-    private List<Long> makerIds;
 }

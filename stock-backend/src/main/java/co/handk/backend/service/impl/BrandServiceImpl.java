@@ -3,48 +3,57 @@ package co.handk.backend.service.impl;
 import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.constant.UploadBizType;
 import co.handk.backend.entity.Brand;
-import co.handk.backend.entity.BrandMakerRelation;
 import co.handk.backend.entity.Maker;
 import co.handk.backend.entity.Series;
-import co.handk.backend.entity.SeriesBrandRelation;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.BrandMapper;
-import co.handk.backend.mapper.BrandMakerRelationMapper;
 import co.handk.backend.mapper.MakerMapper;
-import co.handk.backend.mapper.SeriesBrandRelationMapper;
 import co.handk.backend.mapper.SeriesMapper;
-import co.handk.backend.service.BrandMakerRelationService;
 import co.handk.backend.service.BrandService;
 import co.handk.backend.service.FileStorageService;
-import co.handk.backend.service.SeriesBrandRelationService;
+import co.handk.common.enums.DeleteEnum;
+import co.handk.common.model.dto.BrandTreeMakerSaveDTO;
+import co.handk.common.model.dto.BrandTreeSaveDTO;
+import co.handk.common.model.dto.BrandTreeSeriesSaveDTO;
 import co.handk.common.model.dto.create.CreateBrandDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
+import co.handk.common.model.vo.BrandTreeNodeVO;
 import co.handk.common.model.vo.BrandVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import lombok.RequiredArgsConstructor;
+import java.util.ArrayList;
+import java.util.HashSet;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandVO>
         implements BrandService {
 
     private final FileStorageService fileStorageService;
-    private final SeriesBrandRelationService seriesBrandRelationService;
-    private final BrandMakerRelationService brandMakerRelationService;
     private final SeriesMapper seriesMapper;
     private final MakerMapper makerMapper;
-    private final SeriesBrandRelationMapper seriesBrandRelationMapper;
-    private final BrandMakerRelationMapper brandMakerRelationMapper;
+    private final SeriesServiceImpl seriesService;
+    private final MakerServiceImpl makerService;
+
+    public BrandServiceImpl(FileStorageService fileStorageService,
+                            SeriesMapper seriesMapper,
+                            MakerMapper makerMapper,
+                            SeriesServiceImpl seriesService,
+                            MakerServiceImpl makerService) {
+        this.fileStorageService = fileStorageService;
+        this.seriesMapper = seriesMapper;
+        this.makerMapper = makerMapper;
+        this.seriesService = seriesService;
+        this.makerService = makerService;
+    }
 
     @Override
     protected BrandVO toVO(Brand entity) {
@@ -54,7 +63,7 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
         BrandVO vo = new BrandVO();
         BeanUtils.copyProperties(entity, vo);
         vo.setImage(fileStorageService.toApiPath(UploadBizType.BRAND, vo.getImage()));
-        fillRelationIds(entity.getId(), vo);
+        fillChildren(entity.getId(), vo);
         return vo;
     }
 
@@ -73,16 +82,12 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
     public <C> boolean saveByDto(C dto) {
         if (dto instanceof CreateBrandDTO createDto) {
             createDto.setImage(fileStorageService.normalize(UploadBizType.BRAND, createDto.getImage()));
-            Brand brand = toEntity(createDto);
-            boolean saved = this.save(brand);
-            if (!saved) {
-                return false;
-            }
-            syncSeriesRelations(brand.getId(), createDto.getSeriesIds());
-            syncMakerRelations(brand.getId(), createDto.getMakerIds());
-            return true;
         }
-        return super.saveByDto(dto);
+        Brand brand = toEntity(dto);
+        if (brand == null) {
+            return false;
+        }
+        return save(brand);
     }
 
     @Override
@@ -90,13 +95,6 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
     public <U> boolean updateByDto(U dto) {
         if (dto instanceof UpdateBrandDTO updateDto) {
             updateDto.setImage(fileStorageService.normalize(UploadBizType.BRAND, updateDto.getImage()));
-            boolean updated = super.updateByDto(updateDto);
-            if (!updated) {
-                return false;
-            }
-            syncSeriesRelations(updateDto.getId(), updateDto.getSeriesIds());
-            syncMakerRelations(updateDto.getId(), updateDto.getMakerIds());
-            return true;
         }
         return super.updateByDto(dto);
     }
@@ -106,12 +104,12 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
     public int deleteByIdLogic(Long id) {
         int deleted = super.deleteByIdLogic(id);
         if (deleted > 0) {
-            seriesBrandRelationService.update(null, new UpdateWrapper<SeriesBrandRelation>()
+            List<Series> children = seriesMapper.selectList(new QueryWrapper<Series>()
                     .eq("brand_id", id)
-                    .set("deleted", 1));
-            brandMakerRelationService.update(null, new UpdateWrapper<BrandMakerRelation>()
-                    .eq("brand_id", id)
-                    .set("deleted", 1));
+                    .eq("deleted", 0));
+            for (Series child : children) {
+                seriesService.deleteByIdLogic(child.getId());
+            }
         }
         return deleted;
     }
@@ -138,11 +136,11 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
     @Override
     public String replaceImage(Long id, MultipartFile file) {
         if (id == null) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "ブランドIDは必須です");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "brand id is required");
         }
         Brand existed = this.getByIdNotDeleted(id);
         if (existed == null) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "ブランドが存在しません");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "brand does not exist");
         }
         String imagePath = fileStorageService.upload(UploadBizType.BRAND, file, existed.getImage());
         existed.setImage(imagePath);
@@ -150,148 +148,250 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
         return fileStorageService.toApiPath(UploadBizType.BRAND, imagePath);
     }
 
-    private void fillRelationIds(Long brandId, BrandVO vo) {
+    @Override
+    public List<BrandTreeNodeVO> listTree() {
+        List<Brand> brands = super.list(new QueryWrapper<Brand>()
+                .eq("status", 1)
+                .orderByAsc("id"));
+        List<Series> seriesList = seriesMapper.selectList(new QueryWrapper<Series>()
+                .eq("deleted", 0)
+                .eq("status", 1)
+                .orderByAsc("id"));
+        List<Maker> makerList = makerMapper.selectList(new QueryWrapper<Maker>()
+                .eq("deleted", 0)
+                .eq("status", 1)
+                .orderByAsc("id"));
+
+        Map<Long, List<Series>> seriesByBrand = new LinkedHashMap<>();
+        for (Series series : seriesList) {
+            if (series.getBrandId() == null) {
+                continue;
+            }
+            seriesByBrand.computeIfAbsent(series.getBrandId(), ignored -> new java.util.ArrayList<>()).add(series);
+        }
+
+        Map<Long, List<Maker>> makersBySeries = new LinkedHashMap<>();
+        for (Maker maker : makerList) {
+            if (maker.getSeriesId() == null) {
+                continue;
+            }
+            makersBySeries.computeIfAbsent(maker.getSeriesId(), ignored -> new java.util.ArrayList<>()).add(maker);
+        }
+
+        return brands.stream().map(brand -> {
+            BrandTreeNodeVO brandNode = buildBrandNode(brand);
+
+            List<BrandTreeNodeVO> seriesNodes = seriesByBrand.getOrDefault(brand.getId(), List.of()).stream().map(series -> {
+                BrandTreeNodeVO seriesNode = buildSeriesNode(series, brand.getId());
+
+                List<BrandTreeNodeVO> makerNodes = makersBySeries.getOrDefault(series.getId(), List.of()).stream().map(maker -> {
+                    return buildMakerNode(maker, brand.getId(), series.getId());
+                }).toList();
+                seriesNode.setChildren(makerNodes);
+                return seriesNode;
+            }).toList();
+            brandNode.setChildren(seriesNodes);
+            return brandNode;
+        }).toList();
+    }
+
+    @Override
+    public BrandTreeNodeVO getTreeDetail(Long id) {
+        Brand brand = this.getByIdNotDeleted(id);
+        if (brand == null) {
+            return null;
+        }
+        BrandTreeNodeVO brandNode = buildBrandNode(brand);
+        List<Series> seriesList = seriesMapper.selectList(new QueryWrapper<Series>()
+                .eq("brand_id", id)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .orderByAsc("id"));
+        List<Long> seriesIds = seriesList.stream().map(Series::getId).filter(Objects::nonNull).toList();
+        Map<Long, List<Maker>> makersBySeries = seriesIds.isEmpty()
+                ? Map.of()
+                : makerMapper.selectList(new QueryWrapper<Maker>()
+                        .in("series_id", seriesIds)
+                        .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                        .orderByAsc("id"))
+                .stream()
+                .collect(java.util.stream.Collectors.groupingBy(Maker::getSeriesId, LinkedHashMap::new, java.util.stream.Collectors.toList()));
+        List<BrandTreeNodeVO> seriesNodes = new ArrayList<>();
+        for (Series series : seriesList) {
+            BrandTreeNodeVO seriesNode = buildSeriesNode(series, id);
+            List<BrandTreeNodeVO> makerNodes = makersBySeries.getOrDefault(series.getId(), List.of())
+                    .stream()
+                    .map(maker -> buildMakerNode(maker, id, series.getId()))
+                    .toList();
+            seriesNode.setChildren(makerNodes);
+            seriesNodes.add(seriesNode);
+        }
+        brandNode.setChildren(seriesNodes);
+        return brandNode;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveTree(BrandTreeSaveDTO dto) {
+        Brand brand = saveBrandNode(dto);
+        syncSeriesNodes(brand.getId(), dto.getSeries());
+        return brand.getId();
+    }
+
+    private void fillChildren(Long brandId, BrandVO vo) {
         if (brandId == null || vo == null) {
             return;
         }
-        List<Long> seriesIds = seriesBrandRelationService.list(new QueryWrapper<SeriesBrandRelation>()
-                        .eq("brand_id", brandId)
-                        .eq("deleted", 0)
-                        .orderByAsc("id"))
-                .stream()
-                .map(SeriesBrandRelation::getSeriesId)
-                .filter(id -> id != null)
-                .distinct()
-                .toList();
-        List<Long> makerIds = brandMakerRelationService.list(new QueryWrapper<BrandMakerRelation>()
-                        .eq("brand_id", brandId)
-                        .eq("deleted", 0)
-                        .orderByAsc("id"))
-                .stream()
-                .map(BrandMakerRelation::getMakerId)
-                .filter(id -> id != null)
-                .distinct()
-                .toList();
-        vo.setSeriesIds(seriesIds);
-        vo.setMakerIds(makerIds);
-        vo.setSeriesNames(resolveSeriesNames(seriesIds));
-        vo.setMakerNames(resolveMakerNames(makerIds));
-    }
-
-    private void syncSeriesRelations(Long brandId, List<Long> seriesIds) {
-        List<SeriesBrandRelation> existing = seriesBrandRelationService.list(new QueryWrapper<SeriesBrandRelation>()
-                .eq("brand_id", brandId));
-        syncSeriesBrandRelations(existing, brandId, normalizeIds(seriesIds));
-    }
-
-    private void syncMakerRelations(Long brandId, List<Long> makerIds) {
-        List<BrandMakerRelation> existing = brandMakerRelationService.list(new QueryWrapper<BrandMakerRelation>()
-                .eq("brand_id", brandId));
-        syncBrandMakerRelations(existing, brandId, normalizeIds(makerIds));
-    }
-
-    private void syncSeriesBrandRelations(List<SeriesBrandRelation> existing, Long brandId, Set<Long> targetSeriesIds) {
-        Set<Long> activeIds = existing.stream()
-                .filter(item -> item.getDeleted() != null && item.getDeleted() == 0)
-                .map(SeriesBrandRelation::getSeriesId)
-                .collect(Collectors.toSet());
-
-        for (SeriesBrandRelation relation : existing) {
-            Long seriesId = relation.getSeriesId();
-            if (seriesId == null) {
-                continue;
-            }
-            if (!targetSeriesIds.contains(seriesId) && relation.getDeleted() != null && relation.getDeleted() == 0) {
-                relation.setDeleted(1);
-                seriesBrandRelationService.updateById(relation);
-                continue;
-            }
-            if (targetSeriesIds.contains(seriesId) && relation.getDeleted() != null && relation.getDeleted() != 0) {
-                relation.setDeleted(0);
-                seriesBrandRelationService.updateById(relation);
-            }
-        }
-
-        for (Long seriesId : targetSeriesIds) {
-            if (activeIds.contains(seriesId)) {
-                continue;
-            }
-            ensureSeriesBrandRelation(brandId, seriesId);
-        }
-    }
-
-    private void syncBrandMakerRelations(List<BrandMakerRelation> existing, Long brandId, Set<Long> targetMakerIds) {
-        Set<Long> activeIds = existing.stream()
-                .filter(item -> item.getDeleted() != null && item.getDeleted() == 0)
-                .map(BrandMakerRelation::getMakerId)
-                .collect(Collectors.toSet());
-
-        for (BrandMakerRelation relation : existing) {
-            Long makerId = relation.getMakerId();
-            if (makerId == null) {
-                continue;
-            }
-            if (!targetMakerIds.contains(makerId) && relation.getDeleted() != null && relation.getDeleted() == 0) {
-                relation.setDeleted(1);
-                brandMakerRelationService.updateById(relation);
-                continue;
-            }
-            if (targetMakerIds.contains(makerId) && relation.getDeleted() != null && relation.getDeleted() != 0) {
-                relation.setDeleted(0);
-                brandMakerRelationService.updateById(relation);
-            }
-        }
-
-        for (Long makerId : targetMakerIds) {
-            if (activeIds.contains(makerId)) {
-                continue;
-            }
-            ensureBrandMakerRelation(brandId, makerId);
-        }
-    }
-
-    private Set<Long> normalizeIds(List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
-            return new LinkedHashSet<>();
-        }
-        return ids.stream()
-                .filter(id -> id != null)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-    }
-
-    private List<String> resolveSeriesNames(List<Long> seriesIds) {
-        if (seriesIds == null || seriesIds.isEmpty()) {
-            return List.of();
-        }
-        return seriesMapper.selectList(new QueryWrapper<Series>()
-                        .in("id", seriesIds)
-                        .eq("deleted", 0)
-                        .orderByAsc("id"))
-                .stream()
+        List<Series> children = seriesMapper.selectList(new QueryWrapper<Series>()
+                .eq("brand_id", brandId)
+                .eq("deleted", 0)
+                .orderByAsc("id"));
+        List<Long> seriesIds = children.stream().map(Series::getId).toList();
+        List<String> seriesNames = children.stream()
                 .map(Series::getName)
                 .filter(name -> name != null && !name.isBlank())
                 .toList();
+        vo.setSeriesIds(seriesIds);
+        vo.setSeriesNames(seriesNames);
+        vo.setSeriesCount((long) seriesIds.size());
     }
 
-    private List<String> resolveMakerNames(List<Long> makerIds) {
-        if (makerIds == null || makerIds.isEmpty()) {
-            return List.of();
+    private Brand saveBrandNode(BrandTreeSaveDTO dto) {
+        Brand entity = dto.getId() == null ? new Brand() : this.getByIdNotDeleted(dto.getId());
+        if (dto.getId() != null && entity == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "brand does not exist");
         }
-        return makerMapper.selectList(new QueryWrapper<Maker>()
-                        .in("id", makerIds)
-                        .eq("deleted", 0)
-                        .orderByAsc("id"))
-                .stream()
-                .map(Maker::getName)
-                .filter(name -> name != null && !name.isBlank())
-                .toList();
+        entity.setName(trimToNull(dto.getName()));
+        entity.setEnglishName(trimToNull(dto.getEnglishName()));
+        entity.setImage(fileStorageService.normalize(UploadBizType.BRAND, dto.getImage()));
+        entity.setContent(trimToNull(dto.getContent()));
+        entity.setStatus(resolveStatus(dto.getStatus(), entity.getStatus()));
+        boolean success = entity.getId() == null ? this.save(entity) : this.updateById(entity);
+        if (!success || entity.getId() == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to save brand tree");
+        }
+        return entity;
     }
 
-    private void ensureSeriesBrandRelation(Long brandId, Long seriesId) {
-        seriesBrandRelationMapper.upsertRelation(seriesId, brandId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
+    private void syncSeriesNodes(Long brandId, List<BrandTreeSeriesSaveDTO> submittedSeries) {
+        List<Series> existingSeries = seriesMapper.selectList(new QueryWrapper<Series>()
+                .eq("brand_id", brandId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .orderByAsc("id"));
+        Map<Long, Series> existingSeriesMap = existingSeries.stream()
+                .filter(item -> item.getId() != null)
+                .collect(java.util.stream.Collectors.toMap(Series::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+        Set<Long> submittedSeriesIds = new HashSet<>();
+        for (BrandTreeSeriesSaveDTO item : safeSeries(submittedSeries)) {
+            Series series = item.getId() == null ? new Series() : existingSeriesMap.get(item.getId());
+            if (item.getId() != null && series == null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "series does not belong to brand");
+            }
+            series.setName(trimToNull(item.getName()));
+            series.setEnglishName(trimToNull(item.getEnglishName()));
+            series.setBrandId(brandId);
+            series.setContent(trimToNull(item.getContent()));
+            series.setStatus(resolveStatus(item.getStatus(), series.getStatus()));
+            boolean success = series.getId() == null ? seriesService.save(series) : seriesService.updateById(series);
+            if (!success || series.getId() == null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to save series");
+            }
+            submittedSeriesIds.add(series.getId());
+            syncMakerNodes(brandId, series.getId(), item.getMakers());
+        }
+        for (Series existing : existingSeries) {
+            if (existing.getId() != null && !submittedSeriesIds.contains(existing.getId())) {
+                seriesService.deleteByIdLogic(existing.getId());
+            }
+        }
     }
 
-    private void ensureBrandMakerRelation(Long brandId, Long makerId) {
-        brandMakerRelationMapper.upsertRelation(brandId, makerId, co.handk.backend.annotation.context.UserContext.getUserIdOrDefault());
+    private void syncMakerNodes(Long brandId, Long seriesId, List<BrandTreeMakerSaveDTO> submittedMakers) {
+        List<Maker> existingMakers = makerMapper.selectList(new QueryWrapper<Maker>()
+                .eq("series_id", seriesId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .orderByAsc("id"));
+        Map<Long, Maker> existingMakerMap = existingMakers.stream()
+                .filter(item -> item.getId() != null)
+                .collect(java.util.stream.Collectors.toMap(Maker::getId, item -> item, (left, right) -> left, LinkedHashMap::new));
+        Set<Long> submittedMakerIds = new HashSet<>();
+        for (BrandTreeMakerSaveDTO item : safeMakers(submittedMakers)) {
+            Maker maker = item.getId() == null ? new Maker() : existingMakerMap.get(item.getId());
+            if (item.getId() != null && maker == null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "maker does not belong to series");
+            }
+            maker.setName(trimToNull(item.getName()));
+            maker.setEnglishName(trimToNull(item.getEnglishName()));
+            maker.setSeriesId(seriesId);
+            maker.setStatus(resolveStatus(item.getStatus(), maker.getStatus()));
+            boolean success = maker.getId() == null ? makerService.save(maker) : makerService.updateById(maker);
+            if (!success || maker.getId() == null) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to save maker");
+            }
+            submittedMakerIds.add(maker.getId());
+        }
+        for (Maker existing : existingMakers) {
+            if (existing.getId() != null && !submittedMakerIds.contains(existing.getId())) {
+                makerService.deleteByIdLogic(existing.getId());
+            }
+        }
+    }
+
+    private List<BrandTreeSeriesSaveDTO> safeSeries(List<BrandTreeSeriesSaveDTO> source) {
+        return source == null ? List.of() : source;
+    }
+
+    private List<BrandTreeMakerSaveDTO> safeMakers(List<BrandTreeMakerSaveDTO> source) {
+        return source == null ? List.of() : source;
+    }
+
+    private Integer resolveStatus(co.handk.common.enums.StatusEnum status, Integer fallback) {
+        if (status != null) {
+            return status.getCode();
+        }
+        return fallback != null ? fallback : 1;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private BrandTreeNodeVO buildBrandNode(Brand brand) {
+        BrandTreeNodeVO brandNode = new BrandTreeNodeVO();
+        brandNode.setId(brand.getId());
+        brandNode.setName(brand.getName());
+        brandNode.setEnglishName(brand.getEnglishName());
+        brandNode.setImage(fileStorageService.toApiPath(UploadBizType.BRAND, brand.getImage()));
+        brandNode.setContent(brand.getContent());
+        brandNode.setNodeType("brand");
+        brandNode.setStatus(brand.getStatus());
+        return brandNode;
+    }
+
+    private BrandTreeNodeVO buildSeriesNode(Series series, Long brandId) {
+        BrandTreeNodeVO seriesNode = new BrandTreeNodeVO();
+        seriesNode.setId(series.getId());
+        seriesNode.setName(series.getName());
+        seriesNode.setEnglishName(series.getEnglishName());
+        seriesNode.setContent(series.getContent());
+        seriesNode.setNodeType("series");
+        seriesNode.setBrandId(brandId);
+        seriesNode.setStatus(series.getStatus());
+        return seriesNode;
+    }
+
+    private BrandTreeNodeVO buildMakerNode(Maker maker, Long brandId, Long seriesId) {
+        BrandTreeNodeVO makerNode = new BrandTreeNodeVO();
+        makerNode.setId(maker.getId());
+        makerNode.setName(maker.getName());
+        makerNode.setEnglishName(maker.getEnglishName());
+        makerNode.setNodeType("maker");
+        makerNode.setBrandId(brandId);
+        makerNode.setSeriesId(seriesId);
+        makerNode.setStatus(maker.getStatus());
+        return makerNode;
     }
 }

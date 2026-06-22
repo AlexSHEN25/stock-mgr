@@ -1,29 +1,29 @@
 package co.handk.backend.controller;
 
-import jakarta.validation.constraints.NotNull;
-
-import co.handk.common.constant.NumberConstant;
-
 import co.handk.backend.service.BrandService;
-import co.handk.backend.service.MakerService;
-import co.handk.backend.service.SeriesService;
+import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
-import co.handk.common.model.vo.*;
+import co.handk.common.model.dto.BrandTreeSaveDTO;
 import co.handk.common.model.dto.create.CreateBrandDTO;
 import co.handk.common.model.dto.query.BrandQueryDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import co.handk.backend.entity.Maker;
-import co.handk.backend.entity.Series;
-import co.handk.common.enums.StatusEnum;
+import co.handk.common.model.vo.BrandTreeNodeVO;
+import co.handk.common.model.vo.BrandVO;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @Validated
@@ -31,8 +31,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BrandController {
     private final BrandService brandService;
-    private final SeriesService seriesService;
-    private final MakerService makerService;
 
     @PostMapping
     public Boolean create(@RequestBody @NotNull @Valid CreateBrandDTO dto) {
@@ -54,18 +52,6 @@ public class BrandController {
         return brandService.getVOById(id);
     }
 
-    @GetMapping("/form/options")
-    public MasterRelationOptionsVO formOptions() {
-        MasterRelationOptionsVO vo = new MasterRelationOptionsVO();
-        vo.setSeriesOptions(seriesService.list(new QueryWrapper<Series>()
-                .eq("status", StatusEnum.NOMAL.getCode())
-                .orderByAsc("id")).stream().map(item -> new OptionVO(item.getId(), item.getName())).toList());
-        vo.setMakerOptions(makerService.list(new QueryWrapper<Maker>()
-                .eq("status", StatusEnum.NOMAL.getCode())
-                .orderByAsc("id")).stream().map(item -> new OptionVO(item.getId(), item.getName())).toList());
-        return vo;
-    }
-
     @PutMapping
     public Boolean update(@RequestBody @NotNull @Valid UpdateBrandDTO dto) {
         return brandService.updateByDto(dto);
@@ -85,5 +71,25 @@ public class BrandController {
     public PageResult<BrandVO> page(@Valid BrandQueryDTO query) {
         return brandService.page(query);
     }
-}
 
+    @GetMapping("/tree")
+    public List<BrandTreeNodeVO> tree() {
+        return brandService.listTree();
+    }
+
+    @GetMapping("/tree/{id}")
+    public BrandTreeNodeVO treeDetail(@PathVariable("id") @NotNull Long id) {
+        return brandService.getTreeDetail(id);
+    }
+
+    @PostMapping("/tree")
+    public Long createTree(@RequestBody @NotNull @Valid BrandTreeSaveDTO dto) {
+        dto.setId(null);
+        return brandService.saveTree(dto);
+    }
+
+    @PutMapping("/tree")
+    public Long updateTree(@RequestBody @NotNull @Valid BrandTreeSaveDTO dto) {
+        return brandService.saveTree(dto);
+    }
+}

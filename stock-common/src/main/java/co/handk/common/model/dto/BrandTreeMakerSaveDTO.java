@@ -1,16 +1,18 @@
-package co.handk.common.model.dto.create;
+package co.handk.common.model.dto;
 
 import co.handk.common.enums.StatusEnum;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class CreateBrandDTO {
+public class BrandTreeMakerSaveDTO {
 
-    @NotBlank(message = "必須項目です")
+    private Long id;
+
+    @NotBlank(message = "maker name is required")
     private String name;
+
     private String englishName;
-    private String image;
-    private String content;
+
     private StatusEnum status;
 }
