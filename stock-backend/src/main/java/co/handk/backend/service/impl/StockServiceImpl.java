@@ -1524,7 +1524,11 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     private int resolveInboundScene(Integer sourceType) {
-        int scene = sourceType == null ? StockBizConstant.INBOUND_SCENE_RESALE : sourceType;
+        int scene = sourceType == null ? StockBizConstant.INBOUND_SCENE_SELF : sourceType;
+        if (scene == StockBizConstant.INBOUND_SCENE_RESALE) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "purchase inbound has been disabled");
+        }
         if (scene != StockBizConstant.INBOUND_SCENE_SELF && scene != StockBizConstant.INBOUND_SCENE_RESALE) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫元種別が不正です");

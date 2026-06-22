@@ -129,7 +129,7 @@ class StockFlowIntegrationTest {
     void manualInboundCreatesFinishedOrderAndBatch() {
         TestFixture fixture = createFixture();
         StockOperateDTO inbound = baseOperateDTO(fixture, 10);
-        inbound.setSourceType(StockBizConstant.INBOUND_SCENE_RESALE);
+        inbound.setSourceType(StockBizConstant.INBOUND_SCENE_SELF);
 
         Long orderId = stockService.inbound(inbound);
 
@@ -295,7 +295,7 @@ class StockFlowIntegrationTest {
 
     private void seedInboundStock(TestFixture fixture, int quantity) {
         StockOperateDTO inbound = baseOperateDTO(fixture, quantity);
-        inbound.setSourceType(StockBizConstant.INBOUND_SCENE_RESALE);
+        inbound.setSourceType(StockBizConstant.INBOUND_SCENE_SELF);
         Long orderId = stockService.inbound(inbound);
         assertNotNull(orderId);
     }

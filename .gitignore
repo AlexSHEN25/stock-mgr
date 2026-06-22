@@ -41,3 +41,7 @@ build/
 *.svg
 *.bmp
 *.ico
+
+### Docs and SQL scripts (do not commit) ###
+*.md
+*.sql

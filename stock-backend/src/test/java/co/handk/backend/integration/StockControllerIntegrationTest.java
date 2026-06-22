@@ -153,7 +153,7 @@ class StockControllerIntegrationTest {
                   "warehouseId": %d,
                   "stockTypeId": %d,
                   "quantity": 9,
-                  "sourceType": 2
+                  "sourceType": 1
                 }
                 """.formatted(
                 fixture.goods().getId(),
@@ -182,6 +182,33 @@ class StockControllerIntegrationTest {
         assertEquals(9, stock.getCurrentQty());
         assertEquals(9, batch.getCurrentQty());
         assertEquals(9, batch.getAvailableQty());
+    }
+
+    @Test
+    void inboundEndpointRejectsPurchaseInbound() throws Exception {
+        TestFixture fixture = createFixture();
+        String payload = """
+                {
+                  "goodsId": %d,
+                  "skuId": %d,
+                  "warehouseId": %d,
+                  "stockTypeId": %d,
+                  "quantity": 9,
+                  "sourceType": 2
+                }
+                """.formatted(
+                fixture.goods().getId(),
+                fixture.sku().getId(),
+                fixture.warehouse().getId(),
+                fixture.stockType().getId());
+
+        mockMvc.perform(apiPost("/stock/inbound")
+                        .header("Authorization", "Bearer " + ADMIN_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500))
+                .andExpect(jsonPath("$.message").value("purchase inbound has been disabled"));
     }
 
     @Test
@@ -433,7 +460,7 @@ class StockControllerIntegrationTest {
                   "warehouseId": %d,
                   "stockTypeId": %d,
                   "quantity": %d,
-                  "sourceType": 2
+                  "sourceType": 1
                 }
                 """.formatted(
                 fixture.goods().getId(),

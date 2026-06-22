@@ -400,6 +400,9 @@ public final class ModuleMeta {
                 FormValueRule.defaultIfBlank("currency", "JPY"),
                 FormValueRule.clearWhenBlank("priceUpdateTime", "updatePrice")
         ));
+        FORM_VALUE_RULES.put(MODULE_STOCK, List.of(
+                FormValueRule.defaultIfBlank("sourceType", "1")
+        ));
         FORM_VALUE_RULES.put(STOCK_ORDER, List.of(
                 FormValueRule.defaultIfBlank("sourceType", "4"),
                 FormValueRule.defaultIfBlank("state", "0")
@@ -557,6 +560,11 @@ public final class ModuleMeta {
     public static List<Option> selectOptions(String moduleKey, String field) {
         List<Option> moduleOptions = SELECT_OPTIONS.get(moduleKey + "." + field);
         if (moduleOptions != null) {
+            if (MODULE_STOCK.equals(moduleKey) && "sourceType".equals(field)) {
+                return moduleOptions.stream()
+                        .filter(option -> !"2".equals(option.value))
+                        .toList();
+            }
             if (STOCK_ORDER.equals(moduleKey) && Session.isNormalUser()
                     && ("sourceType".equals(field) || "state".equals(field))) {
                 return moduleOptions.stream()
