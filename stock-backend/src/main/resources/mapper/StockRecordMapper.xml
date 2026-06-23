@@ -297,31 +297,31 @@
     <select id="countCustomerDeliveryScheduleTreeCountries" resultType="long">
         SELECT COUNT(*)
         FROM (
-            SELECT COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) AS country
+            SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country
             FROM t_stock_order o
             INNER JOIN t_stock_order_item i ON i.order_id = o.id
             LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
             WHERE <include refid="customerGoodsTreeWhere"/>
               AND COALESCE(ABS(i.change_qty), 0) > 0
-            GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・)
+            GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '未設定')
         ) country_summary
     </select>
 
     <select id="selectCustomerDeliveryScheduleTreeCountries" resultType="string">
-        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) AS country
+        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country
         FROM t_stock_order o
         INNER JOIN t_stock_order_item i ON i.order_id = o.id
         LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsTreeWhere"/>
           AND COALESCE(ABS(i.change_qty), 0) > 0
-        GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・)
+        GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '未設定')
         ORDER BY country ASC
         LIMIT #{offset}, #{limit}
     </select>
 
     <select id="selectCustomerDeliveryScheduleTreeDetails"
             resultType="co.handk.common.model.vo.CustomerOutboundTreeNodeVO">
-        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) AS country,
+        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country,
                o.customer_id AS customerId,
                o.customer_name AS customerName,
                o.dept_id AS deptId,
@@ -345,7 +345,7 @@
         LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsTreeWhere"/>
           AND COALESCE(ABS(i.change_qty), 0) > 0
-          AND COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) IN
+          AND COALESCE(NULLIF(TRIM(c.country), ''), '未設定') IN
           <foreach collection="countries" item="country" open="(" separator="," close=")">
               #{country}
           </foreach>
