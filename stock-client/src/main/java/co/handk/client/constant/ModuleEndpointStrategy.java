@@ -45,6 +45,15 @@ public final class ModuleEndpointStrategy {
                 PATH_PREFIX + AppConstants.Module.STOCK + "/{id}",
                 PATH_PREFIX + AppConstants.Module.STOCK + "/batch"
         ));
+        CONFIGS.put(AppConstants.Module.BRAND_HIERARCHY, new EndpointConfig(
+                HttpMethod.GET,
+                AppConstants.ApiPath.BRAND_HIERARCHY_PAGE,
+                AppConstants.ApiPath.BRAND_HIERARCHY,
+                AppConstants.ApiPath.BRAND_HIERARCHY + "/{id}",
+                AppConstants.ApiPath.BRAND_HIERARCHY,
+                AppConstants.ApiPath.BRAND_HIERARCHY + "/{id}",
+                null
+        ));
     }
 
     private static EndpointConfig defaultConfig(String moduleKey) {

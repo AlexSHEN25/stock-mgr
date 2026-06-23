@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="co.handk.backend.mapper.BrandMapper">
+
+    <sql id="hierarchyWhere">
+        b.deleted = 0
+        <if test="query.brandName != null and query.brandName != ''">
+            AND b.name LIKE CONCAT('%', #{query.brandName}, '%')
+        </if>
+        <if test="query.brandEnglishName != null and query.brandEnglishName != ''">
+            AND b.english_name LIKE CONCAT('%', #{query.brandEnglishName}, '%')
+        </if>
+        <if test="query.seriesName != null and query.seriesName != ''">
+            AND s.name LIKE CONCAT('%', #{query.seriesName}, '%')
+        </if>
+        <if test="query.seriesEnglishName != null and query.seriesEnglishName != ''">
+            AND s.english_name LIKE CONCAT('%', #{query.seriesEnglishName}, '%')
+        </if>
+        <if test="query.makerName != null and query.makerName != ''">
+            AND m.name LIKE CONCAT('%', #{query.makerName}, '%')
+        </if>
+        <if test="query.makerEnglishName != null and query.makerEnglishName != ''">
+            AND m.english_name LIKE CONCAT('%', #{query.makerEnglishName}, '%')
+        </if>
+        <if test="query.status != null">
+            AND COALESCE(m.status, s.status, b.status) = #{query.status}
+        </if>
+    </sql>
+
+    <select id="countHierarchy" resultType="long">
+        SELECT COUNT(*)
+        FROM t_brand b
+        LEFT JOIN t_series s ON s.brand_id = b.id AND s.deleted = 0
+        LEFT JOIN t_maker m ON m.series_id = s.id AND m.deleted = 0
+        WHERE <include refid="hierarchyWhere"/>
+    </select>
+
+    <select id="selectHierarchy" resultType="co.handk.common.model.vo.BrandHierarchyVO">
+        SELECT CASE
+                   WHEN m.id IS NOT NULL THEN CONCAT('maker:', m.id)
+                   WHEN s.id IS NOT NULL THEN CONCAT('series:', s.id)
+                   ELSE CONCAT('brand:', b.id)
+               END AS id,
+               CASE
+                   WHEN m.id IS NOT NULL THEN 'maker'
+                   WHEN s.id IS NOT NULL THEN 'series'
+                   ELSE 'brand'
+               END AS nodeType,
+               b.id AS brandId,
+               b.name AS brandName,
+               b.english_name AS brandEnglishName,
+               s.id AS seriesId,
+               s.name AS seriesName,
+               s.english_name AS seriesEnglishName,
+               m.id AS makerId,
+               m.name AS makerName,
+               m.english_name AS makerEnglishName,
+               COALESCE(m.status, s.status, b.status) AS status,
+               GREATEST(
+                   COALESCE(b.update_time, b.create_time),
+                   COALESCE(s.update_time, s.create_time, b.update_time, b.create_time),
+                   COALESCE(m.update_time, m.create_time, s.update_time, s.create_time, b.update_time, b.create_time)
+               ) AS updateTime
+        FROM t_brand b
+        LEFT JOIN t_series s ON s.brand_id = b.id AND s.deleted = 0
+        LEFT JOIN t_maker m ON m.series_id = s.id AND m.deleted = 0
+        WHERE <include refid="hierarchyWhere"/>
+        ORDER BY
+        <choose>
+            <when test="query.sortBy == 'createTime'">
+                b.create_time
+            </when>
+            <otherwise>
+                updateTime
+            </otherwise>
+        </choose>
+        <choose>
+            <when test="query.sortOrder != null and query.sortOrder.toLowerCase() == 'asc'">
+                ASC
+            </when>
+            <otherwise>
+                DESC
+            </otherwise>
+        </choose>,
+        b.id ASC, s.id ASC, m.id ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+</mapper>

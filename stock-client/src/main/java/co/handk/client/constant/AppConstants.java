@@ -19,6 +19,7 @@ public final class AppConstants {
         public static final String REQUEST_ITEM = "requestItem";
         public static final String DELIVERY_SCHEDULE = "deliverySchedule";
         public static final String CUSTOMER = "customer";
+        public static final String BRAND_HIERARCHY = "brandHierarchy";
 
         private Module() {
         }
@@ -70,6 +71,9 @@ public final class AppConstants {
         public static final String CUSTOMER_EXPORT = "/customer/export";
         public static final String CUSTOMER_IMPORT_TEMPLATE = "/customer/import/template";
         public static final String CUSTOMER_IMPORT_UPSERT = "/customer/import/upsert";
+        public static final String BRAND_HIERARCHY_PAGE = "/brand/hierarchy/page";
+        public static final String BRAND_HIERARCHY = "/brand/hierarchy";
+        public static final String BRAND_TREE = "/brand/tree";
         public static final String DELIVERY_SCHEDULE_PAGE = "/stock/customer/delivery-schedule/page";
         public static final String DELIVERY_SCHEDULE_MATRIX = "/stock/customer/delivery-schedule/matrix";
         public static final String DELIVERY_SCHEDULE_ADD_TO_REQUEST = "/stock/customer/delivery-schedule/items/add-to-request";

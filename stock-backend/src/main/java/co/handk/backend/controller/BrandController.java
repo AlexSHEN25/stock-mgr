@@ -3,10 +3,13 @@ package co.handk.backend.controller;
 import co.handk.backend.service.BrandService;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.BrandHierarchySaveDTO;
 import co.handk.common.model.dto.BrandTreeSaveDTO;
 import co.handk.common.model.dto.create.CreateBrandDTO;
+import co.handk.common.model.dto.query.BrandHierarchyQueryDTO;
 import co.handk.common.model.dto.query.BrandQueryDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
+import co.handk.common.model.vo.BrandHierarchyVO;
 import co.handk.common.model.vo.BrandTreeNodeVO;
 import co.handk.common.model.vo.BrandVO;
 import jakarta.validation.Valid;
@@ -70,6 +73,32 @@ public class BrandController {
     @GetMapping("/page")
     public PageResult<BrandVO> page(@Valid BrandQueryDTO query) {
         return brandService.page(query);
+    }
+
+    @GetMapping("/hierarchy/page")
+    public PageResult<BrandHierarchyVO> hierarchyPage(@Valid BrandHierarchyQueryDTO query) {
+        return brandService.pageHierarchy(query);
+    }
+
+    @GetMapping("/hierarchy/{key}")
+    public BrandHierarchyVO hierarchyDetail(@PathVariable("key") @NotNull String key) {
+        return brandService.getHierarchy(key);
+    }
+
+    @PostMapping("/hierarchy")
+    public BrandHierarchyVO createHierarchy(@RequestBody @NotNull @Valid BrandHierarchySaveDTO dto) {
+        dto.setId(null);
+        return brandService.saveHierarchy(dto);
+    }
+
+    @PutMapping("/hierarchy")
+    public BrandHierarchyVO updateHierarchy(@RequestBody @NotNull @Valid BrandHierarchySaveDTO dto) {
+        return brandService.updateHierarchy(dto);
+    }
+
+    @DeleteMapping("/hierarchy/{key}")
+    public Boolean deleteHierarchy(@PathVariable("key") @NotNull String key) {
+        return brandService.deleteHierarchy(key);
     }
 
     @GetMapping("/tree")

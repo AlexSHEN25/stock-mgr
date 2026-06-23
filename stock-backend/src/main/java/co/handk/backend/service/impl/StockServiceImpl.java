@@ -114,8 +114,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Autowired
     private WarehouseService warehouseService;
     @Autowired
-    private RequestFormService requestFormService;
-    @Autowired
     private StringRedisUtil stringRedisUtil;
     @Autowired
     private StockRecordMapper stockRecordMapper;
@@ -233,6 +231,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING, idempotencyKey);
         StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
         stockBatchService.lockOutbound(order, item, stock);
+        if (permissionQueryService.isSuperAdmin(UserContext.getUserIdOrDefault())) {
+            approveOrder(order.getId(), true, dto.getRemark());
+        }
         return order.getId();
     }
 
@@ -769,7 +770,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(mode)) {
             if (admin && dto.getDeptId() == null
                     && (dto.getGroupCode() == null || dto.getGroupCode().isBlank())) {
-                dto.setDeptId(resolveUniqueGroupDeptId(stock.getId()));
+                dto.setDeptId(resolveGroupDeptIdForQuantity(stock, dto.getQuantity()));
             }
             dto.setDeptId(resolveAccessibleGroupDept(dto.getDeptId(), dto.getGroupCode()).getId());
             return;
@@ -793,6 +794,30 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         throw new co.handk.backend.exception.BusinessException(
                 co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                 "複数の組別在庫があります。部署IDまたは組コードを指定してください");
+    }
+
+    private Long resolveGroupDeptIdForQuantity(Stock stock, Integer quantity) {
+        List<Long> deptIds = stockBatchService.getAvailableGroupDeptIds(stock.getId());
+        if (deptIds.isEmpty()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "この在庫に利用可能な組別在庫がありません");
+        }
+        int requiredQty = quantity == null ? 0 : quantity;
+        for (Long deptId : deptIds) {
+            int availableQty = stockBatchService.getGroupAvailableQty(
+                    deptId,
+                    Long.valueOf(stock.getGoodsId()),
+                    stock.getSkuId(),
+                    Long.valueOf(stock.getWarehouseId()),
+                    stock.getStockTypeId());
+            if (availableQty >= requiredQty) {
+                return deptId;
+            }
+        }
+        throw new co.handk.backend.exception.BusinessException(
+                co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                "組別在庫が不足しています");
     }
 
     private void requireAccessibleOutboundStock(Stock stock, String outboundMode) {
@@ -1041,11 +1066,6 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (!stockOrderService.updateById(order)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "伝票更新に失敗しました");
-        }
-        if (Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(order.getOrderType())) {
-            requestFormService.createFromOutbound(order,
-                    items.stream().map(StockOrderItem::getId).toList(),
-                    approveRemark);
         }
         return true;
     }

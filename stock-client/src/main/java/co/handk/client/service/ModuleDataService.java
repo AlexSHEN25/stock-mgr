@@ -20,6 +20,9 @@ public class ModuleDataService {
     private static final String GOODS_MAKER_OPTIONS = "_goodsMakerOptions";
 
     public JSONObject fetchPage(String module, int pageNum, int pageSize, Map<String, String> filters) throws Exception {
+        if (AppConstants.Module.BRAND_HIERARCHY.equals(module)) {
+            return fetchBrandHierarchyPage(pageNum, pageSize, filters);
+        }
         if (AppConstants.Module.DELIVERY_SCHEDULE.equals(module)) {
             return fetchDeliverySchedulePage(pageNum, pageSize, filters);
         }
@@ -42,6 +45,16 @@ public class ModuleDataService {
             res = ApiClient.get(ModuleEndpointStrategy.pagePath(module), params);
         }
         return new JSONObject(res);
+    }
+
+    private JSONObject fetchBrandHierarchyPage(int pageNum, int pageSize, Map<String, String> filters) throws Exception {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("pageNum", String.valueOf(pageNum));
+        params.put("pageSize", String.valueOf(pageSize));
+        if (filters != null) {
+            params.putAll(filters);
+        }
+        return new JSONObject(ApiClient.get(ApiPath.BRAND_HIERARCHY_PAGE, params));
     }
 
     private JSONObject fetchDeliverySchedulePage(int pageNum, int pageSize, Map<String, String> filters) throws Exception {

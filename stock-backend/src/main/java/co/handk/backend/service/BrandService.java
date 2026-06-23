@@ -1,7 +1,11 @@
 package co.handk.backend.service;
 
 import co.handk.backend.entity.Brand;
+import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.BrandHierarchySaveDTO;
 import co.handk.common.model.dto.BrandTreeSaveDTO;
+import co.handk.common.model.dto.query.BrandHierarchyQueryDTO;
+import co.handk.common.model.vo.BrandHierarchyVO;
 import co.handk.common.model.vo.BrandTreeNodeVO;
 import co.handk.common.model.vo.BrandVO;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,16 @@ public interface BrandService extends BaseService<Brand, BrandVO> {
     List<BrandTreeNodeVO> listTree();
 
     BrandTreeNodeVO getTreeDetail(Long id);
+
+    PageResult<BrandHierarchyVO> pageHierarchy(BrandHierarchyQueryDTO query);
+
+    BrandHierarchyVO getHierarchy(String key);
+
+    BrandHierarchyVO saveHierarchy(BrandHierarchySaveDTO dto);
+
+    BrandHierarchyVO updateHierarchy(BrandHierarchySaveDTO dto);
+
+    boolean deleteHierarchy(String key);
 
     Long saveTree(BrandTreeSaveDTO dto);
 

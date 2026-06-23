@@ -12,11 +12,15 @@ import co.handk.backend.mapper.SeriesMapper;
 import co.handk.backend.service.BrandService;
 import co.handk.backend.service.FileStorageService;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.model.PageResult;
+import co.handk.common.model.dto.BrandHierarchySaveDTO;
 import co.handk.common.model.dto.BrandTreeMakerSaveDTO;
 import co.handk.common.model.dto.BrandTreeSaveDTO;
 import co.handk.common.model.dto.BrandTreeSeriesSaveDTO;
 import co.handk.common.model.dto.create.CreateBrandDTO;
+import co.handk.common.model.dto.query.BrandHierarchyQueryDTO;
 import co.handk.common.model.dto.update.UpdateBrandDTO;
+import co.handk.common.model.vo.BrandHierarchyVO;
 import co.handk.common.model.vo.BrandTreeNodeVO;
 import co.handk.common.model.vo.BrandVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -230,11 +234,349 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
     }
 
     @Override
+    public PageResult<BrandHierarchyVO> pageHierarchy(BrandHierarchyQueryDTO query) {
+        long total = baseMapper.countHierarchy(query);
+        List<BrandHierarchyVO> records = total == 0
+                ? List.of()
+                : baseMapper.selectHierarchy(query, pageOffset(query), query.getPageSize());
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), records);
+    }
+
+    @Override
+    public BrandHierarchyVO getHierarchy(String key) {
+        HierarchyKey parsed = parseHierarchyKey(key);
+        return switch (parsed.nodeType()) {
+            case "maker" -> hierarchyForMaker(parsed.id());
+            case "series" -> hierarchyForSeries(parsed.id());
+            case "brand" -> hierarchyForBrand(parsed.id());
+            default -> throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "invalid hierarchy node type");
+        };
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BrandHierarchyVO saveHierarchy(BrandHierarchySaveDTO dto) {
+        Brand brand = findOrCreateBrand(dto);
+        Series series = findOrCreateSeries(brand.getId(), dto);
+        Maker maker = findOrCreateMaker(series.getId(), dto);
+        return hierarchyForMaker(maker.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BrandHierarchyVO updateHierarchy(BrandHierarchySaveDTO dto) {
+        HierarchyKey key = parseHierarchyKey(dto.getId());
+        return switch (key.nodeType()) {
+            case "maker" -> updateMakerHierarchy(key.id(), dto);
+            case "series" -> updateSeriesHierarchy(key.id(), dto);
+            case "brand" -> updateBrandHierarchy(key.id(), dto);
+            default -> throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "invalid hierarchy node type");
+        };
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteHierarchy(String key) {
+        HierarchyKey parsed = parseHierarchyKey(key);
+        return switch (parsed.nodeType()) {
+            case "maker" -> deleteMakerHierarchy(parsed.id());
+            case "series" -> deleteSeriesHierarchy(parsed.id());
+            case "brand" -> deleteBrandHierarchy(parsed.id());
+            default -> throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "invalid hierarchy node type");
+        };
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveTree(BrandTreeSaveDTO dto) {
         Brand brand = saveBrandNode(dto);
         syncSeriesNodes(brand.getId(), dto.getSeries());
         return brand.getId();
+    }
+
+    private Brand findOrCreateBrand(BrandHierarchySaveDTO dto) {
+        String name = requireText(dto.getBrandName(), "brand name is required");
+        String englishName = trimToNull(dto.getBrandEnglishName());
+        Brand brand = dto.getBrandId() == null ? findBrandByName(name, englishName) : this.getByIdNotDeleted(dto.getBrandId());
+        if (brand == null) {
+            brand = new Brand();
+        }
+        brand.setName(name);
+        brand.setEnglishName(englishName);
+        brand.setStatus(resolveStatus(dto.getStatus(), brand.getStatus()));
+        boolean success = brand.getId() == null ? this.save(brand) : this.updateById(brand);
+        if (!success || brand.getId() == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to save brand");
+        }
+        return brand;
+    }
+
+    private Series findOrCreateSeries(Long brandId, BrandHierarchySaveDTO dto) {
+        String name = requireText(dto.getSeriesName(), "series name is required");
+        String englishName = trimToNull(dto.getSeriesEnglishName());
+        Series series = dto.getSeriesId() == null ? findSeriesByName(brandId, name, englishName) : getSeriesNotDeleted(dto.getSeriesId());
+        if (series == null) {
+            series = new Series();
+        }
+        series.setName(name);
+        series.setEnglishName(englishName);
+        series.setBrandId(brandId);
+        series.setStatus(resolveStatus(dto.getStatus(), series.getStatus()));
+        boolean success = series.getId() == null ? seriesService.save(series) : seriesService.updateById(series);
+        if (!success || series.getId() == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to save series");
+        }
+        return series;
+    }
+
+    private Maker findOrCreateMaker(Long seriesId, BrandHierarchySaveDTO dto) {
+        String name = requireText(dto.getMakerName(), "maker name is required");
+        String englishName = trimToNull(dto.getMakerEnglishName());
+        Maker maker = dto.getMakerId() == null ? findMakerByName(seriesId, name, englishName) : getMakerNotDeleted(dto.getMakerId());
+        if (maker == null) {
+            maker = new Maker();
+        }
+        maker.setName(name);
+        maker.setEnglishName(englishName);
+        maker.setSeriesId(seriesId);
+        maker.setStatus(resolveStatus(dto.getStatus(), maker.getStatus()));
+        boolean success = maker.getId() == null ? makerService.save(maker) : makerService.updateById(maker);
+        if (!success || maker.getId() == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to save maker");
+        }
+        return maker;
+    }
+
+    private BrandHierarchyVO updateMakerHierarchy(Long makerId, BrandHierarchySaveDTO dto) {
+        Maker maker = requireMaker(makerId);
+        Series series = requireSeries(maker.getSeriesId());
+        Brand brand = requireBrand(series.getBrandId());
+        applyBrand(brand, dto);
+        applySeries(series, brand.getId(), dto);
+        applyMaker(maker, series.getId(), dto);
+        return hierarchyForMaker(maker.getId());
+    }
+
+    private BrandHierarchyVO updateSeriesHierarchy(Long seriesId, BrandHierarchySaveDTO dto) {
+        Series series = requireSeries(seriesId);
+        Brand brand = requireBrand(series.getBrandId());
+        applyBrand(brand, dto);
+        applySeries(series, brand.getId(), dto);
+        return hierarchyForSeries(series.getId());
+    }
+
+    private BrandHierarchyVO updateBrandHierarchy(Long brandId, BrandHierarchySaveDTO dto) {
+        Brand brand = requireBrand(brandId);
+        applyBrand(brand, dto);
+        return hierarchyForBrand(brand.getId());
+    }
+
+    private void applyBrand(Brand brand, BrandHierarchySaveDTO dto) {
+        brand.setName(requireText(dto.getBrandName(), "brand name is required"));
+        brand.setEnglishName(trimToNull(dto.getBrandEnglishName()));
+        brand.setStatus(resolveStatus(dto.getStatus(), brand.getStatus()));
+        if (!this.updateById(brand)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to update brand");
+        }
+    }
+
+    private void applySeries(Series series, Long brandId, BrandHierarchySaveDTO dto) {
+        series.setName(requireText(dto.getSeriesName(), "series name is required"));
+        series.setEnglishName(trimToNull(dto.getSeriesEnglishName()));
+        series.setBrandId(brandId);
+        series.setStatus(resolveStatus(dto.getStatus(), series.getStatus()));
+        if (!seriesService.updateById(series)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to update series");
+        }
+    }
+
+    private void applyMaker(Maker maker, Long seriesId, BrandHierarchySaveDTO dto) {
+        maker.setName(requireText(dto.getMakerName(), "maker name is required"));
+        maker.setEnglishName(trimToNull(dto.getMakerEnglishName()));
+        maker.setSeriesId(seriesId);
+        maker.setStatus(resolveStatus(dto.getStatus(), maker.getStatus()));
+        if (!makerService.updateById(maker)) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to update maker");
+        }
+    }
+
+    private boolean deleteMakerHierarchy(Long makerId) {
+        Maker maker = getMakerNotDeleted(makerId);
+        if (maker == null) {
+            return true;
+        }
+        makerService.deleteByIdLogic(makerId);
+        return true;
+    }
+
+    private boolean deleteSeriesHierarchy(Long seriesId) {
+        Series series = getSeriesNotDeleted(seriesId);
+        if (series == null) {
+            return true;
+        }
+        seriesService.deleteByIdLogic(seriesId);
+        return true;
+    }
+
+    private boolean deleteBrandHierarchy(Long brandId) {
+        Brand brand = this.getByIdNotDeleted(brandId);
+        if (brand == null) {
+            return true;
+        }
+        deleteByIdLogic(brandId);
+        return true;
+    }
+
+    private BrandHierarchyVO hierarchyForMaker(Long makerId) {
+        Maker maker = requireMaker(makerId);
+        Series series = requireSeries(maker.getSeriesId());
+        Brand brand = requireBrand(series.getBrandId());
+        BrandHierarchyVO vo = baseHierarchy(brand, series, maker);
+        vo.setId("maker:" + maker.getId());
+        vo.setNodeType("maker");
+        return vo;
+    }
+
+    private BrandHierarchyVO hierarchyForSeries(Long seriesId) {
+        Series series = requireSeries(seriesId);
+        Brand brand = requireBrand(series.getBrandId());
+        BrandHierarchyVO vo = baseHierarchy(brand, series, null);
+        vo.setId("series:" + series.getId());
+        vo.setNodeType("series");
+        return vo;
+    }
+
+    private BrandHierarchyVO hierarchyForBrand(Long brandId) {
+        Brand brand = requireBrand(brandId);
+        BrandHierarchyVO vo = baseHierarchy(brand, null, null);
+        vo.setId("brand:" + brand.getId());
+        vo.setNodeType("brand");
+        return vo;
+    }
+
+    private BrandHierarchyVO baseHierarchy(Brand brand, Series series, Maker maker) {
+        BrandHierarchyVO vo = new BrandHierarchyVO();
+        vo.setBrandId(brand.getId());
+        vo.setBrandName(brand.getName());
+        vo.setBrandEnglishName(brand.getEnglishName());
+        if (series != null) {
+            vo.setSeriesId(series.getId());
+            vo.setSeriesName(series.getName());
+            vo.setSeriesEnglishName(series.getEnglishName());
+        }
+        if (maker != null) {
+            vo.setMakerId(maker.getId());
+            vo.setMakerName(maker.getName());
+            vo.setMakerEnglishName(maker.getEnglishName());
+        }
+        vo.setStatus(maker != null ? maker.getStatus() : series != null ? series.getStatus() : brand.getStatus());
+        return vo;
+    }
+
+    private long pageOffset(BrandHierarchyQueryDTO query) {
+        return (query.getPageNum() - 1L) * query.getPageSize();
+    }
+
+    private Brand findBrandByName(String name, String englishName) {
+        QueryWrapper<Brand> wrapper = new QueryWrapper<Brand>()
+                .eq("name", name)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1");
+        if (englishName == null) {
+            wrapper.isNull("english_name");
+        } else {
+            wrapper.eq("english_name", englishName);
+        }
+        return this.getOne(wrapper);
+    }
+
+    private Series findSeriesByName(Long brandId, String name, String englishName) {
+        QueryWrapper<Series> wrapper = new QueryWrapper<Series>()
+                .eq("brand_id", brandId)
+                .eq("name", name)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1");
+        if (englishName == null) {
+            wrapper.isNull("english_name");
+        } else {
+            wrapper.eq("english_name", englishName);
+        }
+        return seriesMapper.selectOne(wrapper);
+    }
+
+    private Maker findMakerByName(Long seriesId, String name, String englishName) {
+        QueryWrapper<Maker> wrapper = new QueryWrapper<Maker>()
+                .eq("series_id", seriesId)
+                .eq("name", name)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1");
+        if (englishName == null) {
+            wrapper.isNull("english_name");
+        } else {
+            wrapper.eq("english_name", englishName);
+        }
+        return makerMapper.selectOne(wrapper);
+    }
+
+    private Brand requireBrand(Long brandId) {
+        Brand brand = brandId == null ? null : this.getByIdNotDeleted(brandId);
+        if (brand == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "brand does not exist");
+        }
+        return brand;
+    }
+
+    private Series requireSeries(Long seriesId) {
+        Series series = getSeriesNotDeleted(seriesId);
+        if (series == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "series does not exist");
+        }
+        return series;
+    }
+
+    private Maker requireMaker(Long makerId) {
+        Maker maker = getMakerNotDeleted(makerId);
+        if (maker == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "maker does not exist");
+        }
+        return maker;
+    }
+
+    private Series getSeriesNotDeleted(Long seriesId) {
+        return seriesId == null ? null : seriesMapper.selectOne(new QueryWrapper<Series>()
+                .eq("id", seriesId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+    }
+
+    private Maker getMakerNotDeleted(Long makerId) {
+        return makerId == null ? null : makerMapper.selectOne(new QueryWrapper<Maker>()
+                .eq("id", makerId)
+                .eq("deleted", DeleteEnum.UNDELETED.getCode())
+                .last("LIMIT 1"));
+    }
+
+    private HierarchyKey parseHierarchyKey(String key) {
+        if (key == null || key.isBlank() || !key.contains(":")) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "invalid hierarchy id");
+        }
+        String[] parts = key.split(":", 2);
+        try {
+            return new HierarchyKey(parts[0].trim(), Long.parseLong(parts[1].trim()));
+        } catch (NumberFormatException ex) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "invalid hierarchy id");
+        }
+    }
+
+    private String requireText(String value, String message) {
+        String text = trimToNull(value);
+        if (text == null) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, message);
+        }
+        return text;
+    }
+
+    private record HierarchyKey(String nodeType, Long id) {
     }
 
     private void fillChildren(Long brandId, BrandVO vo) {
@@ -349,6 +691,10 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
             return status.getCode();
         }
         return fallback != null ? fallback : 1;
+    }
+
+    private Integer resolveStatus(Integer status, Integer fallback) {
+        return status != null ? status : fallback != null ? fallback : 1;
     }
 
     private String trimToNull(String value) {

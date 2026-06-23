@@ -7,6 +7,7 @@ import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import co.handk.common.model.dto.create.StockBatchOperateDTO;
+import co.handk.common.model.dto.create.StockCustomerOutboundItemDTO;
 import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +60,8 @@ public class StockController {
     }
 
     @PostMapping("/inbound")
-    public Long inbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+    public Long inbound(@RequestBody @NotNull StockOperateDTO dto) {
+        requirePositiveQuantity(dto.getQuantity());
         return stockService.inbound(dto);
     }
 
@@ -68,7 +71,8 @@ public class StockController {
     }
 
     @PostMapping("/outbound")
-    public Long outbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+    public Long outbound(@RequestBody @NotNull StockOperateDTO dto) {
+        requirePositiveQuantity(dto.getQuantity());
         Long legacyAllocationOrderId = tryHandleLegacyGroupAllocation(dto);
         if (legacyAllocationOrderId != null) {
             return legacyAllocationOrderId;
@@ -85,7 +89,12 @@ public class StockController {
      * Customer-dimension outbound entry from self stock / goods management.
      */
     @PostMapping("/customer/outbound")
-    public Long customerOutbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+    @Transactional(rollbackFor = Exception.class)
+    public Long customerOutbound(@RequestBody @NotNull StockOperateDTO dto) {
+        if (hasCustomerSplitItems(dto)) {
+            return splitCustomerOutbound(dto);
+        }
+        requirePositiveQuantity(dto.getQuantity());
         if (dto.getCustomerId() == null && hasGroupAllocationTarget(dto)) {
             Long legacyAllocationOrderId = tryHandleLegacyGroupAllocation(dto);
             if (legacyAllocationOrderId != null) {
@@ -106,7 +115,8 @@ public class StockController {
      * Customer-dimension outbound entry from group stock.
      */
     @PostMapping("/group/customer/outbound")
-    public Long groupCustomerOutbound(@RequestBody @NotNull @Valid StockOperateDTO dto) {
+    public Long groupCustomerOutbound(@RequestBody @NotNull StockOperateDTO dto) {
+        requirePositiveQuantity(dto.getQuantity());
         if (dto.getCustomerId() == null) {
             // Backward compatibility: the web client previously sent group allocation
             // requests to this endpoint. A target group without a customer is allocation.
@@ -221,6 +231,67 @@ public class StockController {
     public CustomerGoodsMatrixVO customerDeliveryScheduleMatrix(@Valid CustomerStockQueryDTO query) {
         query.setViewType("deliverySchedule");
         return stockService.getCustomerGoodsMatrix(query);
+    }
+
+    private boolean hasCustomerSplitItems(StockOperateDTO dto) {
+        return dto != null && dto.getCustomerItems() != null && !dto.getCustomerItems().isEmpty();
+    }
+
+    private Long splitCustomerOutbound(StockOperateDTO dto) {
+        Long firstOrderId = null;
+        int totalQuantity = 0;
+        for (StockCustomerOutboundItemDTO item : dto.getCustomerItems()) {
+            if (item == null) {
+                continue;
+            }
+            requirePositiveQuantity(item.getQuantity());
+            if (item.getCustomerId() == null) {
+                throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        "顧客IDは必須です");
+            }
+            totalQuantity += item.getQuantity();
+        }
+        requirePositiveQuantity(totalQuantity);
+
+        for (StockCustomerOutboundItemDTO item : dto.getCustomerItems()) {
+            if (item == null || item.getQuantity() == null || item.getQuantity() <= 0) {
+                continue;
+            }
+            StockOperateDTO operation = copyBaseOperation(dto);
+            operation.setCustomerId(item.getCustomerId());
+            operation.setCustomerName(item.getCustomerName());
+            operation.setQuantity(item.getQuantity());
+            operation.setRemark(item.getRemark() == null || item.getRemark().isBlank() ? dto.getRemark() : item.getRemark());
+            operation.setOutboundMode(co.handk.common.constant.StockBizConstant.OUTBOUND_MODE_CUSTOMER);
+            Long orderId = stockService.outbound(operation);
+            if (firstOrderId == null) {
+                firstOrderId = orderId;
+            }
+        }
+        return firstOrderId == null ? 0L : firstOrderId;
+    }
+
+    private StockOperateDTO copyBaseOperation(StockOperateDTO source) {
+        StockOperateDTO target = new StockOperateDTO();
+        target.setStockId(source.getStockId());
+        target.setGoodsId(source.getGoodsId());
+        target.setSkuId(source.getSkuId());
+        target.setWarehouseId(source.getWarehouseId());
+        target.setStockTypeId(source.getStockTypeId());
+        target.setSourceType(source.getSourceType());
+        target.setDeptId(source.getDeptId());
+        target.setGroupCode(source.getGroupCode());
+        target.setDeptCode(source.getDeptCode());
+        target.setSaleDeadline(source.getSaleDeadline());
+        target.setRemark(source.getRemark());
+        return target;
+    }
+
+    private void requirePositiveQuantity(Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "数量は1以上で入力してください");
+        }
     }
 
     private Long tryHandleLegacyGroupAllocation(StockOperateDTO dto) {

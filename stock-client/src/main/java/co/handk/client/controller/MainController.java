@@ -207,7 +207,7 @@ public class MainController {
             return;
         }
         pendingStockOperation = "outbound";
-        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false, Module.STOCK, selected);
+        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false, Module.STOCK, withDefaultOutboundQuantity(selected));
     }
 
     @FXML
@@ -479,8 +479,12 @@ public class MainController {
         }
         String id = deleteIdField.getText();
         if (id == null || id.isBlank()) {
-            messageLabel.setText(UiText.MSG_DELETE_ID_REQUIRED);
-            return;
+            Map<String, Object> row = currentWorkingRow();
+            id = row == null ? null : tableRowService.resolveRecordId(row);
+            if (id == null || id.isBlank()) {
+                messageLabel.setText(UiText.MSG_DELETE_ID_REQUIRED);
+                return;
+            }
         }
         String normalizedId = id.trim();
         if (!confirm(UiText.TITLE_CONFIRM_DELETE, String.format(UiText.MSG_CONFIRM_DELETE, normalizedId))) {
@@ -1655,6 +1659,15 @@ public class MainController {
 
     private boolean isStockOperationModule() {
         return Module.STOCK.equals(currentModule);
+    }
+
+    private Map<String, Object> withDefaultOutboundQuantity(Map<String, Object> selected) {
+        Map<String, Object> defaults = new LinkedHashMap<>(selected);
+        Number submittedQuantity = coerceNumber(new JSONObject(defaults), "quantity");
+        if (submittedQuantity == null || submittedQuantity.intValue() <= 0) {
+            defaults.put("quantity", 1);
+        }
+        return defaults;
     }
 
     private JSONObject sanitizeStockOperationPayload(JSONObject dto) {

@@ -6,6 +6,7 @@ import static co.handk.client.constant.AppConstants.Field.ID;
 import static co.handk.client.constant.AppConstants.Module.GOODS;
 import static co.handk.client.constant.AppConstants.Module.GOODS_SKU;
 import static co.handk.client.constant.AppConstants.Module.DELIVERY_SCHEDULE;
+import static co.handk.client.constant.AppConstants.Module.BRAND_HIERARCHY;
 import static co.handk.client.constant.AppConstants.Module.REQUEST_FORM;
 import static co.handk.client.constant.AppConstants.Module.REQUEST_ITEM;
 import static co.handk.client.constant.AppConstants.Module.SERIES;
@@ -189,6 +190,7 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(MODULE_ROLE, List.of(ID, "name", "code", "permissionNames", "remark", "status"));
         QUERY_FIELDS.put(MODULE_PERMISSION, List.of(ID, "name", "code", "module", "type", "parentId", "path", "sort", "icon", "component", "status"));
         QUERY_FIELDS.put(GOODS, List.of("name", "skuCode", "brandId", "seriesId", "categoryId", "makerId", "status"));
+        QUERY_FIELDS.put(BRAND_HIERARCHY, List.of("brandName", "brandEnglishName", "seriesName", "seriesEnglishName", "makerName", "makerEnglishName", "status"));
         QUERY_FIELDS.put(MODULE_MAKER, List.of(ID, "name", "englishName", "seriesName", "brandName", "status"));
         QUERY_FIELDS.put(MODULE_BRAND, List.of(ID, "name", "englishName", "image", "content", "status"));
         QUERY_FIELDS.put(MODULE_CATEGORY, List.of(ID, "name", "status"));
@@ -228,6 +230,10 @@ public final class ModuleMeta {
         FORM_FIELDS.put(MODULE_ROLE, List.of("name", "code", "permissionIds", "remark", "status"));
         FORM_FIELDS.put(MODULE_MAKER, List.of("name", "englishName", "seriesId", "status"));
         FORM_FIELDS.put(MODULE_BRAND, List.of("name", "englishName", "image", "content", "status"));
+        FORM_FIELDS.put(BRAND_HIERARCHY, List.of(
+                "brandName", "brandEnglishName", "seriesName", "seriesEnglishName",
+                "makerName", "makerEnglishName", "status"
+        ));
         FORM_FIELDS.put(MODULE_CATEGORY, List.of("name", "status"));
         FORM_FIELDS.put(SERIES, List.of("name", "englishName", "brandId", "content", "status"));
         FORM_FIELDS.put(MODULE_CUSTOMER, List.of("customerCode", "name", "englishName", "contactPerson", "phone", "email", "country", "city", "address", "levelId", "ownerUserId", "ownerDeptId", "remark", "status"));
@@ -245,6 +251,7 @@ public final class ModuleMeta {
         REQUIRED_FORM_FIELDS.put(MODULE_ROLE, List.of("name", "code", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_MAKER, List.of("name", "seriesId", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_BRAND, List.of("name", "status"));
+        REQUIRED_FORM_FIELDS.put(BRAND_HIERARCHY, List.of("brandName", "seriesName", "makerName", "status"));
         REQUIRED_FORM_FIELDS.put(MODULE_CATEGORY, List.of("name", "status"));
         REQUIRED_FORM_FIELDS.put(SERIES, List.of("name", "brandId", "status"));
 
@@ -388,6 +395,7 @@ public final class ModuleMeta {
         HIDDEN_LIST_FIELDS.put(DELIVERY_SCHEDULE, List.of(
                 "recordId", "orderId", "orderItemId", "customerId", "goodsId", "skuId", "stockTypeId"
         ));
+        HIDDEN_LIST_FIELDS.put(BRAND_HIERARCHY, List.of("id", "nodeType", "brandId", "seriesId", "makerId"));
         PREFERRED_COLUMNS.put(GOODS, List.of(
                 "skuId", "goodsName", "name", "goodsId", "englishName", "customerCode", "brandName", "seriesName",
                 "categoryName", "makerName", "stockTypeName", "skuCode", "skuName", "specSummary", "barcode",
@@ -403,6 +411,7 @@ public final class ModuleMeta {
         ACTION_POLICIES.put(MODULE_MESSAGE, new ModuleActionPolicy(true, true, true, true, true));
         ACTION_POLICIES.put(GOODS, new ModuleActionPolicy(true, false, true, true, true));
         ACTION_POLICIES.put(DELIVERY_SCHEDULE, new ModuleActionPolicy(false, false, false, false, false));
+        ACTION_POLICIES.put(BRAND_HIERARCHY, new ModuleActionPolicy(true, false, true, false, true));
 
         WRITE_PERMISSION_CODES.put(STOCK_ORDER, "DATA_STOCK_ORDER_WRITE");
         WRITE_PERMISSION_CODES.put(STOCK_ORDER_ITEM, "DATA_STOCK_ORDER_ITEM_WRITE");
@@ -411,6 +420,7 @@ public final class ModuleMeta {
         WRITE_PERMISSION_CODES.put(MODULE_CUSTOMER, "DATA_CUSTOMER_WRITE");
         WRITE_PERMISSION_CODES.put(MODULE_CUSTOMER_LEVEL, "DATA_CUSTOMER_LEVEL_WRITE");
         WRITE_PERMISSION_CODES.put(MODULE_MESSAGE, "DATA_MESSAGE_WRITE");
+        WRITE_PERMISSION_CODES.put(BRAND_HIERARCHY, "DATA_BRAND_WRITE");
 
         FORM_VALUE_RULES.put(GOODS, List.of(
                 FormValueRule.copyIfBlank("skuName", "name"),
@@ -544,6 +554,9 @@ public final class ModuleMeta {
         }
         if (DELIVERY_SCHEDULE.equals(moduleKey)) {
             return sortDeliveryScheduleColumns(filtered);
+        }
+        if (BRAND_HIERARCHY.equals(moduleKey)) {
+            return sortBrandHierarchyColumns(filtered);
         }
         return sortDefaultColumns(filtered);
     }
@@ -810,6 +823,23 @@ public final class ModuleMeta {
                 "country", "customerName", "groupCode", "bizNo", "goodsName",
                 "skuCode", "stockTypeName", "quantity", "totalQuantity", "goodsKinds",
                 "outboundDate", "operatorName"
+        );
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        for (String key : preferred) {
+            if (containsIgnoreCase(columns, key)) {
+                ordered.add(findOriginalKey(columns, key));
+            }
+        }
+        for (String key : columns) {
+            ordered.add(key);
+        }
+        return new ArrayList<>(ordered);
+    }
+
+    private static List<String> sortBrandHierarchyColumns(List<String> columns) {
+        List<String> preferred = List.of(
+                "brandName", "brandEnglishName", "seriesName", "seriesEnglishName",
+                "makerName", "makerEnglishName", "status", "updateTime"
         );
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
         for (String key : preferred) {

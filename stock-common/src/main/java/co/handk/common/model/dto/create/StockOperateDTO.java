@@ -1,8 +1,7 @@
 package co.handk.common.model.dto.create;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -21,8 +20,7 @@ public class StockOperateDTO {
 
     private Long stockTypeId;
 
-    @NotNull(message = "数量は必須です")
-    @Min(value = 1, message = "quantity must be at least 1")
+    @JsonAlias({"outQty", "outboundQty", "outboundQuantity", "splitQty", "customerQty", "deliveryQty", "qty"})
     private Integer quantity;
 
     /**
@@ -49,6 +47,9 @@ public class StockOperateDTO {
     private Integer groupCQty;
 
     private List<StockGroupAllocationItemDTO> allocations;
+
+    @JsonAlias({"customerItems", "customers", "customerRows", "customerList", "splits", "items"})
+    private List<StockCustomerOutboundItemDTO> customerItems;
 
     private String outboundMode;
 

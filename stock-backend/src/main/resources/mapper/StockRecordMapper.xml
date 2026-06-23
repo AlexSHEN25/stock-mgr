@@ -262,13 +262,17 @@
         SELECT COUNT(*)
         FROM t_stock_order o
         INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        INNER JOIN t_stock_record sr ON sr.order_id = o.id
+                                    AND sr.order_item_id = i.id
+                                    AND sr.order_type = 2
+                                    AND sr.deleted = 0
         WHERE <include refid="customerGoodsOrderWhere"/>
           AND COALESCE(ABS(i.change_qty), 0) > 0
     </select>
 
     <select id="selectCustomerDeliveryScheduleDetails"
             resultType="co.handk.common.model.vo.CustomerGoodsStockDetailVO">
-        SELECT i.id AS recordId,
+        SELECT sr.id AS recordId,
                o.order_no AS bizNo,
                o.id AS orderId,
                i.id AS orderItemId,
@@ -288,6 +292,10 @@
                o.operator_name AS operatorName
         FROM t_stock_order o
         INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        INNER JOIN t_stock_record sr ON sr.order_id = o.id
+                                    AND sr.order_item_id = i.id
+                                    AND sr.order_type = 2
+                                    AND sr.deleted = 0
         WHERE <include refid="customerGoodsOrderWhere"/>
           AND COALESCE(ABS(i.change_qty), 0) > 0
         ORDER BY COALESCE(i.biz_date, o.biz_date) DESC, i.id DESC
@@ -300,6 +308,10 @@
             SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country
             FROM t_stock_order o
             INNER JOIN t_stock_order_item i ON i.order_id = o.id
+            INNER JOIN t_stock_record sr ON sr.order_id = o.id
+                                        AND sr.order_item_id = i.id
+                                        AND sr.order_type = 2
+                                        AND sr.deleted = 0
             LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
             WHERE <include refid="customerGoodsTreeWhere"/>
               AND COALESCE(ABS(i.change_qty), 0) > 0
@@ -311,6 +323,10 @@
         SELECT COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country
         FROM t_stock_order o
         INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        INNER JOIN t_stock_record sr ON sr.order_id = o.id
+                                    AND sr.order_item_id = i.id
+                                    AND sr.order_type = 2
+                                    AND sr.deleted = 0
         LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsTreeWhere"/>
           AND COALESCE(ABS(i.change_qty), 0) > 0
@@ -329,7 +345,7 @@
                o.order_no AS bizNo,
                o.id AS orderId,
                i.id AS orderItemId,
-               i.id AS recordId,
+               sr.id AS recordId,
                i.goods_id AS goodsId,
                i.goods_name AS goodsName,
                i.sku_id AS skuId,
@@ -342,6 +358,10 @@
                o.operator_name AS operatorName
         FROM t_stock_order o
         INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        INNER JOIN t_stock_record sr ON sr.order_id = o.id
+                                    AND sr.order_item_id = i.id
+                                    AND sr.order_type = 2
+                                    AND sr.deleted = 0
         LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsTreeWhere"/>
           AND COALESCE(ABS(i.change_qty), 0) > 0
