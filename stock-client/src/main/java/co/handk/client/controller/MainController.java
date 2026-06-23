@@ -83,6 +83,9 @@ public class MainController {
     @FXML private Button stockOutboundButton;
     @FXML private Button goodsTemplateButton;
     @FXML private Button goodsImportButton;
+    @FXML private Button customerExportButton;
+    @FXML private Button customerTemplateButton;
+    @FXML private Button customerImportButton;
     @FXML private Button addButton;
     @FXML private Button readAllButton;
     @FXML private Button inlineEditButton;
@@ -271,6 +274,89 @@ public class MainController {
             loadData();
         } catch (Exception ex) {
             messageLabel.setText(UiText.MSG_GOODS_IMPORT_FAILED + ": " + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onCustomerExport() {
+        if (!Module.CUSTOMER.equals(currentModule)) {
+            return;
+        }
+        try {
+            byte[] bytes = dataService.exportCustomers(buildQueryParams());
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle(UiText.TITLE_SAVE_FILE);
+            chooser.setInitialFileName(UiText.CUSTOMER_EXPORT_FILENAME);
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx"));
+            Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+            File target = chooser.showSaveDialog(owner);
+            if (target == null) {
+                return;
+            }
+            try (FileOutputStream fos = new FileOutputStream(target)) {
+                fos.write(bytes);
+            }
+            messageLabel.setText(UiText.MSG_CUSTOMER_EXPORT_DONE);
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_DOWNLOAD_FAIL + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onCustomerTemplateDownload() {
+        if (!Module.CUSTOMER.equals(currentModule)) {
+            return;
+        }
+        try {
+            byte[] bytes = dataService.downloadCustomerTemplate();
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle(UiText.TITLE_SAVE_FILE);
+            chooser.setInitialFileName(UiText.CUSTOMER_TEMPLATE_FILENAME);
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx"));
+            Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+            File target = chooser.showSaveDialog(owner);
+            if (target == null) {
+                return;
+            }
+            try (FileOutputStream fos = new FileOutputStream(target)) {
+                fos.write(bytes);
+            }
+            messageLabel.setText(UiText.MSG_CUSTOMER_TEMPLATE_DOWNLOAD_DONE);
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_DOWNLOAD_FAIL + ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void onCustomerImport() {
+        if (!Module.CUSTOMER.equals(currentModule)) {
+            return;
+        }
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(UiText.TITLE_SELECT_IMPORT_FILE);
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel", "*.xlsx", "*.xls"));
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        File file = chooser.showOpenDialog(owner);
+        if (file == null) {
+            messageLabel.setText(UiText.MSG_GOODS_IMPORT_NO_FILE);
+            return;
+        }
+        try {
+            JSONObject json = dataService.importCustomers(file);
+            if (!uiFeedback.isSuccess(json)) {
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_CUSTOMER_IMPORT_FAILED));
+                return;
+            }
+            JSONObject data = json.optJSONObject("data");
+            if (data == null) {
+                messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_RESULT_EMPTY);
+                return;
+            }
+            showCustomerImportResultDialog(data);
+            messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_SUCCESS);
+            loadData();
+        } catch (Exception ex) {
+            messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_FAILED + ": " + ex.getMessage());
         }
     }
 
@@ -536,6 +622,7 @@ public class MainController {
         boolean messageModule = Module.MESSAGE.equals(currentModule);
         boolean stockModule = isStockOperationModule();
         boolean goodsModule = Module.GOODS.equals(currentModule);
+        boolean customerModule = Module.CUSTOMER.equals(currentModule);
         boolean stockOperationAllowed = ModuleMeta.canWriteByPermission(Module.STOCK);
         updateStockSubNav();
         addButton.setDisable(!policy.canCreate || !canWrite);
@@ -551,6 +638,15 @@ public class MainController {
         goodsImportButton.setManaged(goodsModule && superAdmin);
         goodsTemplateButton.setDisable(!goodsModule || !superAdmin);
         goodsImportButton.setDisable(!goodsModule || !superAdmin || !canWrite);
+        customerExportButton.setVisible(customerModule);
+        customerExportButton.setManaged(customerModule);
+        customerTemplateButton.setVisible(customerModule);
+        customerTemplateButton.setManaged(customerModule);
+        customerImportButton.setVisible(customerModule);
+        customerImportButton.setManaged(customerModule);
+        customerExportButton.setDisable(!customerModule);
+        customerTemplateButton.setDisable(!customerModule);
+        customerImportButton.setDisable(!customerModule || !canWrite);
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
         readAllButton.setDisable(!messageModule || !canWrite);
@@ -722,7 +818,11 @@ public class MainController {
         }
         requestCustomerMenu.getChildren().clear();
         try {
-            for (Map<String, String> customer : dataService.fetchSimpleRelationOptions("customer", Map.of())) {
+            Map<String, String> filters = new LinkedHashMap<>();
+            if (!Session.isSuperAdmin() && Session.getUserId() != null) {
+                filters.put("ownerUserId", String.valueOf(Session.getUserId()));
+            }
+            for (Map<String, String> customer : dataService.fetchSimpleRelationOptions("customer", filters)) {
                 String customerId = customer.get("value");
                 String customerName = customer.get("label");
                 if (customerId == null || customerId.isBlank() || customerName == null || customerName.isBlank()) {
@@ -739,7 +839,7 @@ public class MainController {
         VBox childMenu = new VBox(6);
         childMenu.getChildren().add(createRequestCustomerButton(
                 UiText.byKey("main.menu.deliverySchedule"),
-                "stockRecord",
+                Module.DELIVERY_SCHEDULE,
                 customerId,
                 customerName
         ));
@@ -1726,6 +1826,47 @@ public class MainController {
                     .append(", goodsId=").append(row.opt("goodsId"))
                     .append(", skuId=").append(row.opt("skuId"))
                     .append(", skuCode=").append(row.optString("skuCode"))
+                    .append(", message=").append(row.optString("message"))
+                    .append(System.lineSeparator());
+        }
+        return builder.toString();
+    }
+
+    private void showCustomerImportResultDialog(JSONObject data) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(UiText.byKey("main.menu.customer"));
+        alert.setHeaderText(String.format(
+                "success=%d, failure=%d, created=%d, updated=%d",
+                data.optInt("successCount"),
+                data.optInt("failureCount"),
+                data.optInt("createdCount"),
+                data.optInt("updatedCount")
+        ));
+        TextArea area = new TextArea(buildCustomerImportResultText(data.optJSONArray("rows")));
+        area.setEditable(false);
+        area.setWrapText(true);
+        area.setPrefColumnCount(100);
+        area.setPrefRowCount(18);
+        alert.getDialogPane().setContent(area);
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        if (owner != null) {
+            alert.initOwner(owner);
+        }
+        alert.showAndWait();
+    }
+
+    private String buildCustomerImportResultText(JSONArray rows) {
+        if (rows == null || rows.isEmpty()) {
+            return UiText.MSG_CUSTOMER_IMPORT_RESULT_EMPTY;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject row = rows.getJSONObject(i);
+            builder.append("row=").append(row.optInt("rowNo"))
+                    .append(", action=").append(row.optString("action"))
+                    .append(", success=").append(row.optBoolean("success"))
+                    .append(", customerId=").append(row.opt("customerId"))
+                    .append(", customerCode=").append(row.optString("customerCode"))
                     .append(", message=").append(row.optString("message"))
                     .append(System.lineSeparator());
         }

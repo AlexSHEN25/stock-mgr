@@ -258,6 +258,104 @@
         LIMIT #{offset}, #{limit}
     </select>
 
+    <select id="countCustomerDeliveryScheduleDetails" resultType="long">
+        SELECT COUNT(*)
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+          AND COALESCE(ABS(i.change_qty), 0) > 0
+    </select>
+
+    <select id="selectCustomerDeliveryScheduleDetails"
+            resultType="co.handk.common.model.vo.CustomerGoodsStockDetailVO">
+        SELECT i.id AS recordId,
+               o.order_no AS bizNo,
+               o.id AS orderId,
+               i.id AS orderItemId,
+               o.customer_id AS customerId,
+               o.customer_name AS customerName,
+               o.dept_id AS deptId,
+               o.dept_code AS groupCode,
+               i.goods_id AS goodsId,
+               i.goods_name AS goodsName,
+               i.sku_id AS skuId,
+               i.sku_code AS skuCode,
+               i.stock_type_id AS stockTypeId,
+               i.stock_type_name AS stockTypeName,
+               ABS(i.change_qty) AS quantity,
+               COALESCE(i.biz_date, o.biz_date) AS outboundDate,
+               o.operator_id AS operatorId,
+               o.operator_name AS operatorName
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        WHERE <include refid="customerGoodsOrderWhere"/>
+          AND COALESCE(ABS(i.change_qty), 0) > 0
+        ORDER BY COALESCE(i.biz_date, o.biz_date) DESC, i.id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countCustomerDeliveryScheduleTreeCountries" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) AS country
+            FROM t_stock_order o
+            INNER JOIN t_stock_order_item i ON i.order_id = o.id
+            LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
+            WHERE <include refid="customerGoodsTreeWhere"/>
+              AND COALESCE(ABS(i.change_qty), 0) > 0
+            GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・)
+        ) country_summary
+    </select>
+
+    <select id="selectCustomerDeliveryScheduleTreeCountries" resultType="string">
+        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) AS country
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
+        WHERE <include refid="customerGoodsTreeWhere"/>
+          AND COALESCE(ABS(i.change_qty), 0) > 0
+        GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・)
+        ORDER BY country ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="selectCustomerDeliveryScheduleTreeDetails"
+            resultType="co.handk.common.model.vo.CustomerOutboundTreeNodeVO">
+        SELECT COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) AS country,
+               o.customer_id AS customerId,
+               o.customer_name AS customerName,
+               o.dept_id AS deptId,
+               o.dept_code AS groupCode,
+               o.order_no AS bizNo,
+               o.id AS orderId,
+               i.id AS orderItemId,
+               i.id AS recordId,
+               i.goods_id AS goodsId,
+               i.goods_name AS goodsName,
+               i.sku_id AS skuId,
+               i.sku_code AS skuCode,
+               i.stock_type_id AS stockTypeId,
+               i.stock_type_name AS stockTypeName,
+               ABS(i.change_qty) AS quantity,
+               COALESCE(i.biz_date, o.biz_date) AS outboundDate,
+               o.operator_id AS operatorId,
+               o.operator_name AS operatorName
+        FROM t_stock_order o
+        INNER JOIN t_stock_order_item i ON i.order_id = o.id
+        LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
+        WHERE <include refid="customerGoodsTreeWhere"/>
+          AND COALESCE(ABS(i.change_qty), 0) > 0
+          AND COALESCE(NULLIF(TRIM(c.country), ''), '譛ｪ險ｭ螳・) IN
+          <foreach collection="countries" item="country" open="(" separator="," close=")">
+              #{country}
+          </foreach>
+        ORDER BY country ASC,
+                 o.customer_name ASC,
+                 o.customer_id ASC,
+                 COALESCE(i.biz_date, o.biz_date) DESC,
+                 i.id DESC
+    </select>
+
     <select id="countCustomerGoodsMatrixRows" resultType="long">
         SELECT COUNT(DISTINCT i.goods_id)
         FROM t_stock_order o

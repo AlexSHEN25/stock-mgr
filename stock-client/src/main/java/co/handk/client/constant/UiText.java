@@ -98,11 +98,18 @@ public final class UiText {
     public static final String MSG_GOODS_IMPORT_SUCCESS = t("msg.goodsImportSuccess");
     public static final String MSG_GOODS_IMPORT_FAILED = t("msg.goodsImportFailed");
     public static final String MSG_GOODS_IMPORT_RESULT_EMPTY = t("msg.goodsImportResultEmpty");
+    public static final String MSG_CUSTOMER_EXPORT_DONE = t("msg.customerExportDone");
+    public static final String MSG_CUSTOMER_TEMPLATE_DOWNLOAD_DONE = t("msg.customerTemplateDownloadDone");
+    public static final String MSG_CUSTOMER_IMPORT_SUCCESS = t("msg.customerImportSuccess");
+    public static final String MSG_CUSTOMER_IMPORT_FAILED = t("msg.customerImportFailed");
+    public static final String MSG_CUSTOMER_IMPORT_RESULT_EMPTY = t("msg.customerImportResultEmpty");
 
     public static final String PAGE_INFO_FORMAT = t("format.pageInfo");
     public static final String DOWNLOAD_FILENAME_PATTERN = t("format.downloadFilename");
     public static final String DOWNLOAD_PDF_FILENAME_PATTERN = t("format.downloadPdfFilename");
     public static final String GOODS_TEMPLATE_FILENAME = t("format.goodsTemplateFilename");
+    public static final String CUSTOMER_TEMPLATE_FILENAME = t("format.customerTemplateFilename");
+    public static final String CUSTOMER_EXPORT_FILENAME = t("format.customerExportFilename");
     public static final String DELETE_ID_PATTERN = t("format.deleteId");
     public static final String RELATION_FALLBACK_PATTERN = t("format.relationFallback");
     public static final String FIELD_ID = t("field.id");

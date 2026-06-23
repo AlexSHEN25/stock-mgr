@@ -48,6 +48,32 @@ public interface StockRecordMapper extends BaseMapper<StockRecord> {
                                                                 @Param("offset") long offset,
                                                                 @Param("limit") long limit);
 
+    long countCustomerDeliveryScheduleDetails(@Param("query") CustomerStockQueryDTO query,
+                                              @Param("deptId") Long deptId,
+                                              @Param("ownerUserId") Long ownerUserId);
+
+    List<CustomerGoodsStockDetailVO> selectCustomerDeliveryScheduleDetails(@Param("query") CustomerStockQueryDTO query,
+                                                                           @Param("deptId") Long deptId,
+                                                                           @Param("ownerUserId") Long ownerUserId,
+                                                                           @Param("offset") long offset,
+                                                                           @Param("limit") long limit);
+
+    long countCustomerDeliveryScheduleTreeCountries(@Param("query") CustomerStockQueryDTO query,
+                                                    @Param("deptId") Long deptId,
+                                                    @Param("ownerUserId") Long ownerUserId);
+
+    List<String> selectCustomerDeliveryScheduleTreeCountries(@Param("query") CustomerStockQueryDTO query,
+                                                             @Param("deptId") Long deptId,
+                                                             @Param("ownerUserId") Long ownerUserId,
+                                                             @Param("offset") long offset,
+                                                             @Param("limit") long limit);
+
+    List<CustomerOutboundTreeNodeVO> selectCustomerDeliveryScheduleTreeDetails(
+            @Param("query") CustomerStockQueryDTO query,
+            @Param("deptId") Long deptId,
+            @Param("ownerUserId") Long ownerUserId,
+            @Param("countries") List<String> countries);
+
     long countCustomerGoodsMatrixRows(@Param("query") CustomerStockQueryDTO query,
                                       @Param("deptId") Long deptId,
                                       @Param("ownerUserId") Long ownerUserId);

@@ -17,6 +17,8 @@ public final class AppConstants {
         public static final String STOCK = "stock";
         public static final String REQUEST_FORM = "requestForm";
         public static final String REQUEST_ITEM = "requestItem";
+        public static final String DELIVERY_SCHEDULE = "deliverySchedule";
+        public static final String CUSTOMER = "customer";
 
         private Module() {
         }
@@ -65,6 +67,13 @@ public final class AppConstants {
         public static final String STOCK_OUTBOUND = "/stock/outbound";
         public static final String GOODS_IMPORT_TEMPLATE = "/goods/import/template";
         public static final String GOODS_IMPORT_UPSERT = "/goods/import/upsert";
+        public static final String CUSTOMER_EXPORT = "/customer/export";
+        public static final String CUSTOMER_IMPORT_TEMPLATE = "/customer/import/template";
+        public static final String CUSTOMER_IMPORT_UPSERT = "/customer/import/upsert";
+        public static final String DELIVERY_SCHEDULE_PAGE = "/stock/customer/delivery-schedule/page";
+        public static final String DELIVERY_SCHEDULE_MATRIX = "/stock/customer/delivery-schedule/matrix";
+        public static final String DELIVERY_SCHEDULE_ADD_TO_REQUEST = "/stock/customer/delivery-schedule/items/add-to-request";
+        public static final String DELIVERY_SCHEDULE_RETURN_FROM_REQUEST = "/stock/customer/delivery-schedule/items/return-from-request";
 
         private ApiPath() {
         }

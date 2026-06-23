@@ -47,6 +47,10 @@ public interface StockService extends BaseService<Stock, StockVO> {
 
     PageResult<CustomerGoodsStockDetailVO> pageCustomerGoodsStockDetails(CustomerStockQueryDTO query);
 
+    PageResult<CustomerGoodsStockDetailVO> pageCustomerDeliveryScheduleDetails(CustomerStockQueryDTO query);
+
+    PageResult<CustomerOutboundTreeNodeVO> pageCustomerDeliveryScheduleTree(CustomerStockQueryDTO query);
+
     CustomerGoodsMatrixVO getCustomerGoodsMatrix(CustomerStockQueryDTO query);
 
     PageResult<CustomerOutboundTreeNodeVO> pageCustomerGoodsTree(CustomerStockQueryDTO query);

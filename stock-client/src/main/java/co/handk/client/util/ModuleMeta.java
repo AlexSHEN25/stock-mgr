@@ -5,6 +5,7 @@ import co.handk.client.model.Session;
 import static co.handk.client.constant.AppConstants.Field.ID;
 import static co.handk.client.constant.AppConstants.Module.GOODS;
 import static co.handk.client.constant.AppConstants.Module.GOODS_SKU;
+import static co.handk.client.constant.AppConstants.Module.DELIVERY_SCHEDULE;
 import static co.handk.client.constant.AppConstants.Module.REQUEST_FORM;
 import static co.handk.client.constant.AppConstants.Module.REQUEST_ITEM;
 import static co.handk.client.constant.AppConstants.Module.SERIES;
@@ -198,6 +199,7 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(STOCK_ORDER_ITEM, List.of(ID, "orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         QUERY_FIELDS.put(REQUEST_FORM, List.of(ID, "bizNo", "sourceOrderId", "sourceOrderNo", "userId", "username", "deptId", "deptName", "customerId", "customerName", "warehouseId", "totalQty", "requestQty", "totalAmt", "state", "approverId", "approverName", "approveTime", "approveRemark"));
         QUERY_FIELDS.put(REQUEST_ITEM, List.of(ID, "requestId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "makerId", "makerName", "stockTypeId", "stockTypeName", "warehouseId", "price", "discountPrice", "currency", "discount", "requestQty", "approveQty", "outQty", "totalAmt", "depositAmt", "depositTime", "depositFee", "stockRecordId", "remark"));
+        QUERY_FIELDS.put(DELIVERY_SCHEDULE, List.of("customerId", "customerName", "categoryId", "goodsId", "goodsName", "skuCode", "stockTypeId", "startDate", "endDate"));
         QUERY_FIELDS.put(MODULE_STOCK_RECORD, List.of(ID, "bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
         QUERY_FIELDS.put(MODULE_PRICE_RECORD, List.of(ID, "goodsId", "goodsName", "englishName", "skuId", "skuCode", "oldPrice", "newPrice", "currency", "discount", "priceUpdateTime", "operatorId", "operatorName"));
         QUERY_FIELDS.put(MODULE_CUSTOMER, List.of(ID, "customerCode", "name", "englishName", "contactPerson", "phone", "email", "country", "city", "address", "levelName", "ownerUserName", "ownerDeptName", "remark", "status"));
@@ -383,6 +385,9 @@ public final class ModuleMeta {
 
         HIDDEN_LIST_FIELDS.put(GOODS_SKU, List.of("costPrice", "updatePrice", "priceUpdateTime", "barcode", "weight", "volume"));
         HIDDEN_LIST_FIELDS.put(MODULE_GOODS_IMAGE, List.of("imageUrl"));
+        HIDDEN_LIST_FIELDS.put(DELIVERY_SCHEDULE, List.of(
+                "recordId", "orderId", "orderItemId", "customerId", "goodsId", "skuId", "stockTypeId"
+        ));
         PREFERRED_COLUMNS.put(GOODS, List.of(
                 "skuId", "goodsName", "name", "goodsId", "englishName", "customerCode", "brandName", "seriesName",
                 "categoryName", "makerName", "stockTypeName", "skuCode", "skuName", "specSummary", "barcode",
@@ -397,6 +402,7 @@ public final class ModuleMeta {
         ACTION_POLICIES.put(MODULE_OPERATE_LOG, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(MODULE_MESSAGE, new ModuleActionPolicy(true, true, true, true, true));
         ACTION_POLICIES.put(GOODS, new ModuleActionPolicy(true, false, true, true, true));
+        ACTION_POLICIES.put(DELIVERY_SCHEDULE, new ModuleActionPolicy(false, false, false, false, false));
 
         WRITE_PERMISSION_CODES.put(STOCK_ORDER, "DATA_STOCK_ORDER_WRITE");
         WRITE_PERMISSION_CODES.put(STOCK_ORDER_ITEM, "DATA_STOCK_ORDER_ITEM_WRITE");
@@ -535,6 +541,9 @@ public final class ModuleMeta {
 
         if (GOODS.equals(moduleKey)) {
             return sortGoodsColumns(filtered);
+        }
+        if (DELIVERY_SCHEDULE.equals(moduleKey)) {
+            return sortDeliveryScheduleColumns(filtered);
         }
         return sortDefaultColumns(filtered);
     }
@@ -786,6 +795,24 @@ public final class ModuleMeta {
     private static List<String> sortGoodsColumns(List<String> columns) {
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
         for (String key : PREFERRED_COLUMNS.getOrDefault(GOODS, List.of())) {
+            if (containsIgnoreCase(columns, key)) {
+                ordered.add(findOriginalKey(columns, key));
+            }
+        }
+        for (String key : columns) {
+            ordered.add(key);
+        }
+        return new ArrayList<>(ordered);
+    }
+
+    private static List<String> sortDeliveryScheduleColumns(List<String> columns) {
+        List<String> preferred = List.of(
+                "country", "customerName", "groupCode", "bizNo", "goodsName",
+                "skuCode", "stockTypeName", "quantity", "totalQuantity", "goodsKinds",
+                "outboundDate", "operatorName"
+        );
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        for (String key : preferred) {
             if (containsIgnoreCase(columns, key)) {
                 ordered.add(findOriginalKey(columns, key));
             }

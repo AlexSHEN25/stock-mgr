@@ -10,11 +10,13 @@ import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateCustomerDTO;
 import co.handk.common.model.dto.query.CustomerQueryDTO;
 import co.handk.common.model.dto.update.UpdateCustomerDTO;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -53,6 +55,21 @@ public class CustomerController {
     @GetMapping("/page")
     public PageResult<CustomerVO> page(@Valid CustomerQueryDTO query) {
         return customerService.page(query);
+    }
+
+    @GetMapping("/export")
+    public void export(@ModelAttribute CustomerQueryDTO query, HttpServletResponse response) {
+        customerService.exportCustomers(query, response);
+    }
+
+    @GetMapping("/import/template")
+    public void downloadImportTemplate(HttpServletResponse response) {
+        customerService.downloadImportTemplate(response);
+    }
+
+    @PostMapping("/import/upsert")
+    public CustomerImportResultVO importUpsert(@RequestPart("file") MultipartFile file) {
+        return customerService.importCustomers(file);
     }
 }
 

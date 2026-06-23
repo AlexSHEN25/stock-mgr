@@ -20,4 +20,9 @@ public class CustomerStockQueryDTO extends PageQuery {
     private Long stockTypeId;
     private LocalDate startDate;
     private LocalDate endDate;
+
+    /**
+     * Reserved for customer-facing schedule views such as deliverySchedule.
+     */
+    private String viewType;
 }

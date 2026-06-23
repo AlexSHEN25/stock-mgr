@@ -467,6 +467,35 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     }
 
     @Override
+    public PageResult<CustomerGoodsStockDetailVO> pageCustomerDeliveryScheduleDetails(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerGoodsAccess(query);
+        long total = stockRecordMapper.countCustomerDeliveryScheduleDetails(query, access.deptId(), access.ownerUserId());
+        List<CustomerGoodsStockDetailVO> records = total == 0
+                ? List.of()
+                : stockRecordMapper.selectCustomerDeliveryScheduleDetails(
+                        query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), records);
+    }
+
+    @Override
+    public PageResult<CustomerOutboundTreeNodeVO> pageCustomerDeliveryScheduleTree(CustomerStockQueryDTO query) {
+        CustomerStockAccess access = resolveCustomerGoodsAccess(query);
+        long total = stockRecordMapper.countCustomerDeliveryScheduleTreeCountries(
+                query, access.deptId(), access.ownerUserId());
+        if (total == 0) {
+            return PageResult.build(0L, query.getPageNum(), query.getPageSize(), List.of());
+        }
+        List<String> countries = stockRecordMapper.selectCustomerDeliveryScheduleTreeCountries(
+                query, access.deptId(), access.ownerUserId(), pageOffset(query), query.getPageSize());
+        if (countries == null || countries.isEmpty()) {
+            return PageResult.build(total, query.getPageNum(), query.getPageSize(), List.of());
+        }
+        List<CustomerOutboundTreeNodeVO> details = stockRecordMapper.selectCustomerDeliveryScheduleTreeDetails(
+                query, access.deptId(), access.ownerUserId(), countries);
+        return PageResult.build(total, query.getPageNum(), query.getPageSize(), buildCustomerGoodsTree(details));
+    }
+
+    @Override
     public CustomerGoodsMatrixVO getCustomerGoodsMatrix(CustomerStockQueryDTO query) {
         CustomerStockAccess access = resolveCustomerGoodsAccess(query);
         long total = stockRecordMapper.countCustomerGoodsMatrixRows(

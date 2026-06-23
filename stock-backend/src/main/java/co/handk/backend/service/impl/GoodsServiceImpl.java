@@ -92,12 +92,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 @RequiredArgsConstructor
 public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsVO>
         implements GoodsService {
 
+    private static final ConcurrentMap<String, Object> MASTER_DATA_LOCKS = new ConcurrentHashMap<>();
     private static final String TEMPLATE_SHEET_NAME = GoodsImportConstant.SHEET_TEMPLATE;
     private static final String INSTRUCTION_SHEET_NAME = GoodsImportConstant.SHEET_INSTRUCTION;
     private static final String DICTIONARY_SHEET_NAME = GoodsImportConstant.SHEET_DICTIONARY;
@@ -478,7 +481,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             return result;
         }
 
-        List<PreparedBatchItem> preparedItems = new ArrayList<>();
+        List<GoodsBatchUpsertItemDTO> validatedItems = new ArrayList<>();
         Map<String, Integer> skuCodeRows = new HashMap<>();
         Map<Long, Integer> goodsIdRows = new HashMap<>();
         Map<Long, Integer> skuIdRows = new HashMap<>();
@@ -489,7 +492,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             try {
                 validateBatchIdentityUniqueness(item, skuCodeRows, goodsIdRows, skuIdRows);
                 validateItemWithinScope(item, scopeQuery);
-                preparedItems.add(prepareBatchItem(item));
+                validatedItems.add(item);
             } catch (Exception ex) {
                 result.getRows().add(buildFailedRowResult(item, resolveExceptionMessage(ex)));
                 result.setFailureCount(result.getFailureCount() + 1);
@@ -500,16 +503,16 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
 
         try {
-            executeBatchItemsInSingleTransaction(preparedItems, result);
+            executeBatchItemsInSingleTransaction(validatedItems, result);
         } catch (Exception ex) {
             String message = "batch rolled back: " + resolveExceptionMessage(ex);
             result.setRows(new ArrayList<>());
             result.setSuccessCount(0);
             result.setCreatedCount(0);
             result.setUpdatedCount(0);
-            result.setFailureCount(preparedItems.size());
-            for (PreparedBatchItem preparedItem : preparedItems) {
-                result.getRows().add(buildFailedRowResult(preparedItem.item(), message));
+            result.setFailureCount(validatedItems.size());
+            for (GoodsBatchUpsertItemDTO item : validatedItems) {
+                result.getRows().add(buildFailedRowResult(item, message));
             }
         }
         return result;
@@ -519,11 +522,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return applicationContext.getBean(GoodsService.class);
     }
 
-    private void executeBatchItemsInSingleTransaction(List<PreparedBatchItem> preparedItems, GoodsBatchUpsertResultVO result) {
+    private void executeBatchItemsInSingleTransaction(List<GoodsBatchUpsertItemDTO> items, GoodsBatchUpsertResultVO result) {
         TransactionTemplate template = new TransactionTemplate(transactionManager);
         template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED);
         template.executeWithoutResult(status -> {
-            for (PreparedBatchItem preparedItem : preparedItems) {
+            for (GoodsBatchUpsertItemDTO item : items) {
+                PreparedBatchItem preparedItem = prepareBatchItem(item);
                 GoodsBatchUpsertRowResultVO committed = persistPreparedBatchItem(preparedItem);
                 result.getRows().add(committed);
                 result.setSuccessCount(result.getSuccessCount() + 1);
@@ -1031,13 +1035,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         rowIndex = writeValidationBlock(sheet, rowIndex, "CURRENCY", List.of(CommonConstant.DEFAULT_CURRENCY_JPY));
         rowIndex = writeValidationBlock(sheet, rowIndex, "STATUS_FLAG", List.of("1", "0"));
 
-        Map<Long, List<Series>> seriesByBrand = new LinkedHashMap<>();
-        for (Series series : allSeries) {
-            if (series.getBrandId() == null) {
-                continue;
-            }
-            seriesByBrand.computeIfAbsent(series.getBrandId(), key -> new ArrayList<>()).add(series);
-        }
+        Map<Long, List<Series>> seriesByBrand = scope == null
+                ? buildSeriesByBrandFromSeries(allSeries)
+                : buildScopedSeriesByBrand(scope);
 
         for (Brand brand : brands) {
             Long brandId = brand.getId();
@@ -1061,6 +1061,38 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
 
         workbook.setSheetHidden(workbook.getSheetIndex(sheet), true);
+    }
+
+    private Map<Long, List<Series>> buildSeriesByBrandFromSeries(List<Series> allSeries) {
+        Map<Long, List<Series>> seriesByBrand = new LinkedHashMap<>();
+        for (Series series : allSeries) {
+            if (series == null || series.getBrandId() == null) {
+                continue;
+            }
+            seriesByBrand.computeIfAbsent(series.getBrandId(), key -> new ArrayList<>()).add(series);
+        }
+        return seriesByBrand;
+    }
+
+    private Map<Long, List<Series>> buildScopedSeriesByBrand(TemplateScope scope) {
+        Map<Long, Series> seriesById = new LinkedHashMap<>();
+        for (Series series : scope.series()) {
+            if (series != null && series.getId() != null) {
+                seriesById.put(series.getId(), series);
+            }
+        }
+        Map<Long, List<Series>> seriesByBrand = new LinkedHashMap<>();
+        for (Goods goods : scope.scopedGoods()) {
+            if (goods == null || goods.getBrandId() == null || goods.getSeriesId() == null) {
+                continue;
+            }
+            Series series = seriesById.get(goods.getSeriesId());
+            if (series == null) {
+                continue;
+            }
+            seriesByBrand.computeIfAbsent(goods.getBrandId(), key -> new ArrayList<>()).add(series);
+        }
+        return seriesByBrand;
     }
 
     private void applyTemplateValidations(XSSFWorkbook workbook) {
@@ -1161,6 +1193,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         List<Long> categoryIds = distinctIds(scopedGoods.stream().map(Goods::getCategoryId).toList());
         List<Long> makerIds = distinctIds(scopedGoods.stream().map(Goods::getMakerId).toList());
         return new TemplateScope(
+                scopedGoods,
                 loadBrandsByIds(brandIds),
                 loadSeriesByIds(seriesIds),
                 loadCategoriesByIds(categoryIds),
@@ -1445,6 +1478,11 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!StringUtils.hasText(brandName)) {
             return null;
         }
+        synchronized (masterDataLock("brand", brandName)) {
+            brandId = findExistingBrandId(item);
+            if (brandId != null) {
+                return brandId;
+            }
         Brand created = new Brand();
         created.setName(brandName);
         created.setEnglishName(brandName);
@@ -1454,6 +1492,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                     rowMessage(item, "ブランドの作成に失敗しました"));
         }
         return created.getId();
+        }
     }
 
     private Long resolveOrCreateSeriesId(GoodsBatchUpsertItemDTO item, Long brandId) {
@@ -1466,9 +1505,13 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!StringUtils.hasText(seriesName)) {
             return null;
         }
-        Series sameName = seriesService.getOne(new QueryWrapper<Series>()
-                .eq("name", seriesName)
-                .last("LIMIT 1"));
+        synchronized (masterDataLock("series", String.valueOf(brandId), seriesName)) {
+            seriesId = findExistingSeriesId(item, brandId);
+            if (seriesId != null) {
+                Series current = seriesService.getByIdNotDeleted(seriesId);
+                return attachSeriesBrandIfNecessary(current, brandId).getId();
+            }
+        Series sameName = findAttachableSeriesByName(seriesName, brandId);
         if (sameName != null) {
             return attachSeriesBrandIfNecessary(sameName, brandId).getId();
         }
@@ -1482,6 +1525,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                     rowMessage(item, "シリーズの作成に失敗しました"));
         }
         return created.getId();
+        }
     }
 
     private Long resolveOrCreateCategoryId(GoodsBatchUpsertItemDTO item) {
@@ -1493,6 +1537,11 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!StringUtils.hasText(categoryName)) {
             return null;
         }
+        synchronized (masterDataLock("category", categoryName)) {
+            categoryId = findExistingCategoryId(item);
+            if (categoryId != null) {
+                return categoryId;
+            }
         Category created = new Category();
         created.setName(categoryName);
         created.setStatus(StatusEnum.NOMAL.getCode());
@@ -1501,6 +1550,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                     rowMessage(item, "分類の作成に失敗しました"));
         }
         return created.getId();
+        }
     }
 
     private Long resolveOrCreateMakerId(GoodsBatchUpsertItemDTO item, Long seriesId) {
@@ -1513,9 +1563,13 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!StringUtils.hasText(makerName)) {
             return null;
         }
-        Maker sameName = makerService.getOne(new QueryWrapper<Maker>()
-                .eq("name", makerName)
-                .last("LIMIT 1"));
+        synchronized (masterDataLock("maker", String.valueOf(seriesId), makerName)) {
+            makerId = findExistingMakerId(item, seriesId);
+            if (makerId != null) {
+                Maker current = makerService.getByIdNotDeleted(makerId);
+                return attachMakerSeriesIfNecessary(current, seriesId).getId();
+            }
+        Maker sameName = findAttachableMakerByName(makerName, seriesId);
         if (sameName != null) {
             return attachMakerSeriesIfNecessary(sameName, seriesId).getId();
         }
@@ -1529,6 +1583,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                     rowMessage(item, "メーカーの作成に失敗しました"));
         }
         return created.getId();
+        }
     }
 
     private Series attachSeriesBrandIfNecessary(Series series, Long brandId) {
@@ -1581,8 +1636,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (series != null) {
             return series.getId();
         }
-        Series sameName = seriesService.getOne(new QueryWrapper<Series>().eq("name", seriesName).last("LIMIT 1"));
-        return sameName == null ? null : sameName.getId();
+        QueryWrapper<Series> sameNameWrapper = new QueryWrapper<Series>().eq("name", seriesName);
+        if (brandId != null) {
+            sameNameWrapper.isNull("brand_id");
+        }
+        Series sameName = seriesService.getOne(sameNameWrapper.last("LIMIT 1"));
+        return canAttachSeriesToBrand(sameName, brandId) ? sameName.getId() : null;
     }
 
     private Long findExistingCategoryId(GoodsBatchUpsertItemDTO item) {
@@ -1613,8 +1672,50 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (maker != null) {
             return maker.getId();
         }
-        Maker sameName = makerService.getOne(new QueryWrapper<Maker>().eq("name", makerName).last("LIMIT 1"));
-        return sameName == null ? null : sameName.getId();
+        QueryWrapper<Maker> sameNameWrapper = new QueryWrapper<Maker>().eq("name", makerName);
+        if (seriesId != null) {
+            sameNameWrapper.isNull("series_id");
+        }
+        Maker sameName = makerService.getOne(sameNameWrapper.last("LIMIT 1"));
+        return canAttachMakerToSeries(sameName, seriesId) ? sameName.getId() : null;
+    }
+
+    private Series findAttachableSeriesByName(String seriesName, Long brandId) {
+        QueryWrapper<Series> wrapper = new QueryWrapper<Series>().eq("name", seriesName);
+        if (brandId != null) {
+            wrapper.isNull("brand_id");
+        }
+        Series series = seriesService.getOne(wrapper.last("LIMIT 1"));
+        return canAttachSeriesToBrand(series, brandId) ? series : null;
+    }
+
+    private Maker findAttachableMakerByName(String makerName, Long seriesId) {
+        QueryWrapper<Maker> wrapper = new QueryWrapper<Maker>().eq("name", makerName);
+        if (seriesId != null) {
+            wrapper.isNull("series_id");
+        }
+        Maker maker = makerService.getOne(wrapper.last("LIMIT 1"));
+        return canAttachMakerToSeries(maker, seriesId) ? maker : null;
+    }
+
+    private boolean canAttachSeriesToBrand(Series series, Long brandId) {
+        return series != null
+                && (brandId == null || series.getBrandId() == null || Objects.equals(series.getBrandId(), brandId));
+    }
+
+    private boolean canAttachMakerToSeries(Maker maker, Long seriesId) {
+        return maker != null
+                && (seriesId == null || maker.getSeriesId() == null || Objects.equals(maker.getSeriesId(), seriesId));
+    }
+
+    private Object masterDataLock(String type, String... parts) {
+        StringBuilder key = new StringBuilder(type);
+        if (parts != null) {
+            for (String part : parts) {
+                key.append(':').append(part == null ? "" : part.trim());
+            }
+        }
+        return MASTER_DATA_LOCKS.computeIfAbsent(key.toString(), ignored -> new Object());
     }
 
     private StatusEnum parseStatus(String value) {
@@ -1732,6 +1833,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private record TemplateScope(
+            List<Goods> scopedGoods,
             List<Brand> brands,
             List<Series> series,
             List<Category> categories,

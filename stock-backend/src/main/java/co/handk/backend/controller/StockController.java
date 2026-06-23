@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.service.StockService;
+import co.handk.backend.service.RequestFormService;
 import co.handk.backend.exception.BusinessException;
 import co.handk.common.constant.NumberConstant;
 import co.handk.common.model.PageResult;
@@ -10,6 +11,7 @@ import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.create.StockOrderSubmitDTO;
 import co.handk.common.model.dto.query.CustomerStockQueryDTO;
 import co.handk.common.model.dto.query.StockQueryDTO;
+import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.UpdateStockDTO;
 import co.handk.common.model.vo.StockVO;
 import co.handk.common.model.vo.CustomerGoodsStockDetailVO;
@@ -43,6 +45,7 @@ import java.util.List;
 public class StockController {
 
     private final StockService stockService;
+    private final RequestFormService requestFormService;
 
     @GetMapping("/{id}")
     public StockVO get(@PathVariable("id") @NotNull Long id) {
@@ -188,6 +191,22 @@ public class StockController {
         return stockService.pageCustomerGoodsStockDetails(query);
     }
 
+    @GetMapping("/customer/delivery-schedule/page")
+    public PageResult<CustomerOutboundTreeNodeVO> customerDeliverySchedulePage(@Valid CustomerStockQueryDTO query) {
+        query.setViewType("deliverySchedule");
+        return stockService.pageCustomerDeliveryScheduleTree(query);
+    }
+
+    @PostMapping("/customer/delivery-schedule/items/add-to-request")
+    public Boolean addDeliveryScheduleItemsToRequest(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
+        return requestFormService.addItemsFromStockOrder(dto);
+    }
+
+    @PostMapping("/customer/delivery-schedule/items/return-from-request")
+    public Boolean returnRequestItemsToDeliverySchedule(@RequestBody @NotNull @Valid RequestFormItemBatchDTO dto) {
+        return requestFormService.removeItemsFromRequest(dto);
+    }
+
     @GetMapping("/customer/goods/tree/page")
     public PageResult<CustomerOutboundTreeNodeVO> customerGoodsTreePage(@Valid CustomerStockQueryDTO query) {
         return stockService.pageCustomerGoodsTree(query);
@@ -195,6 +214,12 @@ public class StockController {
 
     @GetMapping("/customer/goods/matrix")
     public CustomerGoodsMatrixVO customerGoodsMatrix(@Valid CustomerStockQueryDTO query) {
+        return stockService.getCustomerGoodsMatrix(query);
+    }
+
+    @GetMapping("/customer/delivery-schedule/matrix")
+    public CustomerGoodsMatrixVO customerDeliveryScheduleMatrix(@Valid CustomerStockQueryDTO query) {
+        query.setViewType("deliverySchedule");
         return stockService.getCustomerGoodsMatrix(query);
     }
 

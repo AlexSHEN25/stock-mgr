@@ -21,6 +21,8 @@ public class CustomerVO extends BaseVO {
     @JoinValue(sourceField = "ownerUserId", serviceBean = "userServiceImpl", targetField = "username")
     private String ownerUserName;
     private Long ownerDeptId;
+    @JoinValue(sourceField = "ownerDeptId", serviceBean = "deptServiceImpl", targetField = "name")
+    private String ownerDeptName;
     private String remark;
     private Integer status;
     private String statusDesc;

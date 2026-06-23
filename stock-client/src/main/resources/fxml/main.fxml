@@ -120,6 +120,9 @@
                     <Button fx:id="stockOutboundButton" text="%main.btn.stockOutbound" onAction="#onStockOutbound" visible="false" managed="false" styleClass="danger-btn"/>
                     <Button fx:id="goodsTemplateButton" text="%main.btn.goodsTemplate" onAction="#onGoodsTemplateDownload" visible="false" managed="false"/>
                     <Button fx:id="goodsImportButton" text="%main.btn.goodsImport" onAction="#onGoodsImport" visible="false" managed="false" styleClass="primary-btn"/>
+                    <Button fx:id="customerExportButton" text="%main.btn.customerExport" onAction="#onCustomerExport" visible="false" managed="false"/>
+                    <Button fx:id="customerTemplateButton" text="%main.btn.customerTemplate" onAction="#onCustomerTemplateDownload" visible="false" managed="false"/>
+                    <Button fx:id="customerImportButton" text="%main.btn.customerImport" onAction="#onCustomerImport" visible="false" managed="false" styleClass="primary-btn"/>
                     <Button fx:id="addButton" text="%main.btn.create" onAction="#onAdd" styleClass="success-btn"/>
                     <Button fx:id="inlineEditButton" text="%main.btn.inlineEdit" onAction="#onInlineEdit"/>
                     <Button fx:id="inlineSaveButton" text="%main.btn.save" onAction="#onInlineSave" styleClass="success-btn"/>

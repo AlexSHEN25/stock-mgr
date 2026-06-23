@@ -1,6 +1,7 @@
 package co.handk.client.service;
 
 import co.handk.client.constant.UiText;
+import co.handk.client.constant.AppConstants;
 import co.handk.client.constant.AppConstants.ApiPath;
 import co.handk.client.constant.ModuleEndpointStrategy;
 import co.handk.client.util.ApiClient;
@@ -19,6 +20,9 @@ public class ModuleDataService {
     private static final String GOODS_MAKER_OPTIONS = "_goodsMakerOptions";
 
     public JSONObject fetchPage(String module, int pageNum, int pageSize, Map<String, String> filters) throws Exception {
+        if (AppConstants.Module.DELIVERY_SCHEDULE.equals(module)) {
+            return fetchDeliverySchedulePage(pageNum, pageSize, filters);
+        }
         String res;
         if (ModuleEndpointStrategy.pageUsesPost(module)) {
             JSONObject body = new JSONObject();
@@ -38,6 +42,79 @@ public class ModuleDataService {
             res = ApiClient.get(ModuleEndpointStrategy.pagePath(module), params);
         }
         return new JSONObject(res);
+    }
+
+    private JSONObject fetchDeliverySchedulePage(int pageNum, int pageSize, Map<String, String> filters) throws Exception {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("pageNum", String.valueOf(pageNum));
+        params.put("pageSize", String.valueOf(pageSize));
+        params.put("viewType", AppConstants.Module.DELIVERY_SCHEDULE);
+        if (filters != null) {
+            params.putAll(filters);
+        }
+        JSONObject wrapper = new JSONObject(ApiClient.get(ApiPath.DELIVERY_SCHEDULE_PAGE, params));
+        JSONObject page = wrapper.optJSONObject("data");
+        if (page == null) {
+            return wrapper;
+        }
+
+        JSONArray records = page.optJSONArray("records");
+        page.put("records", flattenDeliveryScheduleTree(records));
+        return wrapper;
+    }
+
+    private JSONArray flattenDeliveryScheduleTree(JSONArray records) {
+        JSONArray rows = new JSONArray();
+        if (records == null) {
+            return rows;
+        }
+        for (int i = 0; i < records.length(); i++) {
+            appendDeliveryScheduleNode(rows, records.getJSONObject(i), 0);
+        }
+        return rows;
+    }
+
+    private void appendDeliveryScheduleNode(JSONArray rows, JSONObject node, int level) {
+        JSONObject row = new JSONObject();
+        String nodeType = node.optString("nodeType", "");
+        row.put("__level", level);
+        row.put("__nodeType", nodeType);
+        row.put("country", node.optString("country", ""));
+        row.put("customerName", "CUSTOMER".equals(nodeType) || "RECORD".equals(nodeType)
+                ? node.optString("customerName", "") : "");
+        row.put("groupCode", "CUSTOMER".equals(nodeType) || "RECORD".equals(nodeType)
+                ? node.optString("groupCode", "") : "");
+        row.put("bizNo", "RECORD".equals(nodeType) ? node.optString("bizNo", "") : "");
+        row.put("goodsName", "RECORD".equals(nodeType) ? node.optString("goodsName", "") : "");
+        row.put("skuCode", "RECORD".equals(nodeType) ? node.optString("skuCode", "") : "");
+        row.put("stockTypeName", "RECORD".equals(nodeType) ? node.optString("stockTypeName", "") : "");
+        row.put("quantity", "RECORD".equals(nodeType) ? node.opt("quantity") : "");
+        row.put("totalQuantity", !"RECORD".equals(nodeType) ? node.opt("totalQuantity") : "");
+        row.put("goodsKinds", !"RECORD".equals(nodeType) ? node.opt("goodsKinds") : "");
+        row.put("outboundDate", "RECORD".equals(nodeType) ? node.optString("outboundDate", "") : "");
+        row.put("operatorName", "RECORD".equals(nodeType) ? node.optString("operatorName", "") : "");
+        putIfPresent(row, node, "recordId");
+        putIfPresent(row, node, "orderId");
+        putIfPresent(row, node, "orderItemId");
+        putIfPresent(row, node, "customerId");
+        putIfPresent(row, node, "goodsId");
+        putIfPresent(row, node, "skuId");
+        putIfPresent(row, node, "stockTypeId");
+        rows.put(row);
+
+        JSONArray children = node.optJSONArray("children");
+        if (children == null) {
+            return;
+        }
+        for (int i = 0; i < children.length(); i++) {
+            appendDeliveryScheduleNode(rows, children.getJSONObject(i), level + 1);
+        }
+    }
+
+    private void putIfPresent(JSONObject target, JSONObject source, String key) {
+        if (source.has(key) && source.opt(key) != JSONObject.NULL) {
+            target.put(key, source.opt(key));
+        }
     }
 
     public JSONObject save(String module, boolean editMode, JSONObject dto) throws Exception {
@@ -95,6 +172,24 @@ public class ModuleDataService {
             builder.append(String.format("%02x", b));
         }
         return builder.toString();
+    }
+
+    public byte[] exportCustomers(Map<String, String> filters) throws Exception {
+        return ApiClient.getBytes(ApiPath.CUSTOMER_EXPORT, filters == null ? Map.of() : filters);
+    }
+
+    public byte[] downloadCustomerTemplate() throws Exception {
+        return ApiClient.getBytes(ApiPath.CUSTOMER_IMPORT_TEMPLATE, Map.of());
+    }
+
+    public JSONObject importCustomers(java.io.File file) throws Exception {
+        return new JSONObject(ApiClient.postMultipart(
+                ApiPath.CUSTOMER_IMPORT_UPSERT,
+                "file",
+                file,
+                Map.of(),
+                Map.of()
+        ));
     }
 
     public JSONObject delete(String module, String id) throws Exception {

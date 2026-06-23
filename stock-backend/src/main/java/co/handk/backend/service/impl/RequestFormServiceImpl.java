@@ -1001,6 +1001,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
         List<RequestItem> existing = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", form.getId())
+                .eq("state", StockBizConstant.REQUEST_ITEM_STATE_ADDED)
                 .in("stock_record_id", stockRecordIds));
         if (existing == null || existing.isEmpty()) {
             return true;
@@ -1010,8 +1011,11 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             int currentQty = requestItem.getRequestQty() == null ? 0 : Math.abs(requestItem.getRequestQty());
             StockRecord record = requireAvailableOutboundRecord(requestItem.getStockRecordId());
             applyOutboundRemainderByRequested(record, 0, currentQty);
-            requestItem.setState(StockBizConstant.REQUEST_ITEM_STATE_REMOVED);
-            if (!requestItemService.updateById(requestItem)) {
+            boolean removed = requestItemService.update(new LambdaUpdateWrapper<RequestItem>()
+                    .eq(RequestItem::getId, requestItem.getId())
+                    .eq(RequestItem::getState, StockBizConstant.REQUEST_ITEM_STATE_ADDED)
+                    .set(RequestItem::getState, StockBizConstant.REQUEST_ITEM_STATE_REMOVED));
+            if (!removed) {
                 throw fail("failed to remove request item");
             }
         }

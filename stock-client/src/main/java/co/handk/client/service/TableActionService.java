@@ -99,6 +99,20 @@ public class TableActionService {
         return new JSONObject(ApiClient.post(ApiPath.REQUEST_FORM_MATCH_ITEMS, body.toString()));
     }
 
+    public JSONObject addDeliveryScheduleItemsToRequest(String requestId, JSONArray items) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("requestId", Long.parseLong(requestId));
+        body.put("items", items);
+        return new JSONObject(ApiClient.post(ApiPath.DELIVERY_SCHEDULE_ADD_TO_REQUEST, body.toString()));
+    }
+
+    public JSONObject returnRequestItemsToDeliverySchedule(String requestId, JSONArray items) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("requestId", Long.parseLong(requestId));
+        body.put("items", items);
+        return new JSONObject(ApiClient.post(ApiPath.DELIVERY_SCHEDULE_RETURN_FROM_REQUEST, body.toString()));
+    }
+
     public JSONObject approveStockOrder(String orderId, boolean approved, String remark) throws Exception {
         String path = "/stock/approve/" + orderId + "?approved=" + approved;
         if (remark != null && !remark.isBlank()) {
