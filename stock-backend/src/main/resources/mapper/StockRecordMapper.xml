@@ -267,7 +267,6 @@
                                     AND sr.order_type = 2
                                     AND sr.deleted = 0
         WHERE <include refid="customerGoodsOrderWhere"/>
-          AND COALESCE(ABS(i.change_qty), 0) > 0
     </select>
 
     <select id="selectCustomerDeliveryScheduleDetails"
@@ -286,7 +285,7 @@
                i.sku_code AS skuCode,
                i.stock_type_id AS stockTypeId,
                i.stock_type_name AS stockTypeName,
-               ABS(i.change_qty) AS quantity,
+               ABS(sr.change_qty) AS quantity,
                COALESCE(i.biz_date, o.biz_date) AS outboundDate,
                o.operator_id AS operatorId,
                o.operator_name AS operatorName
@@ -297,7 +296,6 @@
                                     AND sr.order_type = 2
                                     AND sr.deleted = 0
         WHERE <include refid="customerGoodsOrderWhere"/>
-          AND COALESCE(ABS(i.change_qty), 0) > 0
         ORDER BY COALESCE(i.biz_date, o.biz_date) DESC, i.id DESC
         LIMIT #{offset}, #{limit}
     </select>
@@ -314,7 +312,6 @@
                                         AND sr.deleted = 0
             LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
             WHERE <include refid="customerGoodsTreeWhere"/>
-              AND COALESCE(ABS(i.change_qty), 0) > 0
             GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '未設定')
         ) country_summary
     </select>
@@ -329,7 +326,6 @@
                                     AND sr.deleted = 0
         LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsTreeWhere"/>
-          AND COALESCE(ABS(i.change_qty), 0) > 0
         GROUP BY COALESCE(NULLIF(TRIM(c.country), ''), '未設定')
         ORDER BY country ASC
         LIMIT #{offset}, #{limit}
@@ -352,7 +348,7 @@
                i.sku_code AS skuCode,
                i.stock_type_id AS stockTypeId,
                i.stock_type_name AS stockTypeName,
-               ABS(i.change_qty) AS quantity,
+               ABS(sr.change_qty) AS quantity,
                COALESCE(i.biz_date, o.biz_date) AS outboundDate,
                o.operator_id AS operatorId,
                o.operator_name AS operatorName
@@ -364,7 +360,6 @@
                                     AND sr.deleted = 0
         LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsTreeWhere"/>
-          AND COALESCE(ABS(i.change_qty), 0) > 0
           AND COALESCE(NULLIF(TRIM(c.country), ''), '未設定') IN
           <foreach collection="countries" item="country" open="(" separator="," close=")">
               #{country}
