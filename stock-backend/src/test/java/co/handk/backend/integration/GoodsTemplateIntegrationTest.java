@@ -50,11 +50,9 @@ class GoodsTemplateIntegrationTest {
     private static final int TEMPLATE_COL_SERIES_NAME = 5;
     private static final int TEMPLATE_COL_CATEGORY_NAME = 6;
     private static final int TEMPLATE_COL_MAKER_NAME = 7;
-    private static final int TEMPLATE_COL_SKU_CODE = 11;
-    private static final int TEMPLATE_COL_SKU_NAME = 12;
-    private static final int TEMPLATE_COL_CURRENCY = 14;
-    private static final int TEMPLATE_COL_SKU_STATUS = 21;
-    private static final int TEMPLATE_COL_GOODS_STATUS = 25;
+    private static final int TEMPLATE_COL_SKU_CODE = 8;
+    private static final int TEMPLATE_COL_SKU_NAME = 9;
+    private static final int TEMPLATE_COL_CURRENCY = 11;
 
     @Autowired
     private GoodsService goodsService;
@@ -116,6 +114,21 @@ class GoodsTemplateIntegrationTest {
                 }
             }
             assertTrue(hasScopedSeriesRange);
+        }
+    }
+
+    @Test
+    void templateOnlyContainsNecessaryImportColumns() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        goodsService.downloadBatchTemplate(null, response);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
+            Row headerRow = workbook.getSheetAt(0).getRow(0);
+            Row noteRow = workbook.getSheetAt(0).getRow(1);
+            assertNotNull(headerRow);
+            assertNotNull(noteRow);
+            assertEquals(12, headerRow.getLastCellNum());
+            assertEquals(12, noteRow.getLastCellNum());
         }
     }
 
@@ -257,8 +270,6 @@ class GoodsTemplateIntegrationTest {
             row.createCell(TEMPLATE_COL_SKU_CODE).setCellValue("scope-mismatch-sku");
             row.createCell(TEMPLATE_COL_SKU_NAME).setCellValue("scope-import-sku");
             row.createCell(TEMPLATE_COL_CURRENCY).setCellValue("JPY");
-            row.createCell(TEMPLATE_COL_SKU_STATUS).setCellValue("1");
-            row.createCell(TEMPLATE_COL_GOODS_STATUS).setCellValue("1");
             workbook.write(outputStream);
             return outputStream.toByteArray();
         }

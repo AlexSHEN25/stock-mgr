@@ -58,6 +58,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -145,7 +146,7 @@ class StockFlowIntegrationTest {
     }
 
     @Test
-    void customerOutboundIsIdempotentAndConfirmedConsistently() {
+    void adminCustomerOutboundIsIdempotentAndAutoConfirmedConsistently() {
         TestFixture fixture = createFixture();
         seedInboundStock(fixture, 10);
         bindRequest("idem-customer-" + UUID.randomUUID());
@@ -159,18 +160,12 @@ class StockFlowIntegrationTest {
 
         assertEquals(firstOrderId, secondOrderId);
 
-        Stock stockBeforeApprove = findStock(fixture);
-        List<StockReservation> lockedRows = findReservationsByOrderId(firstOrderId);
-        assertEquals(10, stockBeforeApprove.getCurrentQty());
-        assertEquals(4, lockedRows.stream().mapToInt(StockReservation::getReservationQty).sum());
-        assertTrue(lockedRows.stream().allMatch(row -> row.getState() == StockBizConstant.RESERVATION_STATE_LOCKED));
-
-        assertTrue(stockService.approveOrder(firstOrderId, true, "approve customer outbound"));
-
         Stock stockAfterApprove = findStock(fixture);
+        StockOrder order = stockOrderService.getByIdNotDeleted(firstOrderId);
         StockBatch batch = findSingleBatchByStockId(stockAfterApprove.getId());
         List<StockReservation> confirmedRows = findReservationsByOrderId(firstOrderId);
 
+        assertEquals(StockBizConstant.ORDER_STATE_FINISHED, order.getState());
         assertEquals(6, stockAfterApprove.getCurrentQty());
         assertEquals(6, batch.getAvailableQty());
         assertEquals(4, batch.getCustomerOutQty());
@@ -179,28 +174,29 @@ class StockFlowIntegrationTest {
     }
 
     @Test
-    void rejectedOutboundReleasesReservationWithoutChangingStock() {
+    void adminCustomerOutboundAutoApprovalDecrementsStockImmediately() {
         TestFixture fixture = createFixture();
         seedInboundStock(fixture, 8);
-        bindRequest("idem-reject-" + UUID.randomUUID());
+        bindRequest("idem-auto-approve-" + UUID.randomUUID());
 
         StockOperateDTO outbound = baseOperateDTO(fixture, 3);
         outbound.setCustomerId(fixture.customer().getId());
         outbound.setOutboundMode(StockBizConstant.OUTBOUND_MODE_CUSTOMER);
 
         Long orderId = stockService.outbound(outbound);
-        assertTrue(stockService.approveOrder(orderId, false, "reject outbound"));
 
         Stock stock = findStock(fixture);
+        StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         StockBatch batch = findSingleBatchByStockId(stock.getId());
-        List<StockReservation> releasedRows = findReservationsByOrderId(orderId);
+        List<StockReservation> confirmedRows = findReservationsByOrderId(orderId);
 
-        assertEquals(8, stock.getCurrentQty());
-        assertEquals(8, batch.getAvailableQty());
+        assertEquals(StockBizConstant.ORDER_STATE_FINISHED, order.getState());
+        assertEquals(5, stock.getCurrentQty());
+        assertEquals(5, batch.getAvailableQty());
         assertEquals(0, batch.getAllocatedQty());
-        assertEquals(0, batch.getCustomerOutQty());
-        assertTrue(releasedRows.stream().allMatch(row -> row.getState() == StockBizConstant.RESERVATION_STATE_RELEASED));
-        assertTrue(releasedRows.stream().allMatch(row -> row.getReleaseTime() != null));
+        assertEquals(3, batch.getCustomerOutQty());
+        assertTrue(confirmedRows.stream().allMatch(row -> row.getState() == StockBizConstant.RESERVATION_STATE_CONFIRMED));
+        assertTrue(confirmedRows.stream().allMatch(row -> row.getConfirmTime() != null));
     }
 
     @Test
@@ -226,7 +222,6 @@ class StockFlowIntegrationTest {
 
         List<Long> allocationOrders = stockService.allocateToGroups(allocateDTO);
         assertEquals(1, allocationOrders.size());
-        assertTrue(stockService.approveOrder(allocationOrders.get(0), true, "approve allocation"));
 
         Stock stockAfterAllocation = findStock(fixture);
         GroupStock groupStockAfterAllocation = findSingleGroupStock(stockAfterAllocation.getId(), fixture.groupDept().getId());
@@ -241,12 +236,13 @@ class StockFlowIntegrationTest {
         groupCustomerOutbound.setOutboundMode(StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER);
 
         Long orderId = stockService.outbound(groupCustomerOutbound);
-        assertTrue(stockService.approveOrder(orderId, true, "approve group customer outbound"));
 
         Stock stockAfterGroupOutbound = findStock(fixture);
+        StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         GroupStock groupStockAfterOutbound = findSingleGroupStock(stockAfterGroupOutbound.getId(), fixture.groupDept().getId());
         List<StockReservation> confirmedRows = findReservationsByOrderId(orderId);
 
+        assertEquals(StockBizConstant.ORDER_STATE_FINISHED, order.getState());
         assertEquals(7, stockAfterGroupOutbound.getCurrentQty());
         assertEquals(3, groupStockAfterOutbound.getCurrentQty());
         assertTrue(confirmedRows.stream().allMatch(row -> row.getState() == StockBizConstant.RESERVATION_STATE_CONFIRMED));
@@ -276,7 +272,6 @@ class StockFlowIntegrationTest {
 
         List<Long> allocationOrders = stockService.allocateToGroups(allocateDTO);
         assertEquals(1, allocationOrders.size());
-        assertTrue(stockService.approveOrder(allocationOrders.get(0), true, "approve expired allocation"));
 
         int reclaimedQty = stockBatchService.reclaimExpiredGroupStock();
 
@@ -293,11 +288,118 @@ class StockFlowIntegrationTest {
         assertEquals(StockBizConstant.BATCH_STATE_EXPIRED, groupAfterReclaim.getState());
     }
 
+    @Test
+    void selfCustomerOutboundOverAvailableQuantityDoesNotCreateOrderOrChangeStock() {
+        TestFixture fixture = createFixture();
+        seedInboundStock(fixture, 5);
+        Stock stockBefore = findStock(fixture);
+        StockBatch batchBefore = findSingleBatchByStockId(stockBefore.getId());
+        long orderCountBefore = countStockOrders(fixture);
+
+        bindRequest("idem-self-over-" + UUID.randomUUID());
+        StockOperateDTO outbound = baseOperateDTO(fixture, 6);
+        outbound.setCustomerId(fixture.customer().getId());
+        outbound.setOutboundMode(StockBizConstant.OUTBOUND_MODE_CUSTOMER);
+
+        assertThrows(RuntimeException.class, () -> stockService.outbound(outbound));
+
+        Stock stockAfter = findStock(fixture);
+        StockBatch batchAfter = findSingleBatchByStockId(stockAfter.getId());
+        assertEquals(orderCountBefore, countStockOrders(fixture));
+        assertEquals(5, stockAfter.getCurrentQty());
+        assertEquals(batchBefore.getCurrentQty(), batchAfter.getCurrentQty());
+        assertEquals(5, batchAfter.getAvailableQty());
+        assertEquals(0, batchAfter.getCustomerOutQty());
+    }
+
+    @Test
+    void groupCustomerOutboundOverGroupQuantityDoesNotChangeSelfOrGroupStock() {
+        TestFixture fixture = createFixture();
+        seedInboundStock(fixture, 10);
+        allocateToSingleGroup(fixture, 4, LocalDateTime.now().plusDays(30));
+
+        Stock stockBefore = findStock(fixture);
+        StockBatch batchBefore = findSingleBatchByStockId(stockBefore.getId());
+        GroupStock groupBefore = findSingleGroupStock(stockBefore.getId(), fixture.groupDept().getId());
+        long orderCountBefore = countStockOrders(fixture);
+
+        bindRequest("idem-group-over-" + UUID.randomUUID());
+        StockOperateDTO groupOutbound = baseOperateDTO(fixture, 5);
+        groupOutbound.setCustomerId(fixture.customer().getId());
+        groupOutbound.setDeptId(fixture.groupDept().getId());
+        groupOutbound.setGroupCode(fixture.groupDept().getCode());
+        groupOutbound.setOutboundMode(StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER);
+
+        assertThrows(RuntimeException.class, () -> stockService.outbound(groupOutbound));
+
+        Stock stockAfter = findStock(fixture);
+        StockBatch batchAfter = findSingleBatchByStockId(stockAfter.getId());
+        GroupStock groupAfter = findSingleGroupStock(stockAfter.getId(), fixture.groupDept().getId());
+        assertEquals(orderCountBefore, countStockOrders(fixture));
+        assertEquals(stockBefore.getCurrentQty(), stockAfter.getCurrentQty());
+        assertEquals(batchBefore.getCurrentQty(), batchAfter.getCurrentQty());
+        assertEquals(batchBefore.getAvailableQty(), batchAfter.getAvailableQty());
+        assertEquals(groupBefore.getCurrentQty(), groupAfter.getCurrentQty());
+    }
+
+    @Test
+    void groupAllocationOverSelfQuantityDoesNotCreatePartialGroupStock() {
+        TestFixture fixture = createFixture();
+        seedInboundStock(fixture, 3);
+        Stock stockBefore = findStock(fixture);
+        StockBatch batchBefore = findSingleBatchByStockId(stockBefore.getId());
+        long orderCountBefore = countStockOrders(fixture);
+
+        StockGroupAllocationItemDTO allocationItem = new StockGroupAllocationItemDTO();
+        allocationItem.setDeptId(fixture.groupDept().getId());
+        allocationItem.setDeptCode(fixture.groupDept().getCode());
+        allocationItem.setGroupCode(fixture.groupDept().getCode());
+        allocationItem.setQuantity(4);
+
+        StockGroupAllocateDTO allocateDTO = new StockGroupAllocateDTO();
+        allocateDTO.setStockId(stockBefore.getId());
+        allocateDTO.setGoodsId(fixture.goods().getId().intValue());
+        allocateDTO.setSkuId(fixture.sku().getId());
+        allocateDTO.setWarehouseId(fixture.warehouse().getId().intValue());
+        allocateDTO.setStockTypeId(fixture.stockType().getId());
+        allocateDTO.setSaleDeadline(LocalDateTime.now().plusDays(30));
+        allocateDTO.setAllocations(List.of(allocationItem));
+
+        assertThrows(RuntimeException.class, () -> stockService.allocateToGroups(allocateDTO));
+
+        Stock stockAfter = findStock(fixture);
+        StockBatch batchAfter = findSingleBatchByStockId(stockAfter.getId());
+        assertEquals(orderCountBefore, countStockOrders(fixture));
+        assertEquals(3, stockAfter.getCurrentQty());
+        assertEquals(batchBefore.getCurrentQty(), batchAfter.getCurrentQty());
+        assertEquals(3, batchAfter.getAvailableQty());
+        assertEquals(0, countGroupStockRows(stockAfter.getId(), fixture.groupDept().getId()));
+    }
+
     private void seedInboundStock(TestFixture fixture, int quantity) {
         StockOperateDTO inbound = baseOperateDTO(fixture, quantity);
         inbound.setSourceType(StockBizConstant.INBOUND_SCENE_SELF);
         Long orderId = stockService.inbound(inbound);
         assertNotNull(orderId);
+    }
+
+    private List<Long> allocateToSingleGroup(TestFixture fixture, int quantity, LocalDateTime saleDeadline) {
+        Stock stock = findStock(fixture);
+        StockGroupAllocationItemDTO allocationItem = new StockGroupAllocationItemDTO();
+        allocationItem.setDeptId(fixture.groupDept().getId());
+        allocationItem.setDeptCode(fixture.groupDept().getCode());
+        allocationItem.setGroupCode(fixture.groupDept().getCode());
+        allocationItem.setQuantity(quantity);
+
+        StockGroupAllocateDTO allocateDTO = new StockGroupAllocateDTO();
+        allocateDTO.setStockId(stock.getId());
+        allocateDTO.setGoodsId(fixture.goods().getId().intValue());
+        allocateDTO.setSkuId(fixture.sku().getId());
+        allocateDTO.setWarehouseId(fixture.warehouse().getId().intValue());
+        allocateDTO.setStockTypeId(fixture.stockType().getId());
+        allocateDTO.setSaleDeadline(saleDeadline);
+        allocateDTO.setAllocations(List.of(allocationItem));
+        return stockService.allocateToGroups(allocateDTO);
     }
 
     private StockOperateDTO baseOperateDTO(TestFixture fixture, int quantity) {
@@ -415,6 +517,20 @@ class StockFlowIntegrationTest {
                 .eq("order_id", orderId)
                 .eq("deleted", 0)
                 .orderByAsc("id"));
+    }
+
+    private long countStockOrders(TestFixture fixture) {
+        return stockOrderService.count(new QueryWrapper<StockOrder>()
+                .eq("warehouse_id", fixture.warehouse().getId())
+                .eq("stock_type_id", fixture.stockType().getId())
+                .eq("deleted", 0));
+    }
+
+    private long countGroupStockRows(Long stockId, Long deptId) {
+        return groupStockMapper.selectCount(new QueryWrapper<GroupStock>()
+                .eq("stock_id", stockId)
+                .eq("dept_id", deptId)
+                .eq("deleted", 0));
     }
 
     private void bindRequest(String idempotencyKey) {

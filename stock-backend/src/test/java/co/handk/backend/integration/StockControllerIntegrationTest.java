@@ -260,10 +260,10 @@ class StockControllerIntegrationTest {
     }
 
     @Test
-    void approveEndpointConfirmsGroupCustomerOutboundThroughHttp() throws Exception {
+    void adminGroupCustomerOutboundThroughHttpIsAutoConfirmed() throws Exception {
         TestFixture fixture = createFixture();
         seedInboundStock(fixture, 8);
-        Long allocationOrderId = createAndApproveAllocation(fixture, 5, LocalDateTime.now().plusDays(30));
+        createAndApproveAllocation(fixture, 5, LocalDateTime.now().plusDays(30));
 
         String outboundPayload = """
                 {
@@ -296,18 +296,13 @@ class StockControllerIntegrationTest {
 
         Long outboundOrderId = objectMapper.readTree(outboundResponse).path("data").asLong();
 
-        mockMvc.perform(apiPost("/stock/approve/" + outboundOrderId)
-                        .header("Authorization", "Bearer " + ADMIN_TOKEN)
-                        .param("approved", "true")
-                        .param("remark", "approve by http"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value(true));
-
+        UserContext.setUserId(ADMIN_USER_ID);
         Stock stock = findStock(fixture);
+        StockOrder outboundOrder = stockOrderService.getByIdNotDeleted(outboundOrderId);
         GroupStock groupStock = findSingleGroupStock(stock.getId(), fixture.groupDept().getId());
         StockBatch batch = findSingleBatchByStockId(stock.getId());
 
+        assertEquals(StockBizConstant.ORDER_STATE_FINISHED, outboundOrder.getState());
         assertEquals(3, stock.getCurrentQty());
         assertEquals(3, batch.getAvailableQty());
         assertEquals(3, groupStock.getCurrentQty());
@@ -448,7 +443,6 @@ class StockControllerIntegrationTest {
 
         List<Long> orderIds = stockService.allocateToGroups(allocateDTO);
         assertEquals(1, orderIds.size());
-        assertTrue(stockService.approveOrder(orderIds.get(0), true, "approve allocation"));
         return orderIds.get(0);
     }
 

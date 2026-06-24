@@ -390,6 +390,9 @@ public final class ModuleMeta {
                 new RowAction(RowActionType.MARK_READ, "action.read", null, null)
         ));
 
+        HIDDEN_LIST_FIELDS.put(GOODS, List.of(
+                "sort", "isHot", "skuStatus", "skuStatusDesc", "imageSort"
+        ));
         HIDDEN_LIST_FIELDS.put(GOODS_SKU, List.of("costPrice", "updatePrice", "priceUpdateTime", "barcode", "weight", "volume"));
         HIDDEN_LIST_FIELDS.put(MODULE_GOODS_IMAGE, List.of("imageUrl"));
         HIDDEN_LIST_FIELDS.put(DELIVERY_SCHEDULE, List.of(
@@ -407,8 +410,7 @@ public final class ModuleMeta {
                 "categoryName", "makerName", "stockTypeName", "skuCode", "skuName", "specSummary", "barcode",
                 "weight", "volume", "price", "costPrice", "updatePrice", "oldPrice", "newPrice", "discount",
                 "currency", "lockQty", "beforeQty", "changeQty", "afterQty", "statusDesc", "status",
-                "mainImage", "imageUrl", "priceUpdateTime", "effectiveTime", "expireTime", "remark", "description",
-                "sort"
+                "mainImage", "imageUrl", "priceUpdateTime", "effectiveTime", "expireTime", "remark", "description"
         ));
 
         ACTION_POLICIES.put(MODULE_STOCK_RECORD, new ModuleActionPolicy(false, false, false, true, true));

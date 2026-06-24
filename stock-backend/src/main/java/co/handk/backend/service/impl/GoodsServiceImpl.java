@@ -201,24 +201,18 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             TEMPLATE_HEADER_SERIES_NAME,
             TEMPLATE_HEADER_CATEGORY_NAME,
             TEMPLATE_HEADER_MAKER_NAME,
-            TEMPLATE_HEADER_DESCRIPTION,
-            TEMPLATE_HEADER_IS_HOT,
-            TEMPLATE_HEADER_SORT,
             TEMPLATE_HEADER_SKU_CODE,
             TEMPLATE_HEADER_SKU_NAME,
             TEMPLATE_HEADER_PRICE,
-            TEMPLATE_HEADER_CURRENCY,
-            TEMPLATE_HEADER_COST_PRICE,
-            TEMPLATE_HEADER_UPDATE_PRICE,
-            TEMPLATE_HEADER_PRICE_UPDATE_TIME,
-            TEMPLATE_HEADER_BARCODE,
-            TEMPLATE_HEADER_WEIGHT,
-            TEMPLATE_HEADER_VOLUME,
-            TEMPLATE_HEADER_SKU_STATUS,
-            TEMPLATE_HEADER_IMAGE_ID,
-            TEMPLATE_HEADER_IMAGE_URL,
-            TEMPLATE_HEADER_IMAGE_SORT,
-            TEMPLATE_HEADER_GOODS_STATUS
+            TEMPLATE_HEADER_CURRENCY
+    );
+    private static final List<String> TEMPLATE_REQUIRED_HEADERS = List.of(
+            TEMPLATE_HEADER_GOODS_ID,
+            TEMPLATE_HEADER_SKU_ID,
+            TEMPLATE_HEADER_GOODS_NAME,
+            TEMPLATE_HEADER_BRAND_NAME,
+            TEMPLATE_HEADER_CATEGORY_NAME,
+            TEMPLATE_HEADER_SKU_CODE
     );
 
     private final GoodsSkuService goodsSkuService;
@@ -948,6 +942,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         for (int i = 0; i < japaneseNotes.length; i++) {
             noteRow.getCell(i).setCellValue(japaneseNotes[i]);
         }
+        for (int i = TEMPLATE_HEADERS.size(); i < noteRow.getLastCellNum(); i++) {
+            Cell extraCell = noteRow.getCell(i);
+            if (extraCell != null) {
+                noteRow.removeCell(extraCell);
+            }
+        }
         sheet.createFreezePane(0, TEMPLATE_DATA_START_ROW_INDEX);
     }
 
@@ -1130,10 +1130,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         int lastRow = TEMPLATE_VALIDATION_MAX_ROW;
         addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_BRAND_NAME), "BRAND_NAME");
         addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_CATEGORY_NAME), "CATEGORY_NAME");
-        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_IS_HOT), "HOT_FLAG");
         addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_CURRENCY), "CURRENCY");
-        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_SKU_STATUS), "STATUS_FLAG");
-        addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_GOODS_STATUS), "STATUS_FLAG");
         addFormulaListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_SERIES_NAME),
                 "IF($E%d=\"\",\"\",INDIRECT(\"SERIES_NAME_\"&$E%d))");
         addFormulaListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_MAKER_NAME),
@@ -1298,7 +1295,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 headerIndexes.put(value, cell.getColumnIndex());
             }
         }
-        for (String header : TEMPLATE_HEADERS) {
+        for (String header : TEMPLATE_REQUIRED_HEADERS) {
             if (!headerIndexes.containsKey(header)) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_TEMPLATE_COLUMN_MISSING + header);
             }
@@ -1995,24 +1992,10 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         writeCell(row, column++, item.getSeriesName());
         writeCell(row, column++, item.getCategoryName());
         writeCell(row, column++, item.getMakerName());
-        writeCell(row, column++, item.getDescription());
-        writeCell(row, column++, item.getIsHot());
-        writeCell(row, column++, item.getSort());
         writeCell(row, column++, item.getSkuCode());
         writeCell(row, column++, item.getSkuName());
         writeCell(row, column++, item.getPrice());
-        writeCell(row, column++, item.getCurrency());
-        writeCell(row, column++, item.getCostPrice());
-        writeCell(row, column++, item.getUpdatePrice());
-        writeCell(row, column++, item.getPriceUpdateTime());
-        writeCell(row, column++, item.getBarcode());
-        writeCell(row, column++, item.getWeight());
-        writeCell(row, column++, item.getVolume());
-        writeCell(row, column++, item.getSkuStatus());
-        writeCell(row, column++, item.getImageId());
-        writeCell(row, column++, item.getImageUrl());
-        writeCell(row, column++, item.getImageSort());
-        writeCell(row, column, item.getStatus());
+        writeCell(row, column, item.getCurrency());
     }
 
     private void writeCell(Row row, int columnIndex, Object value) {
