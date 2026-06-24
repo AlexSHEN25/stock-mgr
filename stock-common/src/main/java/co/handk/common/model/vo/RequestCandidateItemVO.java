@@ -9,12 +9,18 @@ import java.util.List;
 @Data
 public class RequestCandidateItemVO {
     private Long stockRecordId;
+    private List<Long> stockRecordIds;
     private Long stockOrderId;
     private Long stockOrderItemId;
+    private List<Long> stockOrderItemIds;
     private String orderNo;
     private Integer orderType;
     private Integer state;
     private LocalDate bizDate;
+    private String country;
+    private String groupCode;
+    private Long customerId;
+    private String customerName;
     private Long goodsId;
     private Long skuId;
     private String skuCode;

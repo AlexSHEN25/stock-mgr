@@ -202,9 +202,9 @@ public class StockController {
     }
 
     @GetMapping("/customer/delivery-schedule/page")
-    public PageResult<CustomerOutboundTreeNodeVO> customerDeliverySchedulePage(@Valid CustomerStockQueryDTO query) {
+    public PageResult<CustomerGoodsStockDetailVO> customerDeliverySchedulePage(@Valid CustomerStockQueryDTO query) {
         query.setViewType("deliverySchedule");
-        return stockService.pageCustomerDeliveryScheduleTree(query);
+        return stockService.pageCustomerDeliveryScheduleDetails(query);
     }
 
     @PostMapping("/customer/delivery-schedule/items/add-to-request")

@@ -24,7 +24,8 @@ public class FileUploadController {
     public String replace(@RequestParam("bizType") UploadBizType bizType,
                           @RequestParam(value = "oldPath", required = false) String oldPath,
                           @RequestPart("file") MultipartFile file) {
-        String imagePath = fileStorageService.upload(bizType, file, oldPath);
+        String imagePath = fileStorageService.upload(bizType, file, null);
+        fileStorageService.delete(bizType, oldPath);
         return fileStorageService.toApiPath(bizType, imagePath);
     }
 }

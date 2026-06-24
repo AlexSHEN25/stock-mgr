@@ -2,7 +2,10 @@ package co.handk.backend.service;
 
 import co.handk.backend.entity.RequestForm;
 import co.handk.backend.entity.StockOrder;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
+import co.handk.common.model.dto.query.RequestItemCartQueryDTO;
+import co.handk.common.model.dto.update.RequestCartMoveDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.vo.RequestCandidateItemVO;
@@ -28,6 +31,12 @@ public interface RequestFormService extends BaseService<RequestForm, RequestForm
     Long reapplyInboundItem(RequestFormItemBatchDTO dto);
 
     java.util.List<RequestCandidateItemVO> listCandidateItems(Long requestId);
+
+    PageResult<RequestCandidateItemVO> pageCartItems(RequestItemCartQueryDTO query);
+
+    Boolean addItemsToCart(RequestCartMoveDTO dto);
+
+    Boolean removeItemsFromCart(RequestCartMoveDTO dto);
 
     Boolean addItemsFromStockOrder(RequestFormItemBatchDTO dto);
 

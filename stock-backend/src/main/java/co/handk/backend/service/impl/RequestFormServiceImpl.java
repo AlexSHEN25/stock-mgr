@@ -10,8 +10,11 @@ import co.handk.backend.service.*;
 import co.handk.common.constant.CommonConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.model.PageResult;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
+import co.handk.common.model.dto.query.RequestItemCartQueryDTO;
+import co.handk.common.model.dto.update.RequestCartMoveDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
@@ -55,6 +58,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -193,6 +198,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long saveWithItems(RequestFormWithItemsDTO dto) {
+        prepareCartBundleDefaults(dto);
         RequestForm existing = findExistingForm(dto);
         Long requestId;
         if (existing == null) {
@@ -206,6 +212,38 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         validateKnifeHandleQuantity(requestId);
         recalculateRequestFormSummary(requestId);
         return requestId;
+    }
+
+    private void prepareCartBundleDefaults(RequestFormWithItemsDTO dto) {
+        if (dto == null || dto.getItems() == null || dto.getItems().isEmpty()) {
+            return;
+        }
+        Long expectedCustomerId = dto.getCustomerId();
+        Long warehouseId = dto.getWarehouseId();
+        for (RequestFormWithItemsDTO.Item item : dto.getItems()) {
+            for (Long stockRecordId : stockRecordIdsOf(item)) {
+                StockRecord record = requireAvailableOutboundRecord(stockRecordId);
+                if (record.getCustomerId() == null) {
+                    throw fail("customer is required");
+                }
+                if (expectedCustomerId == null) {
+                    expectedCustomerId = record.getCustomerId();
+                } else if (!expectedCustomerId.equals(record.getCustomerId())) {
+                    throw fail("selected stock records must belong to the same customer");
+                }
+                if (warehouseId == null) {
+                    warehouseId = record.getWarehouseId();
+                }
+            }
+        }
+        if (expectedCustomerId != null) {
+            dto.setCustomerId(expectedCustomerId);
+            Customer customer = customerService.getByIdNotDeleted(expectedCustomerId);
+            dto.setCustomerName(customer == null ? dto.getCustomerName() : customer.getName());
+        }
+        if (warehouseId != null) {
+            dto.setWarehouseId(warehouseId);
+        }
     }
 
     @Override
@@ -334,7 +372,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     }
 
     private void syncRequestItems(Long requestId, List<RequestFormWithItemsDTO.Item> submittedItems) {
-        List<RequestFormWithItemsDTO.Item> items = submittedItems == null ? new ArrayList<>() : submittedItems;
+        List<RequestFormWithItemsDTO.Item> items = expandAggregatedCartItems(submittedItems);
         List<RequestItem> existingItems = requestItemService.list(new QueryWrapper<RequestItem>()
                 .eq("request_id", requestId));
         Map<Long, RequestItem> existingById = new HashMap<>();
@@ -374,7 +412,10 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             }
         }
 
+        RequestForm form = super.getByIdNotDeleted(requestId);
         for (RequestFormWithItemsDTO.Item item : items) {
+            RequestItem existing = item.getId() == null ? null : existingById.get(item.getId());
+            prepareBundleItemFromStockRecord(form, item, existing);
             boolean success;
             if (item.getId() == null) {
                 success = requestItemService.saveByDto(item);
@@ -385,6 +426,125 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 throw fail(item.getId() == null ? "failed to save request item" : "failed to update request item");
             }
         }
+    }
+
+    private List<RequestFormWithItemsDTO.Item> expandAggregatedCartItems(List<RequestFormWithItemsDTO.Item> submittedItems) {
+        if (submittedItems == null || submittedItems.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<RequestFormWithItemsDTO.Item> expanded = new ArrayList<>();
+        for (RequestFormWithItemsDTO.Item item : submittedItems) {
+            List<Long> stockRecordIds = stockRecordIdsOf(item);
+            if (stockRecordIds.size() <= 1) {
+                expanded.add(item);
+                continue;
+            }
+            int remainingRequestQty = item.getRequestQty() == null ? 0 : Math.abs(item.getRequestQty());
+            if (remainingRequestQty <= 0) {
+                throw fail("request qty must be greater than zero");
+            }
+            for (Long stockRecordId : stockRecordIds) {
+                if (remainingRequestQty <= 0) {
+                    break;
+                }
+                StockRecord record = requireAvailableOutboundRecord(stockRecordId);
+                int availableQty = Math.max(availableOutboundQty(record), cartAddedQty(record));
+                if (availableQty <= 0) {
+                    continue;
+                }
+                int allocatedQty = Math.min(remainingRequestQty, availableQty);
+                RequestFormWithItemsDTO.Item allocatedItem = new RequestFormWithItemsDTO.Item();
+                BeanUtils.copyProperties(item, allocatedItem);
+                allocatedItem.setId(null);
+                allocatedItem.setStockRecordId(stockRecordId);
+                allocatedItem.setStockRecordIds(null);
+                allocatedItem.setStockOrderItemId(record.getOrderItemId());
+                allocatedItem.setStockOrderItemIds(null);
+                allocatedItem.setRequestQty(allocatedQty);
+                expanded.add(allocatedItem);
+                remainingRequestQty -= allocatedQty;
+            }
+            if (remainingRequestQty > 0) {
+                throw fail("requested qty cannot exceed available outbound qty");
+            }
+        }
+        return expanded;
+    }
+
+    private List<Long> stockRecordIdsOf(RequestFormWithItemsDTO.Item item) {
+        if (item == null) {
+            return List.of();
+        }
+        if (item.getStockRecordIds() != null && !item.getStockRecordIds().isEmpty()) {
+            return item.getStockRecordIds().stream()
+                    .filter(id -> id != null)
+                    .toList();
+        }
+        return item.getStockRecordId() == null ? List.of() : List.of(item.getStockRecordId());
+    }
+
+    private int availableOutboundQty(StockRecord record) {
+        StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
+        return orderItem == null || orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty());
+    }
+
+    private int cartAddedQty(StockRecord record) {
+        int originalQty = record == null || record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
+        int remainingQty = record == null ? 0 : availableOutboundQty(record);
+        return Math.max(0, originalQty - remainingQty);
+    }
+
+    private void prepareBundleItemFromStockRecord(RequestForm form,
+                                                  RequestFormWithItemsDTO.Item item,
+                                                  RequestItem existing) {
+        if (item == null || item.getStockRecordId() == null) {
+            return;
+        }
+        StockRecord record = requireAvailableOutboundRecord(item.getStockRecordId());
+        if (form != null && form.getCustomerId() != null && record.getCustomerId() != null
+                && !form.getCustomerId().equals(record.getCustomerId())) {
+            throw fail("selected stock record customer does not match request form customer");
+        }
+        int requestedQty = item.getRequestQty() == null ? 0 : Math.abs(item.getRequestQty());
+        if (requestedQty <= 0) {
+            throw fail("request qty must be greater than zero");
+        }
+        int currentRequestQty = existing == null
+                || !Integer.valueOf(StockBizConstant.REQUEST_ITEM_STATE_ADDED).equals(existing.getState())
+                || existing.getRequestQty() == null ? cartAddedQty(record) : Math.abs(existing.getRequestQty());
+        applyOutboundRemainderByRequested(record, requestedQty, currentRequestQty);
+        applyStockRecordToBundleItem(item, record, requestedQty);
+    }
+
+    private void applyStockRecordToBundleItem(RequestFormWithItemsDTO.Item item, StockRecord record, int requestedQty) {
+        item.setGoodsId(record.getGoodsId());
+        item.setSkuId(record.getSkuId());
+        item.setSkuCode(record.getSkuCode());
+        item.setGoodsName(record.getGoodsName());
+        item.setEnglishName(record.getEnglishName());
+        item.setBrandId(record.getBrandId());
+        item.setBrandName(record.getBrandName());
+        item.setSeriesId(record.getSeriesId());
+        item.setSeriesName(record.getSeriesName());
+        item.setCategoryId(record.getCategoryId());
+        item.setCategoryName(record.getCategoryName());
+        item.setStockTypeId(record.getStockTypeId());
+        item.setStockTypeName(record.getStockTypeName());
+        item.setMakerId(record.getMakerId());
+        item.setMakerName(record.getMakerName());
+        item.setWarehouseId(record.getWarehouseId());
+        item.setPrice(record.getPrice());
+        if (item.getDiscount() == null) {
+            item.setDiscount(BigDecimal.ONE);
+        }
+        if (item.getDiscountPrice() == null) {
+            item.setDiscountPrice(record.getPrice());
+        }
+        item.setExchangeRate(item.getExchangeRate() == null ? BigDecimal.ONE : item.getExchangeRate());
+        item.setCurrency(record.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : record.getCurrency());
+        item.setRequestQty(requestedQty);
+        item.setOutQty(requestedQty);
+        item.setState(StockBizConstant.REQUEST_ITEM_STATE_ADDED);
     }
 
     private void deleteItemsByRequestId(Long requestId) {
@@ -855,6 +1015,294 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         fillHandleCandidates(result);
         return result;
+    }
+
+    @Override
+    public PageResult<RequestCandidateItemVO> pageCartItems(RequestItemCartQueryDTO query) {
+        List<StockRecord> records = listCartOutboundRecords(query);
+        List<RequestCandidateItemVO> candidates = new ArrayList<>();
+        for (StockRecord record : records) {
+            RequestCandidateItemVO candidate = buildCartCandidate(record);
+            if (candidate != null) {
+                candidates.add(candidate);
+            }
+        }
+        candidates = mergeCartCandidates(candidates);
+        long total = candidates.size();
+        long pageNum = query.getPageNum();
+        long pageSize = query.getPageSize();
+        int from = (int) Math.min(total, Math.max(0, (pageNum - 1) * pageSize));
+        int to = (int) Math.min(total, from + pageSize);
+        return PageResult.build(total, pageNum, pageSize, candidates.subList(from, to));
+    }
+
+    private List<StockRecord> listCartOutboundRecords(RequestItemCartQueryDTO query) {
+        QueryWrapper<StockRecord> wrapper = new QueryWrapper<StockRecord>()
+                .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                .in("outbound_mode", StockBizConstant.OUTBOUND_MODE_CUSTOMER, StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER)
+                .isNotNull("customer_id")
+                .orderByDesc("biz_date", "id");
+        if (query.getCustomerId() != null) {
+            wrapper.eq("customer_id", query.getCustomerId());
+        }
+        if (query.getCustomerName() != null && !query.getCustomerName().isBlank()) {
+            wrapper.like("customer_name", query.getCustomerName().trim());
+        }
+        if (query.getGoodsId() != null) {
+            wrapper.eq("goods_id", query.getGoodsId());
+        }
+        if (query.getGoodsName() != null && !query.getGoodsName().isBlank()) {
+            wrapper.like("goods_name", query.getGoodsName().trim());
+        }
+        if (query.getSkuId() != null) {
+            wrapper.eq("sku_id", query.getSkuId());
+        }
+        if (query.getSkuCode() != null && !query.getSkuCode().isBlank()) {
+            wrapper.like("sku_code", query.getSkuCode().trim());
+        }
+        if (query.getStockTypeId() != null) {
+            wrapper.eq("stock_type_id", query.getStockTypeId());
+        }
+        if (query.getStartDate() != null) {
+            wrapper.ge("biz_date", query.getStartDate());
+        }
+        if (query.getEndDate() != null) {
+            wrapper.le("biz_date", query.getEndDate());
+        }
+
+        List<StockRecord> records = stockRecordService.list(wrapper);
+        if (records.isEmpty()) {
+            return records;
+        }
+        Set<Long> orderIds = new HashSet<>();
+        for (StockRecord record : records) {
+            if (record.getOrderId() != null) {
+                orderIds.add(record.getOrderId());
+            }
+        }
+        Set<Long> finishedOrderIds = new HashSet<>();
+        if (!orderIds.isEmpty()) {
+            for (StockOrder order : stockOrderService.list(new QueryWrapper<StockOrder>()
+                    .in("id", orderIds)
+                    .eq("order_type", StockBizConstant.ORDER_TYPE_OUTBOUND)
+                    .eq("state", StockBizConstant.ORDER_STATE_FINISHED))) {
+                finishedOrderIds.add(order.getId());
+            }
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        return records.stream()
+                .filter(record -> finishedOrderIds.contains(record.getOrderId()))
+                .filter(record -> canAccessCustomerRecord(record, userId))
+                .toList();
+    }
+
+    private RequestCandidateItemVO buildCartCandidate(StockRecord record) {
+        int addedQty = cartAddedQty(record);
+        if (addedQty <= 0) {
+            return null;
+        }
+        RequestCandidateItemVO vo = new RequestCandidateItemVO();
+        vo.setStockRecordId(record.getId());
+        vo.setStockRecordIds(new ArrayList<>(List.of(record.getId())));
+        vo.setStockOrderId(record.getOrderId());
+        vo.setStockOrderItemId(record.getOrderItemId());
+        if (record.getOrderItemId() != null) {
+            vo.setStockOrderItemIds(new ArrayList<>(List.of(record.getOrderItemId())));
+        }
+        vo.setOrderNo(record.getBizNo());
+        vo.setOrderType(record.getOrderType());
+        vo.setState(StockBizConstant.ORDER_STATE_FINISHED);
+        vo.setBizDate(record.getBizDate());
+        vo.setCountry(resolveCustomerCountry(record.getCustomerId()));
+        vo.setGroupCode(record.getDeptCode());
+        vo.setCustomerId(record.getCustomerId());
+        vo.setCustomerName(record.getCustomerName());
+        vo.setGoodsId(record.getGoodsId());
+        vo.setSkuId(record.getSkuId());
+        vo.setSkuCode(record.getSkuCode());
+        vo.setGoodsName(record.getGoodsName());
+        vo.setBrandId(record.getBrandId());
+        vo.setBrandName(record.getBrandName());
+        vo.setSeriesId(record.getSeriesId());
+        vo.setSeriesName(record.getSeriesName());
+        vo.setMakerId(record.getMakerId());
+        vo.setCategoryName(record.getCategoryName());
+        vo.setStockTypeName(record.getStockTypeName());
+        vo.setMakerName(record.getMakerName());
+        vo.setChangeQty(addedQty);
+        vo.setAvailableQty(addedQty);
+        vo.setPrice(record.getPrice());
+        vo.setCurrency(record.getCurrency());
+        vo.setRequesterName(record.getRequesterName());
+        vo.setOperatorName(record.getOperatorName());
+        vo.setSelected(false);
+        vo.setRequestQty(addedQty);
+        vo.setKnife(isKnifeCategory(record.getCategoryName()));
+        vo.setHandle(isHandleCategory(record.getCategoryName()));
+        return vo;
+    }
+
+    private List<RequestCandidateItemVO> mergeCartCandidates(List<RequestCandidateItemVO> candidates) {
+        if (candidates.isEmpty()) {
+            return candidates;
+        }
+        Map<String, RequestCandidateItemVO> merged = new LinkedHashMap<>();
+        for (RequestCandidateItemVO candidate : candidates) {
+            String key = cartMergeKey(candidate);
+            RequestCandidateItemVO existing = merged.get(key);
+            if (existing == null) {
+                merged.put(key, candidate);
+                continue;
+            }
+            int availableQty = safeQty(existing.getAvailableQty()) + safeQty(candidate.getAvailableQty());
+            existing.setAvailableQty(availableQty);
+            existing.setChangeQty(safeQty(existing.getChangeQty()) + safeQty(candidate.getChangeQty()));
+            existing.setRequestQty(availableQty);
+            List<Long> stockRecordIds = new ArrayList<>(existing.getStockRecordIds() == null
+                    ? List.of(existing.getStockRecordId())
+                    : existing.getStockRecordIds());
+            if (candidate.getStockRecordIds() != null && !candidate.getStockRecordIds().isEmpty()) {
+                stockRecordIds.addAll(candidate.getStockRecordIds());
+            } else if (candidate.getStockRecordId() != null) {
+                stockRecordIds.add(candidate.getStockRecordId());
+            }
+            existing.setStockRecordIds(stockRecordIds);
+
+            List<Long> stockOrderItemIds = new ArrayList<>(existing.getStockOrderItemIds() == null
+                    ? List.of()
+                    : existing.getStockOrderItemIds());
+            if (candidate.getStockOrderItemIds() != null && !candidate.getStockOrderItemIds().isEmpty()) {
+                stockOrderItemIds.addAll(candidate.getStockOrderItemIds());
+            } else if (candidate.getStockOrderItemId() != null) {
+                stockOrderItemIds.add(candidate.getStockOrderItemId());
+            }
+            existing.setStockOrderItemIds(stockOrderItemIds);
+            existing.setOrderNo("複数");
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    private String cartMergeKey(RequestCandidateItemVO item) {
+        return String.join("|",
+                String.valueOf(item.getCustomerId()),
+                String.valueOf(item.getGoodsId()),
+                String.valueOf(item.getSkuId()),
+                String.valueOf(item.getStockTypeName()),
+                String.valueOf(item.getPrice() == null ? "" : item.getPrice().stripTrailingZeros().toPlainString()),
+                String.valueOf(item.getCurrency()));
+    }
+
+    private int safeQty(Integer qty) {
+        return qty == null ? 0 : Math.abs(qty);
+    }
+
+    private String resolveCustomerCountry(Long customerId) {
+        if (customerId == null) {
+            return null;
+        }
+        Customer customer = customerService.getByIdNotDeleted(customerId);
+        if (customer == null || customer.getCountry() == null || customer.getCountry().isBlank()) {
+            return "未設定";
+        }
+        return customer.getCountry();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean addItemsToCart(RequestCartMoveDTO dto) {
+        if (dto == null || dto.getItems() == null) {
+            return true;
+        }
+        for (RequestCartMoveDTO.Item item : dto.getItems()) {
+            allocateCartMove(dto, item, true);
+        }
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean removeItemsFromCart(RequestCartMoveDTO dto) {
+        if (dto == null || dto.getItems() == null) {
+            return true;
+        }
+        for (RequestCartMoveDTO.Item item : dto.getItems()) {
+            allocateCartMove(dto, item, false);
+        }
+        return true;
+    }
+
+    private Map<Long, Integer> resolveCartMoveQuantities(RequestCartMoveDTO dto) {
+        Map<Long, Integer> quantities = new LinkedHashMap<>();
+        if (dto == null || dto.getItems() == null) {
+            return quantities;
+        }
+        for (RequestCartMoveDTO.Item item : dto.getItems()) {
+            if (item == null || item.getStockRecordId() == null) {
+                continue;
+            }
+            int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
+            if (qty <= 0) {
+                throw fail("request qty must be greater than zero");
+            }
+            quantities.merge(item.getStockRecordId(), qty, Integer::sum);
+        }
+        return quantities;
+    }
+
+    private void allocateCartMove(RequestCartMoveDTO dto, RequestCartMoveDTO.Item item, boolean addToCart) {
+        if (item == null) {
+            return;
+        }
+        int remainingQty = item.getRequestQty() == null ? 0 : item.getRequestQty();
+        if (remainingQty <= 0) {
+            throw fail("request qty must be greater than zero");
+        }
+        List<Long> sourceIds = cartMoveStockRecordIds(item);
+        if (sourceIds.isEmpty()) {
+            throw fail("stock record is required");
+        }
+        for (Long stockRecordId : sourceIds) {
+            if (remainingQty <= 0) {
+                break;
+            }
+            StockRecord record = requireCartMoveRecord(dto, stockRecordId);
+            int movableQty = addToCart ? availableOutboundQty(record) : cartAddedQty(record);
+            if (movableQty <= 0) {
+                continue;
+            }
+            int allocatedQty = Math.min(remainingQty, movableQty);
+            applyOutboundRemainderDelta(record, addToCart ? allocatedQty : -allocatedQty);
+            remainingQty -= allocatedQty;
+        }
+        if (remainingQty > 0) {
+            throw fail((addToCart ? "add qty cannot exceed delivery schedule qty" : "return qty cannot exceed request item qty")
+                    + ", requested=" + item.getRequestQty()
+                    + ", remaining=" + remainingQty);
+        }
+    }
+
+    private List<Long> cartMoveStockRecordIds(RequestCartMoveDTO.Item item) {
+        LinkedHashSet<Long> ids = new LinkedHashSet<>();
+        if (item.getStockRecordIds() != null) {
+            for (Long id : item.getStockRecordIds()) {
+                if (id != null && id > 0) {
+                    ids.add(id);
+                }
+            }
+        }
+        if (item.getStockRecordId() != null && item.getStockRecordId() > 0) {
+            ids.add(item.getStockRecordId());
+        }
+        return new ArrayList<>(ids);
+    }
+
+    private StockRecord requireCartMoveRecord(RequestCartMoveDTO dto, Long stockRecordId) {
+        StockRecord record = requireAvailableOutboundRecord(stockRecordId);
+        if (dto != null && dto.getCustomerId() != null && record.getCustomerId() != null
+                && !dto.getCustomerId().equals(record.getCustomerId())) {
+            throw fail("selected stock record customer does not match request customer");
+        }
+        return record;
     }
 
     private void fillHandleCandidates(List<RequestCandidateItemVO> candidates) {
@@ -1643,10 +2091,25 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)
                 && !userId.equals(record.getRequesterId())
-                && !userId.equals(record.getOperatorId())) {
+                && !userId.equals(record.getOperatorId())
+                && !canAccessCustomerRecord(record, userId)) {
             throw fail("source outbound order is not owned by current user");
         }
         return record;
+    }
+
+    private boolean canAccessCustomerRecord(StockRecord record, Long userId) {
+        if (record == null) {
+            return false;
+        }
+        if (permissionQueryService.isSuperAdmin(userId)) {
+            return true;
+        }
+        if (record.getCustomerId() == null || userId == null) {
+            return false;
+        }
+        Customer customer = customerService.getByIdNotDeleted(record.getCustomerId());
+        return customer != null && userId.equals(customer.getOwnerUserId());
     }
 
     private void applyOutboundRemainderDelta(StockRecord record, int deltaQty) {

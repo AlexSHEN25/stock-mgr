@@ -266,7 +266,9 @@
                                     AND sr.order_item_id = i.id
                                     AND sr.order_type = 2
                                     AND sr.deleted = 0
+        LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsOrderWhere"/>
+          AND ABS(i.change_qty) > 0
     </select>
 
     <select id="selectCustomerDeliveryScheduleDetails"
@@ -275,6 +277,7 @@
                o.order_no AS bizNo,
                o.id AS orderId,
                i.id AS orderItemId,
+               COALESCE(NULLIF(TRIM(c.country), ''), '未設定') AS country,
                o.customer_id AS customerId,
                o.customer_name AS customerName,
                o.dept_id AS deptId,
@@ -283,9 +286,19 @@
                i.goods_name AS goodsName,
                i.sku_id AS skuId,
                i.sku_code AS skuCode,
+               i.brand_id AS brandId,
+               i.brand_name AS brandName,
+               i.series_id AS seriesId,
+               i.series_name AS seriesName,
+               i.maker_id AS makerId,
+               i.maker_name AS makerName,
+               i.category_id AS categoryId,
+               i.category_name AS categoryName,
                i.stock_type_id AS stockTypeId,
                i.stock_type_name AS stockTypeName,
-               ABS(sr.change_qty) AS quantity,
+               ABS(i.change_qty) AS quantity,
+               i.price AS price,
+               i.currency AS currency,
                COALESCE(i.biz_date, o.biz_date) AS outboundDate,
                o.operator_id AS operatorId,
                o.operator_name AS operatorName
@@ -295,7 +308,9 @@
                                     AND sr.order_item_id = i.id
                                     AND sr.order_type = 2
                                     AND sr.deleted = 0
+        LEFT JOIN t_customer c ON c.id = o.customer_id AND <include refid="aliasNotDeleted"><property name="alias" value="c"/></include>
         WHERE <include refid="customerGoodsOrderWhere"/>
+          AND ABS(i.change_qty) > 0
         ORDER BY COALESCE(i.biz_date, o.biz_date) DESC, i.id DESC
         LIMIT #{offset}, #{limit}
     </select>

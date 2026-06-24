@@ -54,6 +54,15 @@ public final class ModuleEndpointStrategy {
                 AppConstants.ApiPath.BRAND_HIERARCHY + "/{id}",
                 null
         ));
+        CONFIGS.put(AppConstants.Module.REQUEST_ITEM, new EndpointConfig(
+                HttpMethod.GET,
+                AppConstants.ApiPath.REQUEST_ITEM_CART_PAGE,
+                AppConstants.ApiPath.REQUEST_FORM_WITH_ITEMS,
+                PATH_PREFIX + AppConstants.Module.REQUEST_ITEM + "/{id}",
+                PATH_PREFIX + AppConstants.Module.REQUEST_ITEM,
+                PATH_PREFIX + AppConstants.Module.REQUEST_ITEM + "/{id}",
+                null
+        ));
     }
 
     private static EndpointConfig defaultConfig(String moduleKey) {

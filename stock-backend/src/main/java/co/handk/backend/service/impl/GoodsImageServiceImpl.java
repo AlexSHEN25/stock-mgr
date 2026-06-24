@@ -56,9 +56,18 @@ public class GoodsImageServiceImpl extends BaseServiceImpl<GoodsImageMapper, Goo
         if (existed == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "商品画像が存在しません");
         }
-        String imagePath = fileStorageService.upload(UploadBizType.GOODS, file, existed.getImageUrl());
-        existed.setImageUrl(imagePath);
-        this.updateById(existed);
+        String oldImageUrl = existed.getImageUrl();
+        String imagePath = fileStorageService.upload(UploadBizType.GOODS, file, null);
+        try {
+            existed.setImageUrl(imagePath);
+            if (!this.updateById(existed)) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "商品画像の更新に失敗しました");
+            }
+        } catch (RuntimeException ex) {
+            fileStorageService.delete(UploadBizType.GOODS, imagePath);
+            throw ex;
+        }
+        fileStorageService.delete(UploadBizType.GOODS, oldImageUrl);
         return fileStorageService.toApiPath(UploadBizType.GOODS, imagePath);
     }
 }

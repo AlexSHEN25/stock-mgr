@@ -10,6 +10,8 @@ import co.handk.common.model.vo.*;
 import co.handk.common.model.dto.create.CreateRequestFromOutboundDTO;
 import co.handk.common.model.dto.create.CreateRequestFormDTO;
 import co.handk.common.model.dto.query.RequestFormQueryDTO;
+import co.handk.common.model.dto.query.RequestItemCartQueryDTO;
+import co.handk.common.model.dto.update.RequestCartMoveDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
@@ -56,6 +58,21 @@ public class RequestFormController {
     @GetMapping("/{id}/candidateItems")
     public List<RequestCandidateItemVO> candidateItems(@PathVariable("id") @NotNull Long id) {
         return requestFormService.listCandidateItems(id);
+    }
+
+    @GetMapping("/items/cart/page")
+    public PageResult<RequestCandidateItemVO> cartItems(@Valid RequestItemCartQueryDTO query) {
+        return requestFormService.pageCartItems(query);
+    }
+
+    @PostMapping("/items/cart/add")
+    public Boolean addCartItems(@RequestBody @NotNull @Valid RequestCartMoveDTO dto) {
+        return requestFormService.addItemsToCart(dto);
+    }
+
+    @PostMapping("/items/cart/remove")
+    public Boolean removeCartItems(@RequestBody @NotNull @Valid RequestCartMoveDTO dto) {
+        return requestFormService.removeItemsFromCart(dto);
     }
 
     @PostMapping("/items/add")

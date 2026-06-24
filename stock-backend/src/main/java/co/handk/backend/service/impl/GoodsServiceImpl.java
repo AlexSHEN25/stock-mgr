@@ -61,6 +61,7 @@ import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -362,6 +363,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
 
         if (StringUtils.hasText(dto.getImageUrl()) || dto.getImageSort() != null || dto.getImageId() != null) {
+            GoodsImage existedImage = resolveTargetGoodsImage(dto);
+            String oldImageUrl = existedImage == null ? null : existedImage.getImageUrl();
             String normalizedImageUrl = fileStorageService.normalize(UploadBizType.GOODS, dto.getImageUrl());
             UpdateWrapper<GoodsImage> imageWrapper = new UpdateWrapper<GoodsImage>()
                     .eq("goods_id", dto.getId())
@@ -371,12 +374,35 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             if (dto.getImageId() != null) {
                 imageWrapper.eq("id", dto.getImageId());
             }
+            try {
             boolean imageUpdated = goodsImageService.update(null, imageWrapper);
             if (!imageUpdated) {
                 throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像の更新に失敗しました");
             }
+            } catch (RuntimeException ex) {
+                if (StringUtils.hasText(normalizedImageUrl) && !Objects.equals(normalizedImageUrl, oldImageUrl)) {
+                    fileStorageService.delete(UploadBizType.GOODS, normalizedImageUrl);
+                }
+                throw ex;
+            }
+            if (StringUtils.hasText(normalizedImageUrl) && !Objects.equals(normalizedImageUrl, oldImageUrl)) {
+                fileStorageService.delete(UploadBizType.GOODS, oldImageUrl);
+            }
         }
         return true;
+    }
+
+    private GoodsImage resolveTargetGoodsImage(UpdateGoodsDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        if (dto.getImageId() != null) {
+            return goodsImageService.getByIdNotDeleted(dto.getImageId());
+        }
+        return goodsImageService.getOne(new QueryWrapper<GoodsImage>()
+                .eq("goods_id", dto.getId())
+                .orderByAsc("sort", "id")
+                .last("LIMIT 1"));
     }
 
     @Override
@@ -1142,7 +1168,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         CellRangeAddressList addressList = new CellRangeAddressList(firstRow, lastRow, columnIndex, columnIndex);
         DataValidation validation = helper.createValidation(constraint, addressList);
         validation.setSuppressDropDownArrow(false);
-        validation.setShowErrorBox(true);
+        // Dropdowns are hints only: import can auto-create new brand/category values.
+        validation.setShowErrorBox(false);
         sheet.addValidationData(validation);
     }
 
@@ -1155,7 +1182,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             CellRangeAddressList addressList = new CellRangeAddressList(rowIndex, rowIndex, columnIndex, columnIndex);
             DataValidation validation = helper.createValidation(constraint, addressList);
             validation.setSuppressDropDownArrow(false);
-            validation.setShowErrorBox(true);
+            // Dropdowns are hints only: import can auto-create new series/maker values.
+            validation.setShowErrorBox(false);
             sheet.addValidationData(validation);
         }
     }
@@ -1487,9 +1515,17 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         created.setName(brandName);
         created.setEnglishName(brandName);
         created.setStatus(StatusEnum.NOMAL.getCode());
+        try {
         if (!brandService.save(created)) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
                     rowMessage(item, "ブランドの作成に失敗しました"));
+        }
+        } catch (DuplicateKeyException ex) {
+            Long existingId = findExistingBrandId(item);
+            if (existingId != null) {
+                return existingId;
+            }
+            throw ex;
         }
         return created.getId();
         }
@@ -1520,9 +1556,17 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         created.setEnglishName(seriesName);
         created.setBrandId(brandId);
         created.setStatus(StatusEnum.NOMAL.getCode());
+        try {
         if (!seriesService.save(created)) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
                     rowMessage(item, "シリーズの作成に失敗しました"));
+        }
+        } catch (DuplicateKeyException ex) {
+            Long existingId = findExistingSeriesId(item, brandId);
+            if (existingId != null) {
+                return existingId;
+            }
+            throw ex;
         }
         return created.getId();
         }
@@ -1545,9 +1589,17 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         Category created = new Category();
         created.setName(categoryName);
         created.setStatus(StatusEnum.NOMAL.getCode());
+        try {
         if (!categoryService.save(created)) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
                     rowMessage(item, "分類の作成に失敗しました"));
+        }
+        } catch (DuplicateKeyException ex) {
+            Long existingId = findExistingCategoryId(item);
+            if (existingId != null) {
+                return existingId;
+            }
+            throw ex;
         }
         return created.getId();
         }
@@ -1578,9 +1630,17 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         created.setEnglishName(makerName);
         created.setSeriesId(seriesId);
         created.setStatus(StatusEnum.NOMAL.getCode());
+        try {
         if (!makerService.save(created)) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
                     rowMessage(item, "メーカーの作成に失敗しました"));
+        }
+        } catch (DuplicateKeyException ex) {
+            Long existingId = findExistingMakerId(item, seriesId);
+            if (existingId != null) {
+                return existingId;
+            }
+            throw ex;
         }
         return created.getId();
         }

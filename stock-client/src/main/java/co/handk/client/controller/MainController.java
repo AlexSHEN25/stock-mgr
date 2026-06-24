@@ -174,6 +174,10 @@ public class MainController {
 
     @FXML
     private void onAdd() {
+        if (Module.REQUEST_ITEM.equals(currentModule)) {
+            generateRequestFormFromCheckedItems();
+            return;
+        }
         if (isReadOnlyModule()) {
             messageLabel.setText(UiText.MSG_READONLY_MODULE);
             return;
@@ -270,7 +274,14 @@ public class MainController {
             }
             showGoodsImportResultDialog(data);
             saveGoodsImportErrorReport(data);
-            messageLabel.setText(UiText.MSG_GOODS_IMPORT_SUCCESS);
+            int failureCount = data.optInt("failureCount");
+            if (failureCount > 0) {
+                messageLabel.setText(UiText.MSG_GOODS_IMPORT_FAILED
+                        + ": failed=" + failureCount
+                        + ", success=" + data.optInt("successCount"));
+            } else {
+                messageLabel.setText(UiText.MSG_GOODS_IMPORT_SUCCESS);
+            }
             loadData();
         } catch (Exception ex) {
             messageLabel.setText(UiText.MSG_GOODS_IMPORT_FAILED + ": " + ex.getMessage());
@@ -627,8 +638,12 @@ public class MainController {
         boolean stockModule = isStockOperationModule();
         boolean goodsModule = Module.GOODS.equals(currentModule);
         boolean customerModule = Module.CUSTOMER.equals(currentModule);
+        boolean requestItemModule = Module.REQUEST_ITEM.equals(currentModule);
         boolean stockOperationAllowed = ModuleMeta.canWriteByPermission(Module.STOCK);
         updateStockSubNav();
+        addButton.setText(requestItemModule ? UiText.byKey("main.btn.generateRequestForm") : UiText.byKey("main.btn.create"));
+        addButton.setVisible(policy.canCreate);
+        addButton.setManaged(policy.canCreate);
         addButton.setDisable(!policy.canCreate || !canWrite);
         stockInboundButton.setVisible(stockModule);
         stockInboundButton.setManaged(stockModule);
@@ -654,12 +669,26 @@ public class MainController {
         readAllButton.setVisible(messageModule);
         readAllButton.setManaged(messageModule);
         readAllButton.setDisable(!messageModule || !canWrite);
+        inlineEditButton.setVisible(policy.canInlineEdit);
+        inlineEditButton.setManaged(policy.canInlineEdit);
         inlineEditButton.setDisable(!policy.canInlineEdit || !canWrite);
+        inlineSaveButton.setVisible(policy.canInlineEdit);
+        inlineSaveButton.setManaged(policy.canInlineEdit);
         inlineSaveButton.setDisable(!policy.canInlineEdit || !canWrite);
+        inlineCancelButton.setVisible(policy.canInlineEdit);
+        inlineCancelButton.setManaged(policy.canInlineEdit);
         inlineCancelButton.setDisable(!policy.canInlineEdit || !canWrite);
+        editButton.setVisible(policy.canEdit);
+        editButton.setManaged(policy.canEdit);
         editButton.setDisable(!policy.canEdit || !canWrite);
+        batchDeleteButton.setVisible(policy.canBatchDelete);
+        batchDeleteButton.setManaged(policy.canBatchDelete);
         batchDeleteButton.setDisable(!policy.canBatchDelete || !canWrite);
+        deleteIdField.setVisible(policy.canDelete);
+        deleteIdField.setManaged(policy.canDelete);
         deleteIdField.setDisable(!policy.canDelete || !canWrite);
+        deleteButton.setVisible(policy.canDelete);
+        deleteButton.setManaged(policy.canDelete);
         deleteButton.setDisable(!policy.canDelete || !canWrite);
     }
 
@@ -848,8 +877,8 @@ public class MainController {
                 customerName
         ));
         childMenu.getChildren().add(createRequestCustomerButton(
-                UiText.byKey("main.menu.requestForm"),
-                Module.REQUEST_FORM,
+                UiText.byKey("main.menu.requestItem"),
+                Module.REQUEST_ITEM,
                 customerId,
                 customerName
         ));
@@ -1643,6 +1672,110 @@ public class MainController {
 
     private List<Map<String, Object>> checkedRows() {
         return tableRowService.checkedRows(dataTable.getItems(), SELECTED_KEY);
+    }
+
+    private void generateRequestFormFromCheckedItems() {
+        List<Map<String, Object>> rows = checkedRows();
+        if (rows.isEmpty()) {
+            messageLabel.setText("請求書に生成する明細を選択してください。");
+            return;
+        }
+        try {
+            JSONArray items = new JSONArray();
+            String customerId = fixedQueryParams.get("customerId");
+            for (Map<String, Object> row : rows) {
+                Object stockRecordId = row.get("stockRecordId");
+                Object stockRecordIds = row.get("stockRecordIds");
+                if ((stockRecordIds == null || String.valueOf(stockRecordIds).isBlank())
+                        && (stockRecordId == null || String.valueOf(stockRecordId).isBlank())) {
+                    messageLabel.setText("在庫履歴IDがない明細は生成できません。");
+                    return;
+                }
+                if ((customerId == null || customerId.isBlank()) && row.get("customerId") != null) {
+                    customerId = String.valueOf(row.get("customerId"));
+                }
+                int requestQty = parsePositiveInt(row.get("requestQty"), "請求数量");
+                int availableQty = parsePositiveInt(row.get("availableQty"), "生成可能数量");
+                if (requestQty > availableQty) {
+                    messageLabel.setText("請求数量は生成可能数量以下で入力してください。");
+                    return;
+                }
+                JSONObject item = new JSONObject();
+                putLongArrayOrSingle(item, "stockRecordIds", stockRecordIds, "stockRecordId", stockRecordId);
+                if (row.get("stockOrderItemId") != null) {
+                    item.put("stockOrderItemId", Long.parseLong(String.valueOf(row.get("stockOrderItemId"))));
+                }
+                putLongArray(item, "stockOrderItemIds", row.get("stockOrderItemIds"));
+                item.put("requestQty", requestQty);
+                items.put(item);
+            }
+            JSONObject json = dataService.createRequestFormWithItems(customerId, items);
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText("請求書を生成しました。");
+                loadData();
+            } else {
+                messageLabel.setText(uiFeedback.resolveMessage(json, "請求書の生成に失敗しました。"));
+            }
+        } catch (NumberFormatException ex) {
+            messageLabel.setText("数量は1以上の整数で入力してください。");
+        } catch (Exception ex) {
+            messageLabel.setText("請求書の生成に失敗しました: " + ex.getMessage());
+        }
+    }
+
+    private void putLongArrayOrSingle(JSONObject target,
+                                      String arrayKey,
+                                      Object arrayValue,
+                                      String singleKey,
+                                      Object singleValue) {
+        JSONArray values = toLongArray(arrayValue);
+        if (values.length() > 0) {
+            target.put(arrayKey, values);
+            return;
+        }
+        target.put(singleKey, Long.parseLong(String.valueOf(singleValue)));
+    }
+
+    private void putLongArray(JSONObject target, String key, Object value) {
+        JSONArray values = toLongArray(value);
+        if (values.length() > 0) {
+            target.put(key, values);
+        }
+    }
+
+    private JSONArray toLongArray(Object value) {
+        JSONArray result = new JSONArray();
+        if (value == null) {
+            return result;
+        }
+        if (value instanceof JSONArray array) {
+            for (int i = 0; i < array.length(); i++) {
+                Object item = array.opt(i);
+                if (item != null && !String.valueOf(item).isBlank()) {
+                    result.put(Long.parseLong(String.valueOf(item)));
+                }
+            }
+            return result;
+        }
+        String text = String.valueOf(value).trim();
+        if (text.startsWith("[") && text.endsWith("]")) {
+            JSONArray array = new JSONArray(text);
+            for (int i = 0; i < array.length(); i++) {
+                Object item = array.opt(i);
+                if (item != null && !String.valueOf(item).isBlank()) {
+                    result.put(Long.parseLong(String.valueOf(item)));
+                }
+            }
+        }
+        return result;
+    }
+
+    private int parsePositiveInt(Object value, String label) {
+        int parsed = Integer.parseInt(String.valueOf(value).trim());
+        if (parsed <= 0) {
+            throw new NumberFormatException(label + " must be positive");
+        }
+        return parsed;
     }
 
     private Map<String, Object> currentWorkingRow() {

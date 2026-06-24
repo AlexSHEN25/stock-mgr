@@ -61,6 +61,10 @@ public final class AppConstants {
         public static final String REQUEST_FORM_DOWNLOAD_V2_SUFFIX = "/download";
         public static final String REQUEST_FORM_PDF_V2_SUFFIX = "/pdf";
         public static final String REQUEST_FORM_CANDIDATE_ITEMS_SUFFIX = "/candidateItems";
+        public static final String REQUEST_FORM_WITH_ITEMS = "/requestForm/withItems";
+        public static final String REQUEST_ITEM_CART_PAGE = "/requestForm/items/cart/page";
+        public static final String REQUEST_ITEM_CART_ADD = "/requestForm/items/cart/add";
+        public static final String REQUEST_ITEM_CART_REMOVE = "/requestForm/items/cart/remove";
         public static final String REQUEST_FORM_MATCH_ITEMS = "/requestForm/items/match";
         public static final String MESSAGE_READ_PREFIX = "/message/read/";
         public static final String MESSAGE_READ_ALL = "/message/read-all";

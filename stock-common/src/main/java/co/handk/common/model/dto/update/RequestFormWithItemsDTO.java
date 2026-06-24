@@ -37,7 +37,7 @@ public class RequestFormWithItemsDTO {
     private String approveRemark;
 
     @Valid
-    @NotNull(message = "明細は必須です")
+    @NotNull(message = "items are required")
     private List<Item> items = new ArrayList<>();
 
     @Data
@@ -47,10 +47,8 @@ public class RequestFormWithItemsDTO {
 
         private Long requestId;
 
-        @NotNull(message = "商品IDは必須です")
         private Long goodsId;
 
-        @NotNull(message = "SKU IDは必須です")
         private Long skuId;
 
         private String skuCode;
@@ -81,41 +79,47 @@ public class RequestFormWithItemsDTO {
 
         private Long warehouseId;
 
-        @PositiveOrZero(message = "単価は0以上で入力してください")
+        @PositiveOrZero(message = "price must be zero or greater")
         private BigDecimal price;
 
-        @PositiveOrZero(message = "割引後単価は0以上で入力してください")
+        @PositiveOrZero(message = "discount price must be zero or greater")
         private BigDecimal discountPrice;
 
         private BigDecimal exchangeRate;
 
         private String currency;
 
-        @PositiveOrZero(message = "割引率は0以上で入力してください")
-        @DecimalMax(value = "1.0000", message = "割引率は1.0000以下で入力してください")
+        @PositiveOrZero(message = "discount must be zero or greater")
+        @DecimalMax(value = "1.0000", message = "discount must be 1.0000 or less")
         private BigDecimal discount;
 
-        @PositiveOrZero(message = "申請数量は0以上で入力してください")
+        @PositiveOrZero(message = "request qty must be zero or greater")
         private Integer requestQty;
 
-        @PositiveOrZero(message = "承認数量は0以上で入力してください")
+        @PositiveOrZero(message = "approve qty must be zero or greater")
         private Integer approveQty;
 
-        @PositiveOrZero(message = "出庫数量は0以上で入力してください")
+        @PositiveOrZero(message = "out qty must be zero or greater")
         private Integer outQty;
 
-        @PositiveOrZero(message = "入金額は0以上で入力してください")
+        @PositiveOrZero(message = "deposit amount must be zero or greater")
         private BigDecimal depositAmt;
 
         private LocalDateTime depositTime;
 
-        @PositiveOrZero(message = "入金手数料は0以上で入力してください")
+        @PositiveOrZero(message = "deposit fee must be zero or greater")
         private BigDecimal depositFee;
 
         @PositiveOrZero(message = "unpaid amount must be zero or greater")
         private BigDecimal unpaidAmt;
 
         private Long stockRecordId;
+
+        private List<Long> stockRecordIds;
+
+        private Long stockOrderItemId;
+
+        private List<Long> stockOrderItemIds;
 
         private Integer state;
 

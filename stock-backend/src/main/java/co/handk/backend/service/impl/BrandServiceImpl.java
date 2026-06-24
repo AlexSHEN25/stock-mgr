@@ -146,9 +146,18 @@ public class BrandServiceImpl extends BaseServiceImpl<BrandMapper, Brand, BrandV
         if (existed == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "brand does not exist");
         }
-        String imagePath = fileStorageService.upload(UploadBizType.BRAND, file, existed.getImage());
-        existed.setImage(imagePath);
-        this.updateById(existed);
+        String oldImage = existed.getImage();
+        String imagePath = fileStorageService.upload(UploadBizType.BRAND, file, null);
+        try {
+            existed.setImage(imagePath);
+            if (!this.updateById(existed)) {
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "brand image update failed");
+            }
+        } catch (RuntimeException ex) {
+            fileStorageService.delete(UploadBizType.BRAND, imagePath);
+            throw ex;
+        }
+        fileStorageService.delete(UploadBizType.BRAND, oldImage);
         return fileStorageService.toApiPath(UploadBizType.BRAND, imagePath);
     }
 

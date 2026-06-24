@@ -200,7 +200,7 @@ public final class ModuleMeta {
         QUERY_FIELDS.put(STOCK_ORDER, List.of(ID, "orderNo", "orderType", "bizDate", "stockTypeId", "warehouseId", "sourceType", "sourceId", "totalQty", "state", "requesterId", "requesterName", "operatorId", "operatorName", "approverId", "approverName", "approveTime", "finishTime", "remark"));
         QUERY_FIELDS.put(STOCK_ORDER_ITEM, List.of(ID, "orderId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "changeQty", "price", "currency", "remark"));
         QUERY_FIELDS.put(REQUEST_FORM, List.of(ID, "bizNo", "sourceOrderId", "sourceOrderNo", "userId", "username", "deptId", "deptName", "customerId", "customerName", "warehouseId", "totalQty", "requestQty", "totalAmt", "state", "approverId", "approverName", "approveTime", "approveRemark"));
-        QUERY_FIELDS.put(REQUEST_ITEM, List.of(ID, "requestId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "makerId", "makerName", "stockTypeId", "stockTypeName", "warehouseId", "price", "discountPrice", "currency", "discount", "requestQty", "approveQty", "outQty", "totalAmt", "depositAmt", "depositTime", "depositFee", "stockRecordId", "remark"));
+        QUERY_FIELDS.put(REQUEST_ITEM, List.of("customerId", "customerName", "goodsId", "goodsName", "skuCode", "stockTypeId", "startDate", "endDate"));
         QUERY_FIELDS.put(DELIVERY_SCHEDULE, List.of("customerId", "customerName", "categoryId", "goodsId", "goodsName", "skuCode", "stockTypeId", "startDate", "endDate"));
         QUERY_FIELDS.put(MODULE_STOCK_RECORD, List.of(ID, "bizNo", "orderId", "orderItemId", "stockId", "goodsId", "skuId", "skuCode", "goodsName", "englishName", "brandId", "brandName", "seriesId", "seriesName", "categoryId", "categoryName", "stockTypeId", "stockTypeName", "makerId", "makerName", "warehouseId", "changeQty", "sourceType", "orderType", "bizDate", "price", "currency", "priceUpdateTime", "customerId", "customerName", "requesterId", "requesterName", "operatorId", "operatorName", "remark"));
         QUERY_FIELDS.put(MODULE_PRICE_RECORD, List.of(ID, "goodsId", "goodsName", "englishName", "skuId", "skuCode", "oldPrice", "newPrice", "currency", "discount", "priceUpdateTime", "operatorId", "operatorName"));
@@ -393,7 +393,13 @@ public final class ModuleMeta {
         HIDDEN_LIST_FIELDS.put(GOODS_SKU, List.of("costPrice", "updatePrice", "priceUpdateTime", "barcode", "weight", "volume"));
         HIDDEN_LIST_FIELDS.put(MODULE_GOODS_IMAGE, List.of("imageUrl"));
         HIDDEN_LIST_FIELDS.put(DELIVERY_SCHEDULE, List.of(
-                "recordId", "orderId", "orderItemId", "customerId", "goodsId", "skuId", "stockTypeId"
+                "__level", "__nodeType", "recordId", "orderId", "orderItemId", "customerId", "goodsId", "skuId", "stockTypeId"
+        ));
+        HIDDEN_LIST_FIELDS.put(REQUEST_ITEM, List.of(
+                "stockRecordId", "stockRecordIds", "stockOrderId", "stockOrderItemId", "stockOrderItemIds",
+                "customerId", "goodsId", "skuId",
+                "brandId", "seriesId", "makerId", "stockTypeId", "orderType", "state",
+                "requestItemState", "requestItemId", "selected", "knife", "handle", "handleCandidates"
         ));
         HIDDEN_LIST_FIELDS.put(BRAND_HIERARCHY, List.of("id", "nodeType", "brandId", "seriesId", "makerId"));
         PREFERRED_COLUMNS.put(GOODS, List.of(
@@ -412,6 +418,7 @@ public final class ModuleMeta {
         ACTION_POLICIES.put(GOODS, new ModuleActionPolicy(true, false, true, true, true));
         ACTION_POLICIES.put(DELIVERY_SCHEDULE, new ModuleActionPolicy(false, false, false, false, false));
         ACTION_POLICIES.put(BRAND_HIERARCHY, new ModuleActionPolicy(true, false, true, false, true));
+        ACTION_POLICIES.put(REQUEST_ITEM, new ModuleActionPolicy(true, false, false, false, false));
 
         WRITE_PERMISSION_CODES.put(STOCK_ORDER, "DATA_STOCK_ORDER_WRITE");
         WRITE_PERMISSION_CODES.put(STOCK_ORDER_ITEM, "DATA_STOCK_ORDER_ITEM_WRITE");
@@ -554,6 +561,9 @@ public final class ModuleMeta {
         }
         if (DELIVERY_SCHEDULE.equals(moduleKey)) {
             return sortDeliveryScheduleColumns(filtered);
+        }
+        if (REQUEST_ITEM.equals(moduleKey)) {
+            return sortRequestItemCartColumns(filtered);
         }
         if (BRAND_HIERARCHY.equals(moduleKey)) {
             return sortBrandHierarchyColumns(filtered);
@@ -820,9 +830,27 @@ public final class ModuleMeta {
 
     private static List<String> sortDeliveryScheduleColumns(List<String> columns) {
         List<String> preferred = List.of(
-                "country", "customerName", "groupCode", "bizNo", "goodsName",
-                "skuCode", "stockTypeName", "quantity", "totalQuantity", "goodsKinds",
-                "outboundDate", "operatorName"
+                "country", "customerName", "groupCode", "outboundDate", "bizNo", "goodsName",
+                "skuCode", "brandName", "seriesName", "makerName", "categoryName",
+                "stockTypeName", "quantity", "availableQty", "requestQty", "price", "currency", "operatorName"
+        );
+        LinkedHashSet<String> ordered = new LinkedHashSet<>();
+        for (String key : preferred) {
+            if (containsIgnoreCase(columns, key)) {
+                ordered.add(findOriginalKey(columns, key));
+            }
+        }
+        for (String key : columns) {
+            ordered.add(key);
+        }
+        return new ArrayList<>(ordered);
+    }
+
+    private static List<String> sortRequestItemCartColumns(List<String> columns) {
+        List<String> preferred = List.of(
+                "country", "customerName", "groupCode", "bizDate", "orderNo", "goodsName", "skuCode",
+                "brandName", "seriesName", "makerName", "categoryName", "stockTypeName",
+                "availableQty", "requestQty", "price", "currency", "operatorName"
         );
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
         for (String key : preferred) {

@@ -88,6 +88,13 @@ public class ModuleDataService {
     }
 
     private void appendDeliveryScheduleNode(JSONArray rows, JSONObject node, int level) {
+        if (!node.has("nodeType")) {
+            JSONObject row = new JSONObject(node.toString());
+            row.put("__level", level);
+            row.put("__nodeType", "RECORD");
+            rows.put(row);
+            return;
+        }
         JSONObject row = new JSONObject();
         String nodeType = node.optString("nodeType", "");
         row.put("__level", level);
@@ -151,6 +158,32 @@ public class ModuleDataService {
 
     public JSONObject outboundStock(JSONObject dto) throws Exception {
         return new JSONObject(ApiClient.post(ApiPath.STOCK_OUTBOUND, dto.toString()));
+    }
+
+    public JSONObject createRequestFormWithItems(String customerId, JSONArray items) throws Exception {
+        JSONObject body = new JSONObject();
+        if (customerId != null && !customerId.isBlank()) {
+            body.put("customerId", Long.parseLong(customerId));
+        }
+        body.put("items", items == null ? new JSONArray() : items);
+        return new JSONObject(ApiClient.post(ApiPath.REQUEST_FORM_WITH_ITEMS, body.toString()));
+    }
+
+    public JSONObject addItemsToRequestCart(String customerId, JSONArray items) throws Exception {
+        return moveRequestCartItems(ApiPath.REQUEST_ITEM_CART_ADD, customerId, items);
+    }
+
+    public JSONObject removeItemsFromRequestCart(String customerId, JSONArray items) throws Exception {
+        return moveRequestCartItems(ApiPath.REQUEST_ITEM_CART_REMOVE, customerId, items);
+    }
+
+    private JSONObject moveRequestCartItems(String path, String customerId, JSONArray items) throws Exception {
+        JSONObject body = new JSONObject();
+        if (customerId != null && !customerId.isBlank()) {
+            body.put("customerId", Long.parseLong(customerId));
+        }
+        body.put("items", items == null ? new JSONArray() : items);
+        return new JSONObject(ApiClient.post(path, body.toString()));
     }
 
     public byte[] downloadGoodsTemplate() throws Exception {

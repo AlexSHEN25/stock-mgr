@@ -48,7 +48,6 @@ public class FileStorageServiceImpl implements FileStorageService {
             Files.createDirectories(meta.dir());
             Path target = meta.dir().resolve(fileName);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            deleteOldIfNeeded(oldPath, meta);
             String path = meta.uriPrefix() + fileName;
             ensureLength(path, meta.maxLength());
             return path;
@@ -96,6 +95,11 @@ public class FileStorageServiceImpl implements FileStorageService {
             return API_PREFIX + rawPath;
         }
         return rawPath;
+    }
+
+    @Override
+    public void delete(UploadBizType bizType, String path) {
+        deleteOldIfNeeded(path, resolveMeta(bizType));
     }
 
     private String saveBase64(BizMeta meta, String dataUri) {
