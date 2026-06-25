@@ -1,10 +1,12 @@
 package co.handk.common.model.dto.create;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -14,6 +16,9 @@ public class StockOrderSubmitDTO {
     private Integer orderType;
 
     private Integer sourceType;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime saleDeadline;
 
     private String remark;
 

@@ -16,6 +16,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -26,6 +27,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Dialog;
@@ -80,6 +82,7 @@ public class MainController {
     @FXML private Label messageLabel;
     @FXML private TextField deleteIdField;
     @FXML private Button stockInboundButton;
+    @FXML private Button stockBatchInboundButton;
     @FXML private Button stockOutboundButton;
     @FXML private Button goodsTemplateButton;
     @FXML private Button goodsImportButton;
@@ -117,6 +120,13 @@ public class MainController {
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
     private String pendingStockOperation;
+
+    private record RelationOption(String label, String value) {
+        @Override
+        public String toString() {
+            return label == null || label.isBlank() ? value : label;
+        }
+    }
 
     public void setApp(MainApp app) {
         this.app = app;
@@ -198,6 +208,55 @@ public class MainController {
         }
         pendingStockOperation = "inbound";
         openFormDialog(UiText.byKey("main.btn.stockInbound"), false, Module.STOCK, selected);
+    }
+
+    @FXML
+    private void onStockBatchInbound() {
+        if (!isStockOperationModule()) {
+            return;
+        }
+        List<Map<String, Object>> rows = checkedRows();
+        if (rows.isEmpty()) {
+            messageLabel.setText(UiText.byKey("msg.stockBatchInboundCheck"));
+            return;
+        }
+        Optional<JSONObject> payload = showStockBatchInboundDialog(rows.size());
+        if (payload.isEmpty()) {
+            return;
+        }
+        JSONObject dto = payload.get();
+        try {
+            JSONArray items = new JSONArray();
+            for (Map<String, Object> row : rows) {
+                Object goodsId = row.get("goodsId");
+                Object skuId = row.get("skuId");
+                if (isBlankValue(goodsId) || isBlankValue(skuId)) {
+                    messageLabel.setText(UiText.byKey("msg.stockBatchInboundMissingSku"));
+                    return;
+                }
+                JSONObject item = new JSONObject();
+                item.put("goodsId", parseLongValue(goodsId, "goodsId").intValue());
+                item.put("skuId", parseLongValue(skuId, "skuId"));
+                item.put("warehouseId", dto.getInt("warehouseId"));
+                item.put("stockTypeId", dto.getLong("stockTypeId"));
+                item.put("quantity", dto.getInt("quantity"));
+                items.put(item);
+            }
+            dto.remove("warehouseId");
+            dto.remove("stockTypeId");
+            dto.remove("quantity");
+            dto.put("sourceType", 1);
+            dto.put("items", items);
+            JSONObject json = dataService.batchInboundStock(dto);
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText(String.format(UiText.byKey("msg.stockBatchInboundDone"), rows.size()));
+                loadData();
+            } else {
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_SAVE_FAILED));
+            }
+        } catch (Exception ex) {
+            messageLabel.setText(uiFeedback.saveFailed(ex));
+        }
     }
 
     @FXML
@@ -647,9 +706,12 @@ public class MainController {
         addButton.setDisable(!policy.canCreate || !canWrite);
         stockInboundButton.setVisible(stockModule);
         stockInboundButton.setManaged(stockModule);
+        stockBatchInboundButton.setVisible(stockModule);
+        stockBatchInboundButton.setManaged(stockModule);
         stockOutboundButton.setVisible(stockModule);
         stockOutboundButton.setManaged(stockModule);
         stockInboundButton.setDisable(!stockOperationAllowed);
+        stockBatchInboundButton.setDisable(!stockOperationAllowed);
         stockOutboundButton.setDisable(!stockOperationAllowed);
         goodsTemplateButton.setVisible(goodsModule && superAdmin);
         goodsTemplateButton.setManaged(goodsModule && superAdmin);
@@ -1803,6 +1865,90 @@ public class MainController {
         return defaults;
     }
 
+    private Optional<JSONObject> showStockBatchInboundDialog(int rowCount) {
+        Dialog<JSONObject> dialog = new Dialog<>();
+        dialog.setTitle(UiText.byKey("main.btn.stockBatchInbound"));
+        dialog.setHeaderText(String.format(UiText.byKey("msg.stockBatchInboundHeader"), rowCount));
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        ComboBox<RelationOption> warehouseCombo = new ComboBox<>();
+        warehouseCombo.getItems().addAll(loadRelationOptions("warehouse"));
+        warehouseCombo.setPrefWidth(320);
+        ComboBox<RelationOption> stockTypeCombo = new ComboBox<>();
+        stockTypeCombo.getItems().addAll(loadRelationOptions("stockType"));
+        stockTypeCombo.setPrefWidth(320);
+        TextField quantityField = new TextField("1");
+        DatePicker saleDeadlinePicker = new DatePicker();
+        TextArea remarkArea = new TextArea();
+        remarkArea.setPrefRowCount(2);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(12));
+        grid.add(new Label(ModuleMeta.normalizeTitle("warehouseId")), 0, 0);
+        grid.add(warehouseCombo, 1, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("stockTypeId")), 0, 1);
+        grid.add(stockTypeCombo, 1, 1);
+        grid.add(new Label(ModuleMeta.normalizeTitle("quantity")), 0, 2);
+        grid.add(quantityField, 1, 2);
+        grid.add(new Label(ModuleMeta.normalizeTitle("saleDeadline")), 0, 3);
+        grid.add(saleDeadlinePicker, 1, 3);
+        grid.add(new Label(ModuleMeta.normalizeTitle("remark")), 0, 4);
+        grid.add(remarkArea, 1, 4);
+        dialog.getDialogPane().setContent(grid);
+
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.addEventFilter(ActionEvent.ACTION, event -> {
+            if (warehouseCombo.getValue() == null || stockTypeCombo.getValue() == null) {
+                messageLabel.setText(UiText.byKey("msg.stockBatchInboundRequired"));
+                event.consume();
+                return;
+            }
+            try {
+                parsePositiveInt(quantityField.getText(), "quantity");
+            } catch (Exception ex) {
+                messageLabel.setText(ModuleMeta.normalizeTitle("quantity") + UiText.MSG_REQUIRED_SUFFIX);
+                event.consume();
+            }
+        });
+
+        dialog.setResultConverter(button -> {
+            if (button != ButtonType.OK) {
+                return null;
+            }
+            JSONObject dto = new JSONObject();
+            dto.put("warehouseId", Integer.parseInt(warehouseCombo.getValue().value()));
+            dto.put("stockTypeId", Long.parseLong(stockTypeCombo.getValue().value()));
+            dto.put("quantity", parsePositiveInt(quantityField.getText(), "quantity"));
+            if (saleDeadlinePicker.getValue() != null) {
+                dto.put("saleDeadline", saleDeadlinePicker.getValue() + " 23:59:59");
+            }
+            String remark = remarkArea.getText();
+            if (remark != null && !remark.isBlank()) {
+                dto.put("remark", remark.trim());
+            }
+            return dto;
+        });
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
+        return dialog.showAndWait();
+    }
+
+    private List<RelationOption> loadRelationOptions(String relationModule) {
+        List<RelationOption> options = new ArrayList<>();
+        try {
+            for (Map<String, String> item : dataService.fetchSimpleRelationOptions(relationModule, Map.of())) {
+                options.add(new RelationOption(item.get("label"), item.get("value")));
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load relation options failed. relationModule=" + relationModule, ex);
+        }
+        return options;
+    }
+
     private JSONObject sanitizeStockOperationPayload(JSONObject dto) {
         JSONObject clean = new JSONObject();
         putIfPresent(clean, dto, "stockId");
@@ -1825,6 +1971,18 @@ public class MainController {
         putIfPresent(clean, dto, "saleDeadline");
         putIfPresent(clean, dto, "remark");
         return clean;
+    }
+
+    private boolean isBlankValue(Object value) {
+        return value == null || value == JSONObject.NULL || String.valueOf(value).isBlank();
+    }
+
+    private Long parseLongValue(Object value, String label) {
+        try {
+            return Long.parseLong(String.valueOf(value).trim());
+        } catch (Exception ex) {
+            throw new IllegalArgumentException(label + " is invalid: " + value, ex);
+        }
     }
 
     private void putIfPresent(JSONObject target, JSONObject source, String key) {

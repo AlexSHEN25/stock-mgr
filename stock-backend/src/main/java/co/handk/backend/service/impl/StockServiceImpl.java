@@ -55,6 +55,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -240,7 +242,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long batchInbound(StockBatchOperateDTO dto) {
-        return submitBatchOrder(dto, StockBizConstant.ORDER_TYPE_INBOUND);
+        return submitBatchInbound(dto);
     }
 
     @Override
@@ -1157,6 +1159,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         order.setTotalQty(totalQty);
         order.setStockTypeId(stockTypeId);
         order.setState(needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED);
+        order.setSaleDeadline(dto.getSaleDeadline());
         User user = userService.getByIdNotDeleted(userId);
         String username = user == null ? null : user.getUsername();
         order.setRequesterId(userId);
@@ -1253,10 +1256,76 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return order.getId();
     }
 
+    private Long submitBatchInbound(StockBatchOperateDTO dto) {
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "items is required");
+        }
+        String idempotencyKey = requireBatchInboundIdempotency(dto);
+        StockOrder existingOrder = findExistingSubmitOrder(StockBizConstant.ORDER_TYPE_INBOUND, idempotencyKey);
+        if (existingOrder != null) {
+            return existingOrder.getId();
+        }
+
+        Long firstOrderId = null;
+        for (StockBatchOperateItemDTO itemDTO : dto.getItems()) {
+            StockOperateDTO inbound = new StockOperateDTO();
+            inbound.setStockId(itemDTO.getStockId());
+            inbound.setGoodsId(itemDTO.getGoodsId());
+            inbound.setSkuId(itemDTO.getSkuId());
+            inbound.setWarehouseId(itemDTO.getWarehouseId());
+            inbound.setStockTypeId(itemDTO.getStockTypeId());
+            inbound.setSourceType(itemDTO.getSourceType() == null ? dto.getSourceType() : itemDTO.getSourceType());
+            inbound.setQuantity(itemDTO.getQuantity());
+            inbound.setSaleDeadline(itemDTO.getSaleDeadline() == null ? dto.getSaleDeadline() : itemDTO.getSaleDeadline());
+            inbound.setRemark(hasText(itemDTO.getRemark()) ? itemDTO.getRemark() : dto.getRemark());
+            Long orderId = submitBatchInboundItem(inbound, idempotencyKey);
+            if (firstOrderId == null) {
+                firstOrderId = orderId;
+            }
+        }
+        return firstOrderId;
+    }
+
+    private Long submitBatchInboundItem(StockOperateDTO dto, String idempotencyKey) {
+        Stock stock = resolveInboundStock(dto);
+        if (dto.getStockTypeId() != null
+                && (stock.getStockTypeId() == null || !dto.getStockTypeId().equals(stock.getStockTypeId()))) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "stockTypeId does not match requested stock");
+        }
+        Goods goods = requireGoods(stock.getGoodsId());
+        GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
+        String stockTypeName = getStockTypeName(stock.getStockTypeId());
+
+        int scene = resolveInboundScene(dto.getSourceType());
+        int beforeQty = safeInt(stock.getCurrentQty());
+        int afterQty = beforeQty + dto.getQuantity();
+
+        int sourceType = scene == StockBizConstant.INBOUND_SCENE_SELF
+                ? StockBizConstant.SOURCE_TYPE_REQUEST : StockBizConstant.SOURCE_TYPE_MANUAL;
+        boolean admin = permissionQueryService.isSuperAdmin(UserContext.getUserIdOrDefault());
+        boolean needApprove = scene == StockBizConstant.INBOUND_SCENE_SELF && !admin;
+
+        StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_INBOUND, sourceType,
+                needApprove ? StockBizConstant.ORDER_STATE_APPROVING : StockBizConstant.ORDER_STATE_FINISHED,
+                idempotencyKey);
+        StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
+        if (!needApprove) {
+            updateStockQuantityWithVersion(stock, afterQty);
+            saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
+            stockBatchService.recordInbound(order, item, stock);
+            notifyInbound(sku.getSkuCode(), dto.getQuantity(), afterQty, order.getId());
+        }
+        return order.getId();
+    }
+
     private Long submitBatchOrder(StockBatchOperateDTO dto, int orderType) {
         StockOrderSubmitDTO submitDTO = new StockOrderSubmitDTO();
         submitDTO.setOrderType(orderType);
         submitDTO.setSourceType(dto.getSourceType());
+        submitDTO.setSaleDeadline(dto.getSaleDeadline());
         submitDTO.setRemark(dto.getRemark());
         List<StockOrderSubmitItemDTO> submitItems = new ArrayList<>();
         for (StockBatchOperateItemDTO itemDTO : dto.getItems()) {
@@ -1703,6 +1772,60 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     "duplicate batch stock request detected, please retry later");
         }
         return requestKey;
+    }
+
+    private String requireBatchInboundIdempotency(StockBatchOperateDTO dto) {
+        String headerKey = currentIdempotencyKey();
+        String requestKey = hasText(headerKey)
+                ? "INBOUND_BATCH:" + headerKey.trim()
+                : "INBOUND_BATCH:AUTO:" + sha256Hex(canonicalBatchInboundPayload(dto));
+        Long userId = UserContext.getUserIdOrDefault();
+        String redisKey = RedisKey.IDEMPOTENCY_REQUEST + "stock:batch-inbound:" + userId + ":" + requestKey;
+        Boolean accepted = stringRedisUtil.setIfAbsent(redisKey, "1", 300L, TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(accepted)) {
+            StockOrder existing = findExistingSubmitOrder(StockBizConstant.ORDER_TYPE_INBOUND, requestKey);
+            if (existing != null) {
+                return requestKey;
+            }
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "duplicate batch inbound request detected, please retry later");
+        }
+        return requestKey;
+    }
+
+    private String canonicalBatchInboundPayload(StockBatchOperateDTO dto) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("source=").append(dto.getSourceType()).append('|');
+        builder.append("deadline=").append(dto.getSaleDeadline()).append('|');
+        builder.append("remark=").append(dto.getRemark()).append('|');
+        for (StockBatchOperateItemDTO item : dto.getItems()) {
+            builder.append("item:")
+                    .append(item.getStockId()).append(',')
+                    .append(item.getGoodsId()).append(',')
+                    .append(item.getSkuId()).append(',')
+                    .append(item.getWarehouseId()).append(',')
+                    .append(item.getStockTypeId()).append(',')
+                    .append(item.getSourceType()).append(',')
+                    .append(item.getQuantity()).append(',')
+                    .append(item.getSaleDeadline()).append(',')
+                    .append(item.getRemark()).append(';');
+        }
+        return builder.toString();
+    }
+
+    private String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) {
+                builder.append(String.format("%02x", b));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 
     private StockOrder findExistingSubmitOrder(Integer orderType, String idempotencyKey) {

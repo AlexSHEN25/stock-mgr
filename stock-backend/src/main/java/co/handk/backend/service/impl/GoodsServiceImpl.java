@@ -120,10 +120,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final String IMPORT_RESULT_MESSAGE_HEADER = "Import Message";
     private static final String EXPORT_GOODS_SHEET_NAME = "商品一覧";
     private static final String ERROR_EXPORT_FAILED = "Excel出力に失敗しました";
-    private static final String[] GOODS_EXPORT_HEADERS = {
-            "ID", "商品名", "英語名", "ブランド", "シリーズ", "カテゴリ",
-            "メーカー", "SKUコード", "SKU名", "価格", "通貨", "状態", "説明", "表示順"
-    };
     private static final String ROW_PREFIX = "行 ";
     private static final String ERROR_IMPORT_FILE_REQUIRED = "インポートファイルを選択してください";
     private static final String ERROR_TEMPLATE_GENERATE_FAILED = "商品インポートテンプレートの生成に失敗しました";
@@ -149,8 +145,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final String HEADER_MAKER_ID = "厂家ID";
     private static final String HEADER_MAKER_NAME = "厂家名称";
     private static final String HEADER_DESCRIPTION = "说明";
-    private static final String HEADER_IS_HOT = "热门";
-    private static final String HEADER_SORT = "排序";
     private static final String HEADER_SKU_CODE = "SKU编码";
     private static final String HEADER_SKU_NAME = "SKU名称";
     private static final String HEADER_PRICE = "价格";
@@ -162,39 +156,21 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final String HEADER_WEIGHT = "重量";
     private static final String HEADER_VOLUME = "体积";
     private static final String HEADER_SKU_STATUS = "SKU状态";
-    private static final String HEADER_IMAGE_ID = "图片ID";
-    private static final String HEADER_IMAGE_URL = "图片URL";
-    private static final String HEADER_IMAGE_SORT = "图片排序";
     private static final String HEADER_GOODS_STATUS = "商品状态";
-    private static final String TEMPLATE_HEADER_GOODS_ID = "商品ID";
-    private static final String TEMPLATE_HEADER_SKU_ID = "SKU ID";
-    private static final String TEMPLATE_HEADER_GOODS_NAME = "商品名";
-    private static final String TEMPLATE_HEADER_ENGLISH_NAME = "英語名";
-    private static final String TEMPLATE_HEADER_BRAND_NAME = "ブランド名";
-    private static final String TEMPLATE_HEADER_SERIES_NAME = "シリーズ名";
-    private static final String TEMPLATE_HEADER_CATEGORY_NAME = "分類名";
-    private static final String TEMPLATE_HEADER_MAKER_NAME = "メーカー名";
+    private static final String TEMPLATE_HEADER_GOODS_ID = "id";
+    private static final String TEMPLATE_HEADER_GOODS_NAME = "名称";
+    private static final String TEMPLATE_HEADER_ENGLISH_NAME = "英文名称";
+    private static final String TEMPLATE_HEADER_BRAND_NAME = "ブランド";
+    private static final String TEMPLATE_HEADER_SERIES_NAME = "シリーズ";
+    private static final String TEMPLATE_HEADER_CATEGORY_NAME = "カテゴリ";
+    private static final String TEMPLATE_HEADER_MAKER_NAME = "メーカー";
     private static final String TEMPLATE_HEADER_DESCRIPTION = "説明";
-    private static final String TEMPLATE_HEADER_IS_HOT = "人気商品";
-    private static final String TEMPLATE_HEADER_SORT = "並び順";
-    private static final String TEMPLATE_HEADER_SKU_CODE = "SKUコード";
-    private static final String TEMPLATE_HEADER_SKU_NAME = "SKU名";
-    private static final String TEMPLATE_HEADER_PRICE = "販売価格";
+    private static final String TEMPLATE_HEADER_SKU_CODE = "品番";
+    private static final String TEMPLATE_HEADER_SKU_NAME = "品名";
+    private static final String TEMPLATE_HEADER_PRICE = "価格";
     private static final String TEMPLATE_HEADER_CURRENCY = "通貨";
-    private static final String TEMPLATE_HEADER_COST_PRICE = "原価";
-    private static final String TEMPLATE_HEADER_UPDATE_PRICE = "更新価格";
-    private static final String TEMPLATE_HEADER_PRICE_UPDATE_TIME = "価格更新日時";
-    private static final String TEMPLATE_HEADER_BARCODE = "バーコード";
-    private static final String TEMPLATE_HEADER_WEIGHT = "重量";
-    private static final String TEMPLATE_HEADER_VOLUME = "体積";
-    private static final String TEMPLATE_HEADER_SKU_STATUS = "SKU状態";
-    private static final String TEMPLATE_HEADER_IMAGE_ID = "画像ID";
-    private static final String TEMPLATE_HEADER_IMAGE_URL = "画像URL";
-    private static final String TEMPLATE_HEADER_IMAGE_SORT = "画像順";
-    private static final String TEMPLATE_HEADER_GOODS_STATUS = "商品状態";
     private static final List<String> TEMPLATE_HEADERS = List.of(
             TEMPLATE_HEADER_GOODS_ID,
-            TEMPLATE_HEADER_SKU_ID,
             TEMPLATE_HEADER_GOODS_NAME,
             TEMPLATE_HEADER_ENGLISH_NAME,
             TEMPLATE_HEADER_BRAND_NAME,
@@ -204,11 +180,11 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             TEMPLATE_HEADER_SKU_CODE,
             TEMPLATE_HEADER_SKU_NAME,
             TEMPLATE_HEADER_PRICE,
-            TEMPLATE_HEADER_CURRENCY
+            TEMPLATE_HEADER_CURRENCY,
+            TEMPLATE_HEADER_DESCRIPTION
     );
     private static final List<String> TEMPLATE_REQUIRED_HEADERS = List.of(
             TEMPLATE_HEADER_GOODS_ID,
-            TEMPLATE_HEADER_SKU_ID,
             TEMPLATE_HEADER_GOODS_NAME,
             TEMPLATE_HEADER_BRAND_NAME,
             TEMPLATE_HEADER_CATEGORY_NAME,
@@ -356,16 +332,30 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "SKUの更新に失敗しました");
         }
 
-        if (StringUtils.hasText(dto.getImageUrl()) || dto.getImageSort() != null || dto.getImageId() != null) {
+        if (shouldUpdateGoodsImage(dto)) {
             GoodsImage existedImage = resolveTargetGoodsImage(dto);
             String oldImageUrl = existedImage == null ? null : existedImage.getImageUrl();
             String normalizedImageUrl = fileStorageService.normalize(UploadBizType.GOODS, dto.getImageUrl());
+            if (existedImage == null && StringUtils.hasText(normalizedImageUrl)) {
+                GoodsImage image = new GoodsImage();
+                image.setGoodsId(dto.getId());
+                image.setSkuId(dto.getSkuId());
+                image.setSkuCode(dto.getSkuCode());
+                image.setImageUrl(normalizedImageUrl);
+                image.setSort(dto.getImageSort() == null ? NumberConstant.ZERO : dto.getImageSort());
+                boolean imageSaved = goodsImageService.save(image);
+                if (!imageSaved) {
+                    fileStorageService.delete(UploadBizType.GOODS, normalizedImageUrl);
+                    throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品画像の更新に失敗しました");
+                }
+                return true;
+            }
             UpdateWrapper<GoodsImage> imageWrapper = new UpdateWrapper<GoodsImage>()
                     .eq("goods_id", dto.getId())
                     .set(StringUtils.hasText(normalizedImageUrl), "image_url", normalizedImageUrl)
                     .set(dto.getImageSort() != null, "sort", dto.getImageSort())
                     .set(StringUtils.hasText(dto.getSkuCode()), "sku_code", dto.getSkuCode());
-            if (dto.getImageId() != null) {
+            if (isValidImageId(dto.getImageId())) {
                 imageWrapper.eq("id", dto.getImageId());
             }
             try {
@@ -386,11 +376,25 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return true;
     }
 
+    private boolean shouldUpdateGoodsImage(UpdateGoodsDTO dto) {
+        if (dto == null) {
+            return false;
+        }
+        if (StringUtils.hasText(dto.getImageUrl()) || isValidImageId(dto.getImageId())) {
+            return true;
+        }
+        return dto.getImageSort() != null && isValidImageId(dto.getImageId());
+    }
+
+    private boolean isValidImageId(Long imageId) {
+        return imageId != null && imageId > NumberConstant.ZERO;
+    }
+
     private GoodsImage resolveTargetGoodsImage(UpdateGoodsDTO dto) {
         if (dto == null) {
             return null;
         }
-        if (dto.getImageId() != null) {
+        if (isValidImageId(dto.getImageId())) {
             return goodsImageService.getByIdNotDeleted(dto.getImageId());
         }
         return goodsImageService.getOne(new QueryWrapper<GoodsImage>()
@@ -451,14 +455,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     @Override
     public void downloadBatchTemplate(GoodsQueryDTO query, HttpServletResponse response) {
-        try (XSSFWorkbook workbook = buildBatchTemplateWorkbook(query)) {
-            String fileName = GoodsImportConstant.TEMPLATE_FILE_NAME;
-            response.setContentType(GoodsImportConstant.EXCEL_CONTENT_TYPE);
-            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-            response.setHeader("Content-Disposition",
-                    "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
-            workbook.write(response.getOutputStream());
-            response.flushBuffer();
+        try (XSSFWorkbook workbook = buildGoodsExportWorkbook(query)) {
+            clearTemplateDataRows(workbook);
+            writeWorkbookResponse(workbook, response, GoodsImportConstant.TEMPLATE_FILE_NAME);
         } catch (IOException ex) {
             throw new BusinessException(
                     MessageKeyConstant.ERROR_RUNTIME,
@@ -699,42 +698,27 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private UpdateGoodsDTO buildUpdateGoodsDto(GoodsBatchUpsertItemDTO item, ExistingGoodsTarget target) {
         Goods goods = target.goods();
         GoodsSku sku = target.sku();
-        GoodsImage image = target.image();
         UpdateGoodsDTO dto = new UpdateGoodsDTO();
         dto.setId(goods.getId());
         dto.setName(firstNonBlank(item.getName(), goods.getName(), sku == null ? null : sku.getSkuName(),
                 item.getSkuCode(), sku == null ? null : sku.getSkuCode()));
         dto.setEnglishName(firstNonBlank(item.getEnglishName(), goods.getEnglishName(), dto.getName()));
-        Long brandId = firstNonNull(resolveOrCreateBrandId(item), goods.getBrandId());
+        Long resolvedBrandId = resolveOrCreateBrandId(item);
+        Long brandId = firstNonNull(resolvedBrandId, goods.getBrandId());
         Long categoryId = firstNonNull(resolveOrCreateCategoryId(item), goods.getCategoryId());
-        Long seriesId = firstNonNull(resolveOrCreateSeriesId(item, brandId), goods.getSeriesId());
+        Long resolvedSeriesId = resolveOrCreateSeriesId(item, resolvedBrandId);
+        Long seriesId = firstNonNull(resolvedSeriesId, goods.getSeriesId());
         dto.setBrandId(brandId);
         dto.setSeriesId(seriesId);
         dto.setCategoryId(categoryId);
-        dto.setMakerId(firstNonNull(resolveOrCreateMakerId(item, seriesId), goods.getMakerId()));
+        dto.setMakerId(firstNonNull(resolveOrCreateMakerId(item, resolvedSeriesId), goods.getMakerId()));
         dto.setDescription(firstNonNull(trimToNull(item.getDescription()), goods.getDescription()));
-        dto.setIsHot(firstNonNull(parseFlag(item.getIsHot(), false), goods.getIsHot()));
-        dto.setSort(firstNonNull(item.getSort(), goods.getSort()));
         dto.setSkuId(item.getSkuId() != null ? item.getSkuId() : sku == null ? null : sku.getId());
         dto.setSkuCode(firstNonBlank(item.getSkuCode(), sku == null ? null : sku.getSkuCode()));
         dto.setSkuName(firstNonBlank(item.getSkuName(), sku == null ? null : sku.getSkuName(), dto.getName()));
         dto.setPrice(firstNonNull(item.getPrice(), sku == null ? null : sku.getPrice()));
         dto.setCurrency(firstNonBlank(item.getCurrency(),
                 sku == null ? null : sku.getCurrency(), CommonConstant.DEFAULT_CURRENCY_JPY));
-        dto.setCostPrice(firstNonNull(item.getCostPrice(), sku == null ? null : sku.getCostPrice()));
-        dto.setUpdatePrice(firstNonNull(item.getUpdatePrice(), sku == null ? null : sku.getUpdatePrice()));
-        dto.setPriceUpdateTime(normalizePriceUpdateTime(dto.getUpdatePrice(),
-                firstNonNull(item.getPriceUpdateTime(), sku == null ? null : sku.getPriceUpdateTime())));
-        dto.setBarcode(firstNonBlank(item.getBarcode(), sku == null ? null : sku.getBarcode()));
-        dto.setWeight(firstNonNull(item.getWeight(), sku == null ? null : sku.getWeight()));
-        dto.setVolume(firstNonNull(item.getVolume(), sku == null ? null : sku.getVolume()));
-        dto.setSkuStatus(firstNonNull(parseStatus(item.getSkuStatus(), false),
-                sku == null ? null : StatusEnum.fromValue(sku.getStatus())));
-        dto.setImageId(item.getImageId() != null ? item.getImageId() : image == null ? null : image.getId());
-        dto.setImageUrl(firstNonBlank(item.getImageUrl(),
-                image == null ? null : fileStorageService.toApiPath(UploadBizType.GOODS, image.getImageUrl())));
-        dto.setImageSort(firstNonNull(item.getImageSort(), image == null ? null : image.getSort()));
-        dto.setStatus(firstNonNull(parseStatus(item.getStatus(), false), StatusEnum.fromValue(goods.getStatus())));
         return dto;
     }
 
@@ -826,7 +810,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             GoodsBatchUpsertItemDTO item = new GoodsBatchUpsertItemDTO();
             item.setRowNo(rowIndex + 1);
             item.setGoodsId(readLong(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_ID), formatter));
-            item.setSkuId(readLong(row, headerIndexes.get(TEMPLATE_HEADER_SKU_ID), formatter));
             item.setName(readString(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_NAME), formatter));
             item.setEnglishName(readString(row, headerIndexes.get(TEMPLATE_HEADER_ENGLISH_NAME), formatter));
             item.setBrandName(readString(row, headerIndexes.get(TEMPLATE_HEADER_BRAND_NAME), formatter));
@@ -834,23 +817,10 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             item.setCategoryName(readString(row, headerIndexes.get(TEMPLATE_HEADER_CATEGORY_NAME), formatter));
             item.setMakerName(readString(row, headerIndexes.get(TEMPLATE_HEADER_MAKER_NAME), formatter));
             item.setDescription(readString(row, headerIndexes.get(TEMPLATE_HEADER_DESCRIPTION), formatter));
-            item.setIsHot(readString(row, headerIndexes.get(TEMPLATE_HEADER_IS_HOT), formatter));
-            item.setSort(readInteger(row, headerIndexes.get(TEMPLATE_HEADER_SORT), formatter));
             item.setSkuCode(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_CODE), formatter));
             item.setSkuName(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_NAME), formatter));
             item.setPrice(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_PRICE), formatter));
             item.setCurrency(readString(row, headerIndexes.get(TEMPLATE_HEADER_CURRENCY), formatter));
-            item.setCostPrice(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_COST_PRICE), formatter));
-            item.setUpdatePrice(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_UPDATE_PRICE), formatter));
-            item.setPriceUpdateTime(readDateTime(row, headerIndexes.get(TEMPLATE_HEADER_PRICE_UPDATE_TIME), formatter));
-            item.setBarcode(readString(row, headerIndexes.get(TEMPLATE_HEADER_BARCODE), formatter));
-            item.setWeight(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_WEIGHT), formatter));
-            item.setVolume(readDecimal(row, headerIndexes.get(TEMPLATE_HEADER_VOLUME), formatter));
-            item.setSkuStatus(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_STATUS), formatter));
-            item.setImageId(readLong(row, headerIndexes.get(TEMPLATE_HEADER_IMAGE_ID), formatter));
-            item.setImageUrl(readString(row, headerIndexes.get(TEMPLATE_HEADER_IMAGE_URL), formatter));
-            item.setImageSort(readInteger(row, headerIndexes.get(TEMPLATE_HEADER_IMAGE_SORT), formatter));
-            item.setStatus(readString(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_STATUS), formatter));
             items.add(item);
         }
         return items;
@@ -928,19 +898,21 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         String[] japaneseNotes = new String[TEMPLATE_HEADERS.size()];
         java.util.Arrays.fill(japaneseNotes, "任意");
-        if (japaneseNotes.length > 0) japaneseNotes[0] = "更新時のみ";
-        if (japaneseNotes.length > 1) japaneseNotes[1] = "更新時のみ";
-        if (japaneseNotes.length > 4) japaneseNotes[4] = "候補から選択 / 未登録なら導入時に作成";
-        if (japaneseNotes.length > 5) japaneseNotes[5] = "ブランドに応じて候補表示";
-        if (japaneseNotes.length > 6) japaneseNotes[6] = "候補から選択 / 未登録なら導入時に作成";
-        if (japaneseNotes.length > 7) japaneseNotes[7] = "シリーズに応じて候補表示";
-        if (japaneseNotes.length > 11) japaneseNotes[11] = "必須";
-        if (japaneseNotes.length > 14) japaneseNotes[14] = "既定値 JPY";
-        if (japaneseNotes.length > 21) japaneseNotes[21] = "1/0 または normal/disabled";
-        if (japaneseNotes.length > 22) japaneseNotes[22] = "更新時のみ";
-        if (japaneseNotes.length > 25) japaneseNotes[25] = "1/0 または normal/disabled";
+        if (japaneseNotes.length > 0) japaneseNotes[0] = "更新時のみ指定。新規登録時は空欄可";
+        if (japaneseNotes.length > 1) japaneseNotes[1] = "必須";
+        if (japaneseNotes.length > 3) japaneseNotes[3] = "ブランド名。未登録なら導入時に作成";
+        if (japaneseNotes.length > 4) japaneseNotes[4] = "シリーズ名。ブランドに紐付け";
+        if (japaneseNotes.length > 5) japaneseNotes[5] = "カテゴリ名。未登録なら導入時に作成";
+        if (japaneseNotes.length > 6) japaneseNotes[6] = "メーカー名。シリーズに紐付け";
+        if (japaneseNotes.length > 7) japaneseNotes[7] = "必須。既存品番は更新扱い";
+        if (japaneseNotes.length > 9) japaneseNotes[9] = "0以上";
+        if (japaneseNotes.length > 10) japaneseNotes[10] = "例: JPY";
         for (int i = 0; i < japaneseNotes.length; i++) {
-            noteRow.getCell(i).setCellValue(japaneseNotes[i]);
+            Cell cell = noteRow.getCell(i);
+            if (cell == null) {
+                cell = noteRow.createCell(i);
+            }
+            cell.setCellValue(japaneseNotes[i]);
         }
         for (int i = TEMPLATE_HEADERS.size(); i < noteRow.getLastCellNum(); i++) {
             Cell extraCell = noteRow.getCell(i);
@@ -954,27 +926,23 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private void buildInstructionSheet(XSSFWorkbook workbook) {
         Sheet sheet = workbook.createSheet(INSTRUCTION_SHEET_NAME);
         List<String> instructions = List.of(
-                "1. 一行代表一个商品主SKU，系统会按 商品ID / SKU ID / SKU编码 依次匹配现有数据。",
+                "1. 一行代表一个商品主品番，系统会按 id / 品番 依次匹配现有数据。",
                 "2. 匹配到现有商品则更新，匹配不到则新增。",
-                "3. 新增时至少需要：商品名称、品牌、分类、SKU编码。",
-                "4. 品牌/系列/分类/厂家支持填 ID 或 名称；同时填写时优先 ID。",
-                "5. 调价填写后，调价时间留空会自动使用当前时间。",
-                "6. 热门支持：1/0/是/否/true/false。",
-                "7. 商品状态、SKU状态支持：1/0/有効/無効/normal/disabled。",
-                "8. 图片URL 可选；现有商品没有图片时，更新也会自动补建图片记录。"
+                "3. 新增时至少需要：名称、ブランド、カテゴリ、品番。",
+                "4. ブランド/シリーズ/カテゴリ/メーカー支持名称输入，未登録时会自动创建。",
+                "5. 価格字段支持数字格式，通貨未填写时默认 JPY。",
+                "6. 説明为可选字段，用于商品说明。"
         );
         for (int i = 0; i < instructions.size(); i++) {
             sheet.createRow(i).createCell(0).setCellValue(instructions.get(i));
         }
         List<String> japaneseInstructions = List.of(
-                "1. 商品ID と SKU ID を入力すると既存データ更新、未入力なら新規作成です。",
-                "2. ブランド名 / シリーズ名 / 分類名 / メーカー名 は名称で判定します。",
-                "3. 主データが未登録の場合は、導入トランザクション内で自動作成します。",
-                "4. シリーズはブランド配下、メーカーはシリーズ配下として自動的に関連付けます。",
-                "5. SKUコードは新規作成時に必須です。",
-                "6. 人気商品は 1/0 または true/false を入力できます。",
-                "7. 商品状態・SKU状態は 1/0 または normal/disabled を入力できます。",
-                "8. 価格更新日時は yyyy-MM-dd HH:mm:ss 形式です。"
+                "1. id を入力すると既存商品を更新、未入力なら新規作成です。",
+                "2. ブランド / シリーズ / カテゴリ / メーカーは名称で入力できます。",
+                "3. 未登録の名称を入力した場合は自動作成され、階層関係も登録されます。",
+                "4. 品番は新規作成時に必須です。既存品番は更新扱いです。",
+                "5. 価格は0以上で入力してください。通貨が空欄の場合は JPY を使用します。",
+                "6. 説明は任意です。"
         );
         for (int i = 0; i < japaneseInstructions.size(); i++) {
             sheet.getRow(i).getCell(0).setCellValue(japaneseInstructions.get(i));
@@ -1050,6 +1018,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 .toList());
         rowIndex = writeValidationBlock(sheet, rowIndex, "BRAND_NAME", brands.stream()
                 .map(Brand::getName)
+                .toList());
+        rowIndex = writeValidationBlock(sheet, rowIndex, "BRAND_KEY", brands.stream()
+                .map(item -> String.valueOf(item.getId()))
                 .toList());
         rowIndex = writeValidationBlock(sheet, rowIndex, "CATEGORY_ID", categories.stream()
                 .map(item -> String.valueOf(item.getId()))
@@ -1132,9 +1103,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_CATEGORY_NAME), "CATEGORY_NAME");
         addExplicitListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_CURRENCY), "CURRENCY");
         addFormulaListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_SERIES_NAME),
-                "IF($E%d=\"\",\"\",INDIRECT(\"SERIES_NAME_\"&$E%d))");
+                "IF($D%d=\"\",\"\",INDIRECT(\"SERIES_NAME_\"&INDEX(BRAND_KEY,MATCH($D%d,BRAND_NAME,0))))");
         addFormulaListValidation(sheet, firstRow, lastRow, TEMPLATE_HEADERS.indexOf(TEMPLATE_HEADER_MAKER_NAME),
-                "IF($E%d=\"\",\"\",INDIRECT(\"MAKER_NAME_\"&$E%d))");
+                "IF($D%d=\"\",\"\",INDIRECT(\"MAKER_NAME_\"&INDEX(BRAND_KEY,MATCH($D%d,BRAND_NAME,0))))");
     }
 
     private int writeValidationBlock(Sheet sheet, int rowIndex, String rangeName, List<String> values) {
@@ -1155,11 +1126,14 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         Name name = sheet.getWorkbook().createName();
         name.setNameName(rangeName);
-        name.setRefersToFormula("'" + TEMPLATE_VALIDATION_SHEET_NAME + "'!$A$" + startRow + ":$A$" + (currentRow - 1));
+        name.setRefersToFormula("'" + TEMPLATE_VALIDATION_SHEET_NAME + "'!$A$" + (startRow + 1) + ":$A$" + currentRow);
         return currentRow + 1;
     }
 
     private void addExplicitListValidation(Sheet sheet, int firstRow, int lastRow, int columnIndex, String namedRange) {
+        if (columnIndex < 0) {
+            return;
+        }
         DataValidationHelper helper = sheet.getDataValidationHelper();
         DataValidationConstraint constraint = helper.createFormulaListConstraint(namedRange);
         CellRangeAddressList addressList = new CellRangeAddressList(firstRow, lastRow, columnIndex, columnIndex);
@@ -1171,6 +1145,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private void addFormulaListValidation(Sheet sheet, int firstRow, int lastRow, int columnIndex, String formulaTemplate) {
+        if (columnIndex < 0) {
+            return;
+        }
         DataValidationHelper helper = sheet.getDataValidationHelper();
         for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
             int excelRow = rowIndex + 1;
@@ -1529,14 +1506,14 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private Long resolveOrCreateSeriesId(GoodsBatchUpsertItemDTO item, Long brandId) {
+        String seriesName = trimToNull(item.getSeriesName());
+        if (!StringUtils.hasText(seriesName) || brandId == null) {
+            return null;
+        }
         Long seriesId = findExistingSeriesId(item, brandId);
         if (seriesId != null) {
             Series current = seriesService.getByIdNotDeleted(seriesId);
             return attachSeriesBrandIfNecessary(current, brandId).getId();
-        }
-        String seriesName = trimToNull(item.getSeriesName());
-        if (!StringUtils.hasText(seriesName)) {
-            return null;
         }
         synchronized (masterDataLock("series", String.valueOf(brandId), seriesName)) {
             seriesId = findExistingSeriesId(item, brandId);
@@ -1603,14 +1580,14 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private Long resolveOrCreateMakerId(GoodsBatchUpsertItemDTO item, Long seriesId) {
+        String makerName = trimToNull(item.getMakerName());
+        if (!StringUtils.hasText(makerName) || seriesId == null) {
+            return null;
+        }
         Long makerId = findExistingMakerId(item, seriesId);
         if (makerId != null) {
             Maker current = makerService.getByIdNotDeleted(makerId);
             return attachMakerSeriesIfNecessary(current, seriesId).getId();
-        }
-        String makerName = trimToNull(item.getMakerName());
-        if (!StringUtils.hasText(makerName)) {
-            return null;
         }
         synchronized (masterDataLock("maker", String.valueOf(seriesId), makerName)) {
             makerId = findExistingMakerId(item, seriesId);
@@ -1926,6 +1903,14 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     @Override
     public void exportGoods(GoodsQueryDTO query, HttpServletResponse response) {
+        try (XSSFWorkbook workbook = buildGoodsExportWorkbook(query)) {
+            writeWorkbookResponse(workbook, response, EXPORT_GOODS_FILE_NAME);
+        } catch (IOException ex) {
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_EXPORT_FAILED, ex);
+        }
+    }
+
+    private XSSFWorkbook buildGoodsExportWorkbook(GoodsQueryDTO query) {
         GoodsQueryDTO exportQuery = new GoodsQueryDTO();
         if (query != null) {
             BeanUtils.copyProperties(query, exportQuery);
@@ -1934,18 +1919,28 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         exportQuery.setPageSize(EXPORT_MAX_ROWS);
 
         List<GoodsListVO> records = pageGoods(exportQuery).getRecords();
-        try (XSSFWorkbook workbook = buildBatchTemplateWorkbook(exportQuery)) {
-            Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
-            for (int i = 0; i < records.size(); i++) {
-                Row row = sheet.getRow(TEMPLATE_DATA_START_ROW_INDEX + i);
-                if (row == null) {
-                    row = sheet.createRow(TEMPLATE_DATA_START_ROW_INDEX + i);
-                }
-                writeTemplateDataRow(row, toTemplateItem(records.get(i)));
+        XSSFWorkbook workbook = buildBatchTemplateWorkbook(exportQuery);
+        Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
+        for (int i = 0; i < records.size(); i++) {
+            Row row = sheet.getRow(TEMPLATE_DATA_START_ROW_INDEX + i);
+            if (row == null) {
+                row = sheet.createRow(TEMPLATE_DATA_START_ROW_INDEX + i);
             }
-            writeWorkbookResponse(workbook, response, EXPORT_GOODS_FILE_NAME);
-        } catch (IOException ex) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, ERROR_EXPORT_FAILED, ex);
+            writeTemplateDataRow(row, toTemplateItem(records.get(i)));
+        }
+        return workbook;
+    }
+
+    private void clearTemplateDataRows(XSSFWorkbook workbook) {
+        Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
+        if (sheet == null) {
+            return;
+        }
+        for (int rowIndex = sheet.getLastRowNum(); rowIndex >= TEMPLATE_DATA_START_ROW_INDEX; rowIndex--) {
+            Row row = sheet.getRow(rowIndex);
+            if (row != null) {
+                sheet.removeRow(row);
+            }
         }
     }
 
@@ -1985,7 +1980,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private void writeTemplateDataRow(Row row, GoodsBatchUpsertItemDTO item) {
         int column = 0;
         writeCell(row, column++, item.getGoodsId());
-        writeCell(row, column++, item.getSkuId());
         writeCell(row, column++, item.getName());
         writeCell(row, column++, item.getEnglishName());
         writeCell(row, column++, item.getBrandName());
@@ -1995,7 +1989,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         writeCell(row, column++, item.getSkuCode());
         writeCell(row, column++, item.getSkuName());
         writeCell(row, column++, item.getPrice());
-        writeCell(row, column, item.getCurrency());
+        writeCell(row, column++, item.getCurrency());
+        writeCell(row, column, item.getDescription());
     }
 
     private void writeCell(Row row, int columnIndex, Object value) {

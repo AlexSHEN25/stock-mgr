@@ -156,6 +156,10 @@ public class ModuleDataService {
         return new JSONObject(ApiClient.post(ApiPath.STOCK_INBOUND, dto.toString()));
     }
 
+    public JSONObject batchInboundStock(JSONObject dto) throws Exception {
+        return new JSONObject(ApiClient.post(ApiPath.STOCK_INBOUND_BATCH, dto.toString()));
+    }
+
     public JSONObject outboundStock(JSONObject dto) throws Exception {
         return new JSONObject(ApiClient.post(ApiPath.STOCK_OUTBOUND, dto.toString()));
     }

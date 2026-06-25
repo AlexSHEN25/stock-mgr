@@ -1,6 +1,8 @@
 package co.handk.common.model.dto.create;
 
 import co.handk.common.enums.StatusEnum;
+import co.handk.common.jackson.BooleanIntegerDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -22,6 +24,7 @@ public class CreateGoodsDTO {
     private Long categoryId;
     private Long makerId;
     private String description;
+    @JsonDeserialize(using = BooleanIntegerDeserializer.class)
     private Integer isHot;
     private Integer sort;
     private Long skuId;

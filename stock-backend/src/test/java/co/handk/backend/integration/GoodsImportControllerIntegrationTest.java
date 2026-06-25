@@ -57,16 +57,16 @@ class GoodsImportControllerIntegrationTest {
     private static final Long ADMIN_USER_ID = 1L;
     private static final String ADMIN_TOKEN = "test-admin-token";
 
-    private static final int TEMPLATE_COL_GOODS_NAME = 2;
-    private static final int TEMPLATE_COL_ENGLISH_NAME = 3;
-    private static final int TEMPLATE_COL_BRAND_NAME = 4;
-    private static final int TEMPLATE_COL_SERIES_NAME = 5;
-    private static final int TEMPLATE_COL_CATEGORY_NAME = 6;
-    private static final int TEMPLATE_COL_MAKER_NAME = 7;
-    private static final int TEMPLATE_COL_SKU_CODE = 8;
-    private static final int TEMPLATE_COL_SKU_NAME = 9;
-    private static final int TEMPLATE_COL_PRICE = 10;
-    private static final int TEMPLATE_COL_CURRENCY = 11;
+    private static final int TEMPLATE_COL_GOODS_NAME = 1;
+    private static final int TEMPLATE_COL_ENGLISH_NAME = 2;
+    private static final int TEMPLATE_COL_BRAND_NAME = 3;
+    private static final int TEMPLATE_COL_SERIES_NAME = 4;
+    private static final int TEMPLATE_COL_CATEGORY_NAME = 5;
+    private static final int TEMPLATE_COL_MAKER_NAME = 6;
+    private static final int TEMPLATE_COL_SKU_CODE = 7;
+    private static final int TEMPLATE_COL_SKU_NAME = 8;
+    private static final int TEMPLATE_COL_PRICE = 9;
+    private static final int TEMPLATE_COL_CURRENCY = 10;
 
     @Autowired
     private MockMvc mockMvc;

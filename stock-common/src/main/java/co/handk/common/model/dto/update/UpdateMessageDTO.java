@@ -1,5 +1,7 @@
 package co.handk.common.model.dto.update;
 
+import co.handk.common.jackson.BooleanIntegerDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -14,6 +16,7 @@ public class UpdateMessageDTO {
     @NotBlank(message = "メッセージは必須です")
     private String message;
     private Integer sourceId;
+    @JsonDeserialize(using = BooleanIntegerDeserializer.class)
     private Integer isRead;
     private Integer state;
 }

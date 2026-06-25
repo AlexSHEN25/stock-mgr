@@ -4,16 +4,19 @@ import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.Brand;
 import co.handk.backend.entity.Category;
 import co.handk.backend.entity.Goods;
+import co.handk.backend.entity.GoodsSku;
 import co.handk.backend.entity.Maker;
 import co.handk.backend.entity.Series;
 import co.handk.backend.service.BrandService;
 import co.handk.backend.service.CategoryService;
 import co.handk.backend.service.GoodsService;
+import co.handk.backend.service.GoodsSkuService;
 import co.handk.backend.service.MakerService;
 import co.handk.backend.service.SeriesService;
 import co.handk.common.enums.StatusEnum;
 import co.handk.common.model.dto.query.GoodsQueryDTO;
 import co.handk.common.model.vo.GoodsBatchUpsertResultVO;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -28,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,17 +49,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class GoodsTemplateIntegrationTest {
 
     private static final Long ADMIN_USER_ID = 1L;
-    private static final int TEMPLATE_COL_GOODS_NAME = 2;
-    private static final int TEMPLATE_COL_BRAND_NAME = 4;
-    private static final int TEMPLATE_COL_SERIES_NAME = 5;
-    private static final int TEMPLATE_COL_CATEGORY_NAME = 6;
-    private static final int TEMPLATE_COL_MAKER_NAME = 7;
-    private static final int TEMPLATE_COL_SKU_CODE = 8;
-    private static final int TEMPLATE_COL_SKU_NAME = 9;
-    private static final int TEMPLATE_COL_CURRENCY = 11;
+    private static final int TEMPLATE_COL_GOODS_NAME = 1;
+    private static final int TEMPLATE_COL_BRAND_NAME = 3;
+    private static final int TEMPLATE_COL_SERIES_NAME = 4;
+    private static final int TEMPLATE_COL_CATEGORY_NAME = 5;
+    private static final int TEMPLATE_COL_MAKER_NAME = 6;
+    private static final int TEMPLATE_COL_SKU_CODE = 7;
+    private static final int TEMPLATE_COL_SKU_NAME = 8;
+    private static final int TEMPLATE_COL_CURRENCY = 10;
 
     @Autowired
     private GoodsService goodsService;
+    @Autowired
+    private GoodsSkuService goodsSkuService;
     @Autowired
     private BrandService brandService;
     @Autowired
@@ -127,9 +133,124 @@ class GoodsTemplateIntegrationTest {
             Row noteRow = workbook.getSheetAt(0).getRow(1);
             assertNotNull(headerRow);
             assertNotNull(noteRow);
+            assertTrue(response.getHeader("Content-Disposition").contains("goods-import-template.xlsx"));
             assertEquals(12, headerRow.getLastCellNum());
             assertEquals(12, noteRow.getLastCellNum());
+            assertEquals(List.of(
+                    "id", "名称", "英文名称", "ブランド", "シリーズ", "カテゴリ",
+                    "メーカー", "品番", "品名", "価格", "通貨", "説明"
+            ), collectRowValues(headerRow));
         }
+    }
+
+    @Test
+    void exportOnlyContainsNecessaryGoodsColumns() throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        goodsService.exportGoods(new GoodsQueryDTO(), response);
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
+            Row headerRow = workbook.getSheetAt(0).getRow(0);
+            assertNotNull(headerRow);
+            assertEquals(12, headerRow.getLastCellNum());
+            assertEquals(List.of(
+                    "id", "名称", "英文名称", "ブランド", "シリーズ", "カテゴリ",
+                    "メーカー", "品番", "品名", "価格", "通貨", "説明"
+            ), collectRowValues(headerRow));
+        }
+    }
+
+    @Test
+    void exportUsesSameWorkbookLayoutAsTemplate() throws Exception {
+        MockHttpServletResponse templateResponse = new MockHttpServletResponse();
+        goodsService.downloadBatchTemplate(null, templateResponse);
+        MockHttpServletResponse exportResponse = new MockHttpServletResponse();
+        goodsService.exportGoods(new GoodsQueryDTO(), exportResponse);
+
+        try (XSSFWorkbook templateWorkbook = new XSSFWorkbook(new ByteArrayInputStream(templateResponse.getContentAsByteArray()));
+             XSSFWorkbook exportWorkbook = new XSSFWorkbook(new ByteArrayInputStream(exportResponse.getContentAsByteArray()))) {
+            assertEquals(templateWorkbook.getNumberOfSheets(), exportWorkbook.getNumberOfSheets());
+            for (int sheetIndex = 0; sheetIndex < templateWorkbook.getNumberOfSheets(); sheetIndex++) {
+                assertEquals(templateWorkbook.getSheetName(sheetIndex), exportWorkbook.getSheetName(sheetIndex));
+                assertEquals(templateWorkbook.isSheetHidden(sheetIndex), exportWorkbook.isSheetHidden(sheetIndex));
+            }
+
+            Row templateHeader = templateWorkbook.getSheetAt(0).getRow(0);
+            Row exportHeader = exportWorkbook.getSheetAt(0).getRow(0);
+            Row templateNote = templateWorkbook.getSheetAt(0).getRow(1);
+            Row exportNote = exportWorkbook.getSheetAt(0).getRow(1);
+            assertNotNull(templateHeader);
+            assertNotNull(exportHeader);
+            assertNotNull(templateNote);
+            assertNotNull(exportNote);
+            assertEquals(collectRowValues(templateHeader), collectRowValues(exportHeader));
+            assertEquals(collectRowValues(templateNote), collectRowValues(exportNote));
+            assertEquals(templateWorkbook.getSheetAt(0).getDataValidations().size(),
+                    exportWorkbook.getSheetAt(0).getDataValidations().size());
+        }
+    }
+
+    @Test
+    void templateIsBlankDataVersionOfGoodsExport() throws Exception {
+        Brand brand = saveBrand("blank-template-brand");
+        Category category = saveCategory("blank-template-category");
+        Goods goods = saveGoods("blank-template-goods", brand.getId(), null, category.getId(), null);
+        saveSku(goods.getId(), "blank-template-sku");
+
+        MockHttpServletResponse templateResponse = new MockHttpServletResponse();
+        goodsService.downloadBatchTemplate(null, templateResponse);
+        MockHttpServletResponse exportResponse = new MockHttpServletResponse();
+        goodsService.exportGoods(new GoodsQueryDTO(), exportResponse);
+
+        try (XSSFWorkbook templateWorkbook = new XSSFWorkbook(new ByteArrayInputStream(templateResponse.getContentAsByteArray()));
+             XSSFWorkbook exportWorkbook = new XSSFWorkbook(new ByteArrayInputStream(exportResponse.getContentAsByteArray()))) {
+            assertEquals(1, templateWorkbook.getSheetAt(0).getLastRowNum());
+            assertTrue(exportWorkbook.getSheetAt(0).getLastRowNum() >= 2);
+            assertEquals(collectRowValues(exportWorkbook.getSheetAt(0).getRow(0)),
+                    collectRowValues(templateWorkbook.getSheetAt(0).getRow(0)));
+            assertEquals(collectRowValues(exportWorkbook.getSheetAt(0).getRow(1)),
+                    collectRowValues(templateWorkbook.getSheetAt(0).getRow(1)));
+        }
+    }
+
+    @Test
+    void importUpdatePreservesFieldsNotIncludedInTemplate() throws Exception {
+        Brand brand = saveBrand("preserve-brand");
+        Category category = saveCategory("preserve-category");
+        Goods goods = saveGoods("preserve-goods", brand.getId(), null, category.getId(), null);
+        goods.setIsHot(1);
+        goods.setSort(9);
+        goods.setStatus(StatusEnum.FOBBIDEN.getCode());
+        assertTrue(goodsService.updateById(goods));
+        GoodsSku sku = saveSku(goods.getId(), "preserve-sku");
+        sku.setCostPrice(new BigDecimal("321.00"));
+        sku.setBarcode("KEEP-BARCODE");
+        sku.setWeight(new BigDecimal("12.30"));
+        sku.setVolume(new BigDecimal("45.60"));
+        sku.setStatus(StatusEnum.FOBBIDEN.getCode());
+        assertTrue(goodsSkuService.updateById(sku));
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "goods-preserve.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                buildPreserveUpdateWorkbook(goods, brand, category, sku)
+        );
+
+        GoodsBatchUpsertResultVO result = goodsService.importGoods(file, null);
+
+        assertEquals(1, result.getSuccessCount());
+        Goods updatedGoods = goodsService.getById(goods.getId());
+        GoodsSku updatedSku = goodsSkuService.getOne(new QueryWrapper<GoodsSku>()
+                .eq("id", sku.getId())
+                .last("LIMIT 1"));
+        assertEquals(1, updatedGoods.getIsHot());
+        assertEquals(9, updatedGoods.getSort());
+        assertEquals(StatusEnum.FOBBIDEN.getCode(), updatedGoods.getStatus());
+        assertEquals(new BigDecimal("321.00"), updatedSku.getCostPrice());
+        assertEquals("KEEP-BARCODE", updatedSku.getBarcode());
+        assertEquals(new BigDecimal("12.30"), updatedSku.getWeight());
+        assertEquals(new BigDecimal("45.60"), updatedSku.getVolume());
+        assertEquals(StatusEnum.FOBBIDEN.getCode(), updatedSku.getStatus());
     }
 
     @Test
@@ -232,6 +353,18 @@ class GoodsTemplateIntegrationTest {
         return goods;
     }
 
+    private GoodsSku saveSku(Long goodsId, String skuCode) {
+        GoodsSku sku = new GoodsSku();
+        sku.setGoodsId(goodsId);
+        sku.setSkuCode(skuCode);
+        sku.setSkuName(skuCode);
+        sku.setPrice(new BigDecimal("100.00"));
+        sku.setCurrency("JPY");
+        sku.setStatus(StatusEnum.NOMAL.getCode());
+        assertTrue(goodsSkuService.save(sku));
+        return sku;
+    }
+
     private List<String> collectSheetValues(org.apache.poi.ss.usermodel.Sheet sheet) {
         List<String> values = new ArrayList<>();
         for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
@@ -275,6 +408,25 @@ class GoodsTemplateIntegrationTest {
         }
     }
 
+    private byte[] buildPreserveUpdateWorkbook(Goods goods, Brand brand, Category category, GoodsSku sku) throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        goodsService.downloadBatchTemplate(null, response);
+        try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()));
+             ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            Row row = workbook.getSheetAt(0).createRow(2);
+            row.createCell(0).setCellValue(goods.getId());
+            row.createCell(TEMPLATE_COL_GOODS_NAME).setCellValue("preserve-goods-updated");
+            row.createCell(TEMPLATE_COL_BRAND_NAME).setCellValue(brand.getName());
+            row.createCell(TEMPLATE_COL_CATEGORY_NAME).setCellValue(category.getName());
+            row.createCell(TEMPLATE_COL_SKU_CODE).setCellValue(sku.getSkuCode());
+            row.createCell(TEMPLATE_COL_SKU_NAME).setCellValue("preserve-sku-updated");
+            row.createCell(9).setCellValue("200.00");
+            row.createCell(TEMPLATE_COL_CURRENCY).setCellValue("JPY");
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        }
+    }
+
     private Map<String, Integer> resolveHeaderIndexes(Row headerRow) {
         Map<String, Integer> indexes = new HashMap<>();
         for (int cellIndex = headerRow.getFirstCellNum(); cellIndex < headerRow.getLastCellNum(); cellIndex++) {
@@ -284,5 +436,13 @@ class GoodsTemplateIntegrationTest {
             indexes.put(headerRow.getCell(cellIndex).getStringCellValue(), cellIndex);
         }
         return indexes;
+    }
+
+    private List<String> collectRowValues(Row row) {
+        List<String> values = new ArrayList<>();
+        for (int cellIndex = row.getFirstCellNum(); cellIndex < row.getLastCellNum(); cellIndex++) {
+            values.add(row.getCell(cellIndex).getStringCellValue());
+        }
+        return values;
     }
 }

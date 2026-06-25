@@ -363,7 +363,6 @@ public final class ModuleMeta {
                 new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())
         ));
         DEPENDENCY_RULES.put(MODULE_STOCK, List.of(
-                new DependencyRule("warehouseId", "goodsId", GOODS, "warehouseId", List.of("skuId")),
                 new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())
         ));
         DEPENDENCY_RULES.put(REQUEST_ITEM, List.of(new DependencyRule("goodsId", "skuId", GOODS_SKU, "goodsId", List.of())));
@@ -391,7 +390,7 @@ public final class ModuleMeta {
         ));
 
         HIDDEN_LIST_FIELDS.put(GOODS, List.of(
-                "sort", "isHot", "skuStatus", "skuStatusDesc", "imageSort"
+                "sort", "isHot", "skuStatus", "skuStatusDesc", "imageSort", "currentQty", "lockQty"
         ));
         HIDDEN_LIST_FIELDS.put(GOODS_SKU, List.of("costPrice", "updatePrice", "priceUpdateTime", "barcode", "weight", "volume"));
         HIDDEN_LIST_FIELDS.put(MODULE_GOODS_IMAGE, List.of("imageUrl"));

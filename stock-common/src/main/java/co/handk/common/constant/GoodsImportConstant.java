@@ -4,7 +4,7 @@ public interface GoodsImportConstant {
 
     String FILE_PART_NAME = "file";
 
-    String TEMPLATE_FILE_NAME = "goods_batch_template.xlsx";
+    String TEMPLATE_FILE_NAME = "goods-import-template.xlsx";
 
     String EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 

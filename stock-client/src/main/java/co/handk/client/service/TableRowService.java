@@ -65,6 +65,10 @@ public class TableRowService {
             if (value == null) {
                 continue;
             }
+            value = normalizePayloadValue(module, payloadKey, value);
+            if (value == null) {
+                continue;
+            }
             if (value instanceof String textValue) {
                 String text = textValue.trim();
                 if (text.isEmpty()) {
@@ -90,6 +94,27 @@ public class TableRowService {
             dto.put(payloadKey, value);
         }
         return ModuleMeta.applyFormValueRules(module, dto);
+    }
+
+    private Object normalizePayloadValue(String module, String payloadKey, Object value) {
+        ModuleMeta.FieldType fieldType = ModuleMeta.fieldType(module, payloadKey);
+        if (value instanceof Boolean booleanValue) {
+            if (fieldType == ModuleMeta.FieldType.SELECT || fieldType == ModuleMeta.FieldType.NUMBER) {
+                return booleanValue ? 1 : 0;
+            }
+            return null;
+        }
+        if (fieldType == ModuleMeta.FieldType.SELECT) {
+            String text = String.valueOf(value).trim();
+            if ("true".equalsIgnoreCase(text)) {
+                return 1;
+            }
+            if ("false".equalsIgnoreCase(text)) {
+                return 0;
+            }
+            return normalizeEnumValue(text);
+        }
+        return value;
     }
 
     public String formatCellValue(String key, Object value) {
@@ -137,6 +162,12 @@ public class TableRowService {
             return "1";
         }
         if ("DISABLE".equalsIgnoreCase(value)) {
+            return "0";
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return "1";
+        }
+        if ("false".equalsIgnoreCase(value)) {
             return "0";
         }
         return value;
