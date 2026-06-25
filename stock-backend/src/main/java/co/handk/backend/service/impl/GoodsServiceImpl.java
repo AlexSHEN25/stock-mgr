@@ -455,8 +455,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     @Override
     public void downloadBatchTemplate(GoodsQueryDTO query, HttpServletResponse response) {
-        try (XSSFWorkbook workbook = buildGoodsExportWorkbook(query)) {
-            clearTemplateDataRows(workbook);
+        try (XSSFWorkbook workbook = buildBatchTemplateWorkbook(query)) {
             writeWorkbookResponse(workbook, response, GoodsImportConstant.TEMPLATE_FILE_NAME);
         } catch (IOException ex) {
             throw new BusinessException(
@@ -1931,19 +1930,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return workbook;
     }
 
-    private void clearTemplateDataRows(XSSFWorkbook workbook) {
-        Sheet sheet = workbook.getSheet(TEMPLATE_SHEET_NAME);
-        if (sheet == null) {
-            return;
-        }
-        for (int rowIndex = sheet.getLastRowNum(); rowIndex >= TEMPLATE_DATA_START_ROW_INDEX; rowIndex--) {
-            Row row = sheet.getRow(rowIndex);
-            if (row != null) {
-                sheet.removeRow(row);
-            }
-        }
-    }
-
     private GoodsBatchUpsertItemDTO toTemplateItem(GoodsListVO record) {
         GoodsBatchUpsertItemDTO item = new GoodsBatchUpsertItemDTO();
         item.setGoodsId(record.getId());
@@ -2085,8 +2071,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             throws IOException {
         response.setContentType(GoodsImportConstant.EXCEL_CONTENT_TYPE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
         response.setHeader("Content-Disposition",
-                "attachment; filename*=UTF-8''" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
+                "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encoded);
         workbook.write(response.getOutputStream());
         response.flushBuffer();
     }

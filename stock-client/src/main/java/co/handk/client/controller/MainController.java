@@ -293,6 +293,7 @@ public class MainController {
             if (target == null) {
                 return;
             }
+            target = forceFileExtension(target, ".xlsx");
             try (FileOutputStream fos = new FileOutputStream(target)) {
                 fos.write(bytes);
             }
@@ -2175,6 +2176,25 @@ public class MainController {
                     .append(System.lineSeparator());
         }
         return builder.toString();
+    }
+
+    private File forceFileExtension(File file, String extension) {
+        if (file == null || extension == null || extension.isBlank()) {
+            return file;
+        }
+        String normalizedExtension = extension.startsWith(".") ? extension : "." + extension;
+        String path = file.getAbsolutePath();
+        String lowerPath = path.toLowerCase();
+        String lowerExtension = normalizedExtension.toLowerCase();
+        if (lowerPath.endsWith(lowerExtension)) {
+            return file;
+        }
+        int separatorIndex = Math.max(path.lastIndexOf(File.separatorChar), path.lastIndexOf('/'));
+        int dotIndex = path.lastIndexOf('.');
+        if (dotIndex > separatorIndex) {
+            path = path.substring(0, dotIndex);
+        }
+        return new File(path + normalizedExtension);
     }
 
     private static final class Option implements DependencyResolver.OptionValue {
