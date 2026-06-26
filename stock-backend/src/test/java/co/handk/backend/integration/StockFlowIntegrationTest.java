@@ -33,6 +33,8 @@ import co.handk.backend.service.StockTypeService;
 import co.handk.backend.service.WarehouseService;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.StockBizConstant;
+import co.handk.common.model.dto.create.StockBatchOperateDTO;
+import co.handk.common.model.dto.create.StockBatchOperateItemDTO;
 import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.create.StockGroupAllocationItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
@@ -376,6 +378,45 @@ class StockFlowIntegrationTest {
         assertEquals(0, countGroupStockRows(stockAfter.getId(), fixture.groupDept().getId()));
     }
 
+    @Test
+    void batchInboundMultipleItemsUsesItemScopedIdempotencyKeys() {
+        TestFixture fixture = createFixture();
+        StockBatchOperateDTO batch = new StockBatchOperateDTO();
+        batch.setSourceType(StockBizConstant.INBOUND_SCENE_SELF);
+        batch.setRemark("batch-idempotency");
+
+        StockBatchOperateItemDTO firstItem = baseBatchInboundItem(fixture, 2);
+        StockBatchOperateItemDTO secondItem = baseBatchInboundItem(fixture, 3);
+        batch.setItems(List.of(firstItem, secondItem));
+
+        Long firstOrderId = stockService.batchInbound(batch);
+        assertNotNull(firstOrderId);
+        assertEquals(2, countStockOrders(fixture));
+        assertEquals(5, findStock(fixture).getCurrentQty());
+
+        Long repeatedOrderId = stockService.batchInbound(batch);
+        assertEquals(firstOrderId, repeatedOrderId);
+        assertEquals(2, countStockOrders(fixture));
+        assertEquals(5, findStock(fixture).getCurrentQty());
+    }
+
+    @Test
+    void batchInboundHeaderIdempotencyKeyEscapesSqlLikeWildcards() {
+        TestFixture fixture = createFixture();
+        StockBatchOperateDTO batch = new StockBatchOperateDTO();
+        batch.setSourceType(StockBizConstant.INBOUND_SCENE_SELF);
+        batch.setItems(List.of(baseBatchInboundItem(fixture, 2)));
+
+        bindRequest("idem%wild_key-" + UUID.randomUUID());
+        Long firstOrderId = stockService.batchInbound(batch);
+        assertNotNull(firstOrderId);
+
+        Long repeatedOrderId = stockService.batchInbound(batch);
+        assertEquals(firstOrderId, repeatedOrderId);
+        assertEquals(1, countStockOrders(fixture));
+        assertEquals(2, findStock(fixture).getCurrentQty());
+    }
+
     private void seedInboundStock(TestFixture fixture, int quantity) {
         StockOperateDTO inbound = baseOperateDTO(fixture, quantity);
         inbound.setSourceType(StockBizConstant.INBOUND_SCENE_SELF);
@@ -410,6 +451,16 @@ class StockFlowIntegrationTest {
         dto.setStockTypeId(fixture.stockType().getId());
         dto.setQuantity(quantity);
         return dto;
+    }
+
+    private StockBatchOperateItemDTO baseBatchInboundItem(TestFixture fixture, int quantity) {
+        StockBatchOperateItemDTO item = new StockBatchOperateItemDTO();
+        item.setGoodsId(fixture.goods().getId().intValue());
+        item.setSkuId(fixture.sku().getId());
+        item.setWarehouseId(fixture.warehouse().getId().intValue());
+        item.setStockTypeId(fixture.stockType().getId());
+        item.setQuantity(quantity);
+        return item;
     }
 
     private TestFixture createFixture() {

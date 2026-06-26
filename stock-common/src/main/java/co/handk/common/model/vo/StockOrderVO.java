@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class StockOrderVO extends BaseVO {
     private String orderNo;
     private Integer orderType;
+    private String stockCategory;
     private Long warehouseId;
     private Integer sourceType;
     private Long sourceId;

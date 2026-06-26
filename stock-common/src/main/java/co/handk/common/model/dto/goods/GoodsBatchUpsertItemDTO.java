@@ -15,12 +15,15 @@ public class GoodsBatchUpsertItemDTO {
     private String englishName;
     private Long brandId;
     private String brandName;
+    private String brandEnglishName;
     private Long seriesId;
     private String seriesName;
+    private String seriesEnglishName;
     private Long categoryId;
     private String categoryName;
     private Long makerId;
     private String makerName;
+    private String makerEnglishName;
     private String description;
     private String isHot;
     private Integer sort;

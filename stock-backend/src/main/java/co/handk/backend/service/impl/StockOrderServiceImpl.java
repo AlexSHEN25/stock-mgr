@@ -6,6 +6,7 @@ import co.handk.backend.entity.Message;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockType;
 import co.handk.backend.entity.User;
+import co.handk.backend.entity.Warehouse;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.StockOrderMapper;
 import co.handk.backend.service.MessageService;
@@ -13,10 +14,12 @@ import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockOrderService;
 import co.handk.backend.service.StockTypeService;
 import co.handk.backend.service.UserService;
+import co.handk.backend.service.WarehouseService;
 import co.handk.common.constant.MessageBizConstant;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
 import co.handk.common.model.dto.create.CreateStockOrderDTO;
+import co.handk.common.model.dto.query.StockOrderQueryDTO;
 import co.handk.common.model.dto.update.UpdateStockOrderDTO;
 import co.handk.common.model.vo.StockOrderVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -29,6 +32,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
@@ -43,7 +47,11 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
     private final MessageService messageService;
     private final UserService userService;
     private final StockTypeService stockTypeService;
+    private final WarehouseService warehouseService;
     private static final DateTimeFormatter ORDER_NO_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final String SELF_WAREHOUSE_CODE = "SELF";
+    private static final String SELF_STOCK_CATEGORY = "自社";
+    private static final String HANDLE_STOCK_CATEGORY = "柄";
     private static final String DEFAULT_STOCK_TYPE_NAME = "通常品";
 
     @Override
@@ -53,6 +61,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
         }
         StockOrderVO vo = new StockOrderVO();
         BeanUtils.copyProperties(entity, vo);
+        vo.setStockCategory(resolveStockCategory(entity));
         return vo;
     }
 
@@ -73,11 +82,14 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
 
     @Override
     protected <Q> QueryWrapper<StockOrder> buildWrapper(Q dto) {
-        QueryWrapper<StockOrder> wrapper = super.buildWrapper(dto);
-        if (dto instanceof co.handk.common.model.dto.query.StockOrderQueryDTO query) {
+        QueryWrapper<StockOrder> wrapper = dto instanceof StockOrderQueryDTO query
+                ? super.buildWrapper(copyQueryWithoutStockCategory(query))
+                : super.buildWrapper(dto);
+        if (dto instanceof StockOrderQueryDTO query) {
             if (query.getOutboundMode() != null && !query.getOutboundMode().isBlank()) {
                 wrapper.eq("outbound_mode", query.getOutboundMode().trim());
             }
+            applyStockCategoryFilter(wrapper, query.getStockCategory());
         }
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
@@ -156,6 +168,109 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             rows += super.deleteByIdLogic(id);
         }
         return rows;
+    }
+
+    private StockOrderQueryDTO copyQueryWithoutStockCategory(StockOrderQueryDTO source) {
+        StockOrderQueryDTO copy = new StockOrderQueryDTO();
+        BeanUtils.copyProperties(source, copy);
+        copy.setStockCategory(null);
+        return copy;
+    }
+
+    private void applyStockCategoryFilter(QueryWrapper<StockOrder> wrapper, String stockCategory) {
+        String normalized = normalizeCategory(stockCategory);
+        if (normalized == null) {
+            return;
+        }
+        if (SELF_STOCK_CATEGORY.equals(normalized) || SELF_WAREHOUSE_CODE.equalsIgnoreCase(normalized)) {
+            Long selfWarehouseId = findWarehouseIdByCode(SELF_WAREHOUSE_CODE);
+            if (selfWarehouseId == null) {
+                wrapper.eq("warehouse_id", -1L);
+            } else {
+                wrapper.eq("warehouse_id", selfWarehouseId);
+            }
+            return;
+        }
+        if (HANDLE_STOCK_CATEGORY.equals(normalized) || "HANDLE".equalsIgnoreCase(normalized)) {
+            List<Long> handleWarehouseIds = findHandleWarehouseIds();
+            if (handleWarehouseIds.isEmpty()) {
+                wrapper.eq("warehouse_id", -1L);
+            } else {
+                wrapper.in("warehouse_id", handleWarehouseIds);
+            }
+            return;
+        }
+        wrapper.apply("UPPER(TRIM(COALESCE(dept_code, ''))) = {0}", normalized.toUpperCase());
+    }
+
+    private String resolveStockCategory(StockOrder entity) {
+        String deptCode = normalizeCategory(entity.getDeptCode());
+        if (deptCode != null) {
+            return deptCode;
+        }
+        Warehouse warehouse = resolveWarehouse(entity.getWarehouseId());
+        if (warehouse == null) {
+            return null;
+        }
+        String warehouseCode = warehouse.getCode() == null ? "" : warehouse.getCode().trim();
+        if (SELF_WAREHOUSE_CODE.equalsIgnoreCase(warehouseCode)) {
+            return SELF_STOCK_CATEGORY;
+        }
+        if (isHandleWarehouse(warehouse)) {
+            return HANDLE_STOCK_CATEGORY;
+        }
+        if (warehouse.getName() != null && !warehouse.getName().isBlank()) {
+            return warehouse.getName().trim();
+        }
+        return warehouseCode.isBlank() ? null : warehouseCode;
+    }
+
+    private Warehouse resolveWarehouse(Long warehouseId) {
+        if (warehouseId == null) {
+            return null;
+        }
+        return warehouseService.getByIdNotDeleted(warehouseId);
+    }
+
+    private Long findWarehouseIdByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        Warehouse warehouse = warehouseService.getOne(new QueryWrapper<Warehouse>()
+                .eq("code", code.trim())
+                .last("LIMIT 1"));
+        return warehouse == null ? null : warehouse.getId();
+    }
+
+    private List<Long> findHandleWarehouseIds() {
+        List<Long> ids = new ArrayList<>();
+        List<Warehouse> warehouses = warehouseService.list(new QueryWrapper<Warehouse>());
+        for (Warehouse warehouse : warehouses) {
+            if (warehouse != null && warehouse.getId() != null && isHandleWarehouse(warehouse)) {
+                ids.add(warehouse.getId());
+            }
+        }
+        return ids;
+    }
+
+    private boolean isHandleWarehouse(Warehouse warehouse) {
+        if (warehouse == null) {
+            return false;
+        }
+        String code = warehouse.getCode() == null ? "" : warehouse.getCode().trim().toUpperCase();
+        String name = warehouse.getName() == null ? "" : warehouse.getName().trim();
+        return code.contains("HANDLE")
+                || code.contains("HAND")
+                || name.contains("柄")
+                || name.toUpperCase().contains("HANDLE");
+    }
+
+    private String normalizeCategory(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private void validateRequiredDateByOrderType(Object dto) {
@@ -309,7 +424,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                 : sourceType.equals(StockBizConstant.SOURCE_TYPE_REQUEST)
                 || sourceType.equals(StockBizConstant.SOURCE_TYPE_MANUAL);
         if (!allowed) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの元種別を設定できません");
+            throw new BusinessException(MessageKeyConstant.ERROR_NO_PERMISSION, "現在のユーザーはこの元種別を設定できません");
         }
     }
 
@@ -322,7 +437,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
                 : state.equals(StockBizConstant.ORDER_STATE_DRAFT)
                 || state.equals(StockBizConstant.ORDER_STATE_APPROVING);
         if (!allowed) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの在庫伝票状態を設定できません");
+            throw new BusinessException(MessageKeyConstant.ERROR_NO_PERMISSION, "現在のユーザーはこの在庫伝票状態を設定できません");
         }
     }
 
@@ -363,7 +478,7 @@ public class StockOrderServiceImpl extends BaseServiceImpl<StockOrderMapper, Sto
             return;
         }
         if (!userId.equals(order.getRequesterId()) && !userId.equals(order.getOperatorId())) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "現在のユーザーはこの在庫注文を操作できません");
+            throw new BusinessException(MessageKeyConstant.ERROR_NO_PERMISSION, "現在のユーザーはこの在庫注文を操作できません");
         }
     }
 

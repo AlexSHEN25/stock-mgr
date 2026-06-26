@@ -25,12 +25,15 @@ public class GoodsListVO {
     private String skuStatusDesc;
     private Long brandId;
     private String brandName;
+    private String brandEnglishName;
     private Long seriesId;
     private String seriesName;
+    private String seriesEnglishName;
     private Long categoryId;
     private String categoryName;
     private Long makerId;
     private String makerName;
+    private String makerEnglishName;
     private String description;
     private Integer isHot;
     private Integer sort;

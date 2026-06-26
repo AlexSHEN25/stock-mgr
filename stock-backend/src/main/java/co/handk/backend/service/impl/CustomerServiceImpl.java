@@ -75,8 +75,8 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
     private static final String ACTION_CREATED = "CREATED";
     private static final String ACTION_UPDATED = "UPDATED";
     private static final String ACTION_FAILED = "FAILED";
-    private static final String ERROR_EXPORT_FAILED = "customer excel export failed";
-    private static final String ERROR_IMPORT_READ_FAILED = "customer import file read failed";
+    private static final String ERROR_EXPORT_FAILED = "顧客Excelの出力に失敗しました";
+    private static final String ERROR_IMPORT_READ_FAILED = "顧客取込ファイルの読み取りに失敗しました";
     private static final List<String> IMPORT_HEADERS = List.of(
             "ID",
             "顧客コード",
@@ -240,7 +240,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             return;
         }
         if (!userId.equals(customer.getOwnerUserId())) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "customer ownership mismatch");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "顧客の担当情報が一致しません");
         }
     }
 
@@ -369,11 +369,11 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             sheet = workbook.getNumberOfSheets() == 0 ? null : workbook.getSheetAt(0);
         }
         if (sheet == null) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "customer import sheet not found");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "顧客取込シートが見つかりません");
         }
         Row headerRow = sheet.getRow(HEADER_ROW_INDEX);
         if (headerRow == null) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "customer import header row missing");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "顧客取込テンプレートのヘッダー行が見つかりません");
         }
         DataFormatter formatter = new DataFormatter();
         Map<String, Integer> headerIndexes = resolveHeaderIndexes(headerRow, formatter);
@@ -425,7 +425,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             dto.setRemark(trimToNull(item.getRemark()));
             dto.setStatus(parseStatus(item.getStatus()));
             if (!saveByDto(dto)) {
-                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to create customer");
+                throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "顧客の登録に失敗しました");
             }
             Customer created = trimToNull(item.getCustomerCode()) == null
                     ? null
@@ -436,7 +436,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             rowResult.setAction(ACTION_CREATED);
             rowResult.setCustomerId(created == null ? null : created.getId());
             rowResult.setCustomerCode(item.getCustomerCode());
-            rowResult.setMessage("created");
+            rowResult.setMessage("登録しました");
             return rowResult;
         }
         UpdateCustomerDTO dto = new UpdateCustomerDTO();
@@ -456,7 +456,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
         dto.setRemark(firstNonBlank(item.getRemark(), existing.getRemark()));
         dto.setStatus(parseStatus(item.getStatus(), existing.getStatus()));
         if (!updateByDto(dto)) {
-            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "failed to update customer");
+            throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME, "顧客の更新に失敗しました");
         }
         CustomerImportRowResultVO rowResult = new CustomerImportRowResultVO();
         rowResult.setRowNo(item.getRowNo());
@@ -464,7 +464,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
         rowResult.setAction(ACTION_UPDATED);
         rowResult.setCustomerId(existing.getId());
         rowResult.setCustomerCode(dto.getCustomerCode());
-        rowResult.setMessage("updated");
+        rowResult.setMessage("更新しました");
         return rowResult;
     }
 
@@ -479,7 +479,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
                 .last("LIMIT 1"));
         if (level == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "customer level not found: " + name));
+                    rowMessage(item, "顧客ランクが見つかりません: " + name));
         }
         return level.getId() == null ? null : level.getId().intValue();
     }
@@ -495,7 +495,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
                 .last("LIMIT 1"));
         if (user == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "owner user not found: " + username));
+                    rowMessage(item, "担当ユーザーが見つかりません: " + username));
         }
         return user.getId();
     }
@@ -511,7 +511,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
                 .last("LIMIT 1"));
         if (dept == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "owner dept not found: " + name));
+                    rowMessage(item, "担当部署が見つかりません: " + name));
         }
         return dept.getId();
     }
@@ -523,7 +523,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             Integer existingRow = idRows.putIfAbsent(item.getId(), item.getRowNo());
             if (existingRow != null) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                        rowMessage(item, "duplicate id in batch, first row: " + existingRow));
+                        rowMessage(item, "取込ファイル内でIDが重複しています。最初の行: " + existingRow));
             }
         }
         String code = trimToNull(item.getCustomerCode());
@@ -531,7 +531,7 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
             Integer existingRow = codeRows.putIfAbsent(code, item.getRowNo());
             if (existingRow != null) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                        rowMessage(item, "duplicate customerCode in batch, first row: " + existingRow));
+                        rowMessage(item, "取込ファイル内で顧客コードが重複しています。最初の行: " + existingRow));
             }
         }
     }
@@ -539,11 +539,11 @@ public class CustomerServiceImpl extends BaseServiceImpl<CustomerMapper, Custome
     private void validateImportRow(CustomerImportItemDTO item) {
         if (item.getId() == null && trimToNull(item.getCustomerCode()) == null && trimToNull(item.getName()) == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "name or customerCode is required"));
+                    rowMessage(item, "顧客名または顧客コードを入力してください"));
         }
         if (item.getId() == null && trimToNull(item.getName()) == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "name is required for create"));
+                    rowMessage(item, "新規登録時は顧客名を入力してください"));
         }
     }
 

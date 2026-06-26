@@ -51,6 +51,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public Result<?> handleBusinessException(BusinessException e) {
         log.warn("Business request rejected: type={}, message={}", e.getClass().getName(), safeMessage(e));
+        if (MessageKeyConstant.ERROR_NO_PERMISSION.equals(e.getMessageKey())) {
+            return Result.fail(ResultCode.FORBIDDEN, e.getMessageKey(), i18n(e.getMessageKey()));
+        }
         return Result.fail(ResultCode.ERROR, e.getMessageKey(), safeMessage(e));
     }
 

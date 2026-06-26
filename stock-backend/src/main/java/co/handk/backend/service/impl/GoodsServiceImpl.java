@@ -116,8 +116,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final long EXPORT_MAX_ROWS = 10_000L;
     private static final String EXPORT_GOODS_FILE_NAME = "goods_export.xlsx";
     private static final String TEMPLATE_VALIDATION_SHEET_NAME = "_goods_validation";
-    private static final String IMPORT_RESULT_ACTION_HEADER = "Import Action";
-    private static final String IMPORT_RESULT_MESSAGE_HEADER = "Import Message";
+    private static final String IMPORT_RESULT_ACTION_HEADER = "取込結果";
+    private static final String IMPORT_RESULT_MESSAGE_HEADER = "メッセージ";
     private static final String EXPORT_GOODS_SHEET_NAME = "商品一覧";
     private static final String ERROR_EXPORT_FAILED = "Excel出力に失敗しました";
     private static final String ROW_PREFIX = "行 ";
@@ -134,19 +134,19 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String HEADER_GOODS_ID = "商品ID";
     private static final String HEADER_SKU_ID = "SKU ID";
-    private static final String HEADER_GOODS_NAME = "商品名称";
+    private static final String HEADER_GOODS_NAME = "商品名";
     private static final String HEADER_ENGLISH_NAME = "英文名称";
     private static final String HEADER_BRAND_ID = "品牌ID";
     private static final String HEADER_BRAND_NAME = "品牌名称";
-    private static final String HEADER_SERIES_ID = "系列ID";
-    private static final String HEADER_SERIES_NAME = "系列名称";
-    private static final String HEADER_CATEGORY_ID = "分类ID";
-    private static final String HEADER_CATEGORY_NAME = "分类名称";
+    private static final String HEADER_SERIES_ID = "シリーズID";
+    private static final String HEADER_SERIES_NAME = "シリーズ名";
+    private static final String HEADER_CATEGORY_ID = "カテゴリID";
+    private static final String HEADER_CATEGORY_NAME = "カテゴリ名";
     private static final String HEADER_MAKER_ID = "厂家ID";
     private static final String HEADER_MAKER_NAME = "厂家名称";
     private static final String HEADER_DESCRIPTION = "说明";
-    private static final String HEADER_SKU_CODE = "SKU编码";
-    private static final String HEADER_SKU_NAME = "SKU名称";
+    private static final String HEADER_SKU_CODE = "SKUコード";
+    private static final String HEADER_SKU_NAME = "SKU名";
     private static final String HEADER_PRICE = "价格";
     private static final String HEADER_CURRENCY = "货币";
     private static final String HEADER_COST_PRICE = "成本价";
@@ -155,9 +155,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private static final String HEADER_BARCODE = "条码";
     private static final String HEADER_WEIGHT = "重量";
     private static final String HEADER_VOLUME = "体积";
-    private static final String HEADER_SKU_STATUS = "SKU状态";
-    private static final String HEADER_GOODS_STATUS = "商品状态";
+    private static final String HEADER_SKU_STATUS = "SKU状態";
+    private static final String HEADER_GOODS_STATUS = "商品状態";
     private static final String TEMPLATE_HEADER_GOODS_ID = "id";
+    private static final String TEMPLATE_HEADER_BRAND_ENGLISH_NAME = "ブランド英語名";
+    private static final String TEMPLATE_HEADER_SERIES_ENGLISH_NAME = "シリーズ英語名";
+    private static final String TEMPLATE_HEADER_MAKER_ENGLISH_NAME = "メーカー英語名";
     private static final String TEMPLATE_HEADER_GOODS_NAME = "名称";
     private static final String TEMPLATE_HEADER_ENGLISH_NAME = "英文名称";
     private static final String TEMPLATE_HEADER_BRAND_NAME = "ブランド";
@@ -174,9 +177,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             TEMPLATE_HEADER_GOODS_NAME,
             TEMPLATE_HEADER_ENGLISH_NAME,
             TEMPLATE_HEADER_BRAND_NAME,
+            TEMPLATE_HEADER_BRAND_ENGLISH_NAME,
             TEMPLATE_HEADER_SERIES_NAME,
+            TEMPLATE_HEADER_SERIES_ENGLISH_NAME,
             TEMPLATE_HEADER_CATEGORY_NAME,
             TEMPLATE_HEADER_MAKER_NAME,
+            TEMPLATE_HEADER_MAKER_ENGLISH_NAME,
             TEMPLATE_HEADER_SKU_CODE,
             TEMPLATE_HEADER_SKU_NAME,
             TEMPLATE_HEADER_PRICE,
@@ -297,7 +303,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         validatePriceUpdateFields(dto.getUpdatePrice(), dto.getPriceUpdateTime());
         Goods existed = this.getByIdNotDeleted(dto.getId());
         if (existed == null) {
-            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品不存在");
+            throw new BusinessException(co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "商品が存在しません");
         }
         Goods goods = new Goods();
         BeanUtils.copyProperties(dto, goods);
@@ -467,7 +473,18 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     }
 
     private void syncCascadingRelations(Long brandId, Long seriesId, Long makerId) {
-        // The canonical hierarchy now lives on series.brand_id and maker.series_id.
+        Series series = seriesId == null ? null : seriesService.getByIdNotDeleted(seriesId);
+        attachSeriesBrandIfNecessary(series, brandId);
+        Maker maker = makerId == null ? null : makerService.getByIdNotDeleted(makerId);
+        attachMakerSeriesIfNecessary(maker, seriesId);
+        if (brandId != null && seriesId != null && makerId != null) {
+            brandSeriesMakerRelationMapper.upsertRelation(
+                    brandId,
+                    seriesId,
+                    makerId,
+                    co.handk.backend.annotation.context.UserContext.getUserIdOrDefault()
+            );
+        }
     }
 
     private void cleanupCascadingRelations(Long brandId, Long seriesId, Long makerId) {
@@ -625,21 +642,21 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             Integer existingRow = skuCodeRows.putIfAbsent(skuCode, item.getRowNo());
             if (existingRow != null) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                        rowMessage(item, "duplicate skuCode in batch, first row: " + existingRow));
+                        rowMessage(item, "取込ファイル内で品番が重複しています。最初の行: " + existingRow));
             }
         }
         if (item.getGoodsId() != null) {
             Integer existingRow = goodsIdRows.putIfAbsent(item.getGoodsId(), item.getRowNo());
             if (existingRow != null) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                        rowMessage(item, "duplicate goodsId in batch, first row: " + existingRow));
+                        rowMessage(item, "取込ファイル内で商品IDが重複しています。最初の行: " + existingRow));
             }
         }
         if (item.getSkuId() != null) {
             Integer existingRow = skuIdRows.putIfAbsent(item.getSkuId(), item.getRowNo());
             if (existingRow != null) {
                 throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                        rowMessage(item, "duplicate skuId in batch, first row: " + existingRow));
+                        rowMessage(item, "取込ファイル内でSKU IDが重複しています。最初の行: " + existingRow));
             }
         }
     }
@@ -654,7 +671,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         String name = firstNonBlank(item.getName(), item.getSkuName(), skuCode);
         if (!StringUtils.hasText(name)) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "商品名称またはSKU编码を入力してください"));
+                    rowMessage(item, "商品名または品番を入力してください"));
         }
         if (brandId == null) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
@@ -666,7 +683,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         if (!StringUtils.hasText(skuCode)) {
             throw new BusinessException(MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, "SKU编码を入力してください"));
+                    rowMessage(item, "品番を入力してください"));
         }
         dto.setName(name);
         dto.setEnglishName(firstNonBlank(item.getEnglishName(), name));
@@ -812,9 +829,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             item.setName(readString(row, headerIndexes.get(TEMPLATE_HEADER_GOODS_NAME), formatter));
             item.setEnglishName(readString(row, headerIndexes.get(TEMPLATE_HEADER_ENGLISH_NAME), formatter));
             item.setBrandName(readString(row, headerIndexes.get(TEMPLATE_HEADER_BRAND_NAME), formatter));
+            item.setBrandEnglishName(readString(row, headerIndexes.get(TEMPLATE_HEADER_BRAND_ENGLISH_NAME), formatter));
             item.setSeriesName(readString(row, headerIndexes.get(TEMPLATE_HEADER_SERIES_NAME), formatter));
+            item.setSeriesEnglishName(readString(row, headerIndexes.get(TEMPLATE_HEADER_SERIES_ENGLISH_NAME), formatter));
             item.setCategoryName(readString(row, headerIndexes.get(TEMPLATE_HEADER_CATEGORY_NAME), formatter));
             item.setMakerName(readString(row, headerIndexes.get(TEMPLATE_HEADER_MAKER_NAME), formatter));
+            item.setMakerEnglishName(readString(row, headerIndexes.get(TEMPLATE_HEADER_MAKER_ENGLISH_NAME), formatter));
             item.setDescription(readString(row, headerIndexes.get(TEMPLATE_HEADER_DESCRIPTION), formatter));
             item.setSkuCode(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_CODE), formatter));
             item.setSkuName(readString(row, headerIndexes.get(TEMPLATE_HEADER_SKU_NAME), formatter));
@@ -899,9 +919,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         java.util.Arrays.fill(japaneseNotes, "任意");
         if (japaneseNotes.length > 0) japaneseNotes[0] = "更新時のみ指定。新規登録時は空欄可";
         if (japaneseNotes.length > 1) japaneseNotes[1] = "必須";
-        if (japaneseNotes.length > 3) japaneseNotes[3] = "ブランド名。未登録なら導入時に作成";
+        if (japaneseNotes.length > 3) japaneseNotes[3] = "ブランド名。未登録なら取込時に作成";
         if (japaneseNotes.length > 4) japaneseNotes[4] = "シリーズ名。ブランドに紐付け";
-        if (japaneseNotes.length > 5) japaneseNotes[5] = "カテゴリ名。未登録なら導入時に作成";
+        if (japaneseNotes.length > 5) japaneseNotes[5] = "カテゴリ名。未登録なら取込時に作成";
         if (japaneseNotes.length > 6) japaneseNotes[6] = "メーカー名。シリーズに紐付け";
         if (japaneseNotes.length > 7) japaneseNotes[7] = "必須。既存品番は更新扱い";
         if (japaneseNotes.length > 9) japaneseNotes[9] = "0以上";
@@ -928,7 +948,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                 "1. 一行代表一个商品主品番，系统会按 id / 品番 依次匹配现有数据。",
                 "2. 匹配到现有商品则更新，匹配不到则新增。",
                 "3. 新增时至少需要：名称、ブランド、カテゴリ、品番。",
-                "4. ブランド/シリーズ/カテゴリ/メーカー支持名称输入，未登録时会自动创建。",
+                "4. ブランド/シリーズ/カテゴリ/メーカーは名称で入力できます。未登録の場合は取込時に自動作成します。",
                 "5. 価格字段支持数字格式，通貨未填写时默认 JPY。",
                 "6. 説明为可选字段，用于商品说明。"
         );
@@ -954,7 +974,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         int rowIndex = 0;
         if (scope != null) {
             rowIndex = writeDictionarySection(sheet, rowIndex, "brand", scope.brands().stream()
-                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus())))
+                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(),
+                            nullToEmpty(item.getEnglishName()), String.valueOf(item.getStatus())))
                     .toList());
             rowIndex = writeDictionarySection(sheet, rowIndex + 1, "series", scope.series().stream()
                     .map(item -> List.of(
@@ -966,7 +987,8 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
                     .map(item -> List.of(String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus())))
                     .toList());
             rowIndex = writeDictionarySection(sheet, rowIndex + 1, "maker", scope.makers().stream()
-                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus())))
+                    .map(item -> List.of(String.valueOf(item.getId()), item.getName(),
+                            nullToEmpty(item.getEnglishName()), String.valueOf(item.getStatus())))
                     .toList());
             writeDictionarySection(sheet, rowIndex + 1, "status", List.of(
                     List.of("1", "normal", "normal"),
@@ -980,16 +1002,17 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         rowIndex = writeDictionarySection(sheet, rowIndex, "品牌", brandService.list(new QueryWrapper<Brand>()
                 .orderByAsc("id")).stream().map(item -> List.of(
                 String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus()))).toList());
-        rowIndex = writeDictionarySection(sheet, rowIndex + 1, "系列", seriesService.list(new QueryWrapper<Series>()
+        rowIndex = writeDictionarySection(sheet, rowIndex + 1, "シリーズ", seriesService.list(new QueryWrapper<Series>()
                 .orderByAsc("id")).stream().map(item -> List.of(
-                String.valueOf(item.getId()), item.getName(), item.getBrandId() == null ? "" : String.valueOf(item.getBrandId()))).toList());
-        rowIndex = writeDictionarySection(sheet, rowIndex + 1, "分类", categoryService.list(new QueryWrapper<Category>()
+                String.valueOf(item.getId()), item.getName(),
+                item.getBrandId() == null ? "" : String.valueOf(item.getBrandId()))).toList());
+        rowIndex = writeDictionarySection(sheet, rowIndex + 1, "カテゴリ", categoryService.list(new QueryWrapper<Category>()
                 .orderByAsc("id")).stream().map(item -> List.of(
                 String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus()))).toList());
         rowIndex = writeDictionarySection(sheet, rowIndex + 1, "厂家", makerService.list(new QueryWrapper<Maker>()
                 .orderByAsc("id")).stream().map(item -> List.of(
                 String.valueOf(item.getId()), item.getName(), String.valueOf(item.getStatus()))).toList());
-        writeDictionarySection(sheet, rowIndex + 1, "状态值", List.of(
+        writeDictionarySection(sheet, rowIndex + 1, "状態値", List.of(
                 List.of("1", "有効", "normal"),
                 List.of("0", "無効", "disabled")
         ));
@@ -1465,14 +1488,31 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         if (!Objects.equals(expectedId, actualId)) {
             throw new BusinessException(
                     MessageKeyConstant.ERROR_RUNTIME,
-                    rowMessage(item, fieldName + " is outside selected filter scope")
+                    rowMessage(item, scopeFieldLabel(fieldName) + "が選択された絞り込み条件の範囲外です")
             );
         }
+    }
+
+    private String scopeFieldLabel(String fieldName) {
+        if ("brand".equals(fieldName)) {
+            return "ブランド";
+        }
+        if ("series".equals(fieldName)) {
+            return "シリーズ";
+        }
+        if ("category".equals(fieldName)) {
+            return "カテゴリ";
+        }
+        if ("maker".equals(fieldName)) {
+            return "メーカー";
+        }
+        return fieldName;
     }
 
     private Long resolveOrCreateBrandId(GoodsBatchUpsertItemDTO item) {
         Long brandId = findExistingBrandId(item);
         if (brandId != null) {
+            updateBrandEnglishNameIfNecessary(brandId, item.getBrandEnglishName());
             return brandId;
         }
         String brandName = trimToNull(item.getBrandName());
@@ -1482,11 +1522,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         synchronized (masterDataLock("brand", brandName)) {
             brandId = findExistingBrandId(item);
             if (brandId != null) {
+                updateBrandEnglishNameIfNecessary(brandId, item.getBrandEnglishName());
                 return brandId;
             }
         Brand created = new Brand();
         created.setName(brandName);
-        created.setEnglishName(brandName);
+        created.setEnglishName(firstNonBlank(item.getBrandEnglishName(), brandName));
         created.setStatus(StatusEnum.NOMAL.getCode());
         try {
         if (!brandService.save(created)) {
@@ -1496,6 +1537,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         } catch (DuplicateKeyException ex) {
             Long existingId = findExistingBrandId(item);
             if (existingId != null) {
+                updateBrandEnglishNameIfNecessary(existingId, item.getBrandEnglishName());
                 return existingId;
             }
             throw ex;
@@ -1512,21 +1554,27 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         Long seriesId = findExistingSeriesId(item, brandId);
         if (seriesId != null) {
             Series current = seriesService.getByIdNotDeleted(seriesId);
-            return attachSeriesBrandIfNecessary(current, brandId).getId();
+            Series attached = attachSeriesBrandIfNecessary(current, brandId);
+            updateSeriesEnglishNameIfNecessary(attached.getId(), item.getSeriesEnglishName());
+            return attached.getId();
         }
         synchronized (masterDataLock("series", String.valueOf(brandId), seriesName)) {
             seriesId = findExistingSeriesId(item, brandId);
             if (seriesId != null) {
                 Series current = seriesService.getByIdNotDeleted(seriesId);
-                return attachSeriesBrandIfNecessary(current, brandId).getId();
+                Series attached = attachSeriesBrandIfNecessary(current, brandId);
+                updateSeriesEnglishNameIfNecessary(attached.getId(), item.getSeriesEnglishName());
+                return attached.getId();
             }
         Series sameName = findAttachableSeriesByName(seriesName, brandId);
         if (sameName != null) {
-            return attachSeriesBrandIfNecessary(sameName, brandId).getId();
+            Series attached = attachSeriesBrandIfNecessary(sameName, brandId);
+            updateSeriesEnglishNameIfNecessary(attached.getId(), item.getSeriesEnglishName());
+            return attached.getId();
         }
         Series created = new Series();
         created.setName(seriesName);
-        created.setEnglishName(seriesName);
+        created.setEnglishName(firstNonBlank(item.getSeriesEnglishName(), seriesName));
         created.setBrandId(brandId);
         created.setStatus(StatusEnum.NOMAL.getCode());
         try {
@@ -1537,6 +1585,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         } catch (DuplicateKeyException ex) {
             Long existingId = findExistingSeriesId(item, brandId);
             if (existingId != null) {
+                updateSeriesEnglishNameIfNecessary(existingId, item.getSeriesEnglishName());
                 return existingId;
             }
             throw ex;
@@ -1586,21 +1635,27 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         Long makerId = findExistingMakerId(item, seriesId);
         if (makerId != null) {
             Maker current = makerService.getByIdNotDeleted(makerId);
-            return attachMakerSeriesIfNecessary(current, seriesId).getId();
+            Maker attached = attachMakerSeriesIfNecessary(current, seriesId);
+            updateMakerEnglishNameIfNecessary(attached.getId(), item.getMakerEnglishName());
+            return attached.getId();
         }
         synchronized (masterDataLock("maker", String.valueOf(seriesId), makerName)) {
             makerId = findExistingMakerId(item, seriesId);
             if (makerId != null) {
                 Maker current = makerService.getByIdNotDeleted(makerId);
-                return attachMakerSeriesIfNecessary(current, seriesId).getId();
+                Maker attached = attachMakerSeriesIfNecessary(current, seriesId);
+                updateMakerEnglishNameIfNecessary(attached.getId(), item.getMakerEnglishName());
+                return attached.getId();
             }
         Maker sameName = findAttachableMakerByName(makerName, seriesId);
         if (sameName != null) {
-            return attachMakerSeriesIfNecessary(sameName, seriesId).getId();
+            Maker attached = attachMakerSeriesIfNecessary(sameName, seriesId);
+            updateMakerEnglishNameIfNecessary(attached.getId(), item.getMakerEnglishName());
+            return attached.getId();
         }
         Maker created = new Maker();
         created.setName(makerName);
-        created.setEnglishName(makerName);
+        created.setEnglishName(firstNonBlank(item.getMakerEnglishName(), makerName));
         created.setSeriesId(seriesId);
         created.setStatus(StatusEnum.NOMAL.getCode());
         try {
@@ -1611,6 +1666,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         } catch (DuplicateKeyException ex) {
             Long existingId = findExistingMakerId(item, seriesId);
             if (existingId != null) {
+                updateMakerEnglishNameIfNecessary(existingId, item.getMakerEnglishName());
                 return existingId;
             }
             throw ex;
@@ -1639,6 +1695,42 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             makerService.updateById(maker);
         }
         return maker;
+    }
+
+    private void updateBrandEnglishNameIfNecessary(Long brandId, String englishName) {
+        String normalized = trimToNull(englishName);
+        if (brandId == null || !StringUtils.hasText(normalized)) {
+            return;
+        }
+        Brand brand = brandService.getByIdNotDeleted(brandId);
+        if (brand != null && !Objects.equals(normalized, trimToNull(brand.getEnglishName()))) {
+            brand.setEnglishName(normalized);
+            brandService.updateById(brand);
+        }
+    }
+
+    private void updateSeriesEnglishNameIfNecessary(Long seriesId, String englishName) {
+        String normalized = trimToNull(englishName);
+        if (seriesId == null || !StringUtils.hasText(normalized)) {
+            return;
+        }
+        Series series = seriesService.getByIdNotDeleted(seriesId);
+        if (series != null && !Objects.equals(normalized, trimToNull(series.getEnglishName()))) {
+            series.setEnglishName(normalized);
+            seriesService.updateById(series);
+        }
+    }
+
+    private void updateMakerEnglishNameIfNecessary(Long makerId, String englishName) {
+        String normalized = trimToNull(englishName);
+        if (makerId == null || !StringUtils.hasText(normalized)) {
+            return;
+        }
+        Maker maker = makerService.getByIdNotDeleted(makerId);
+        if (maker != null && !Objects.equals(normalized, trimToNull(maker.getEnglishName()))) {
+            maker.setEnglishName(normalized);
+            makerService.updateById(maker);
+        }
     }
 
     private Long findExistingBrandId(GoodsBatchUpsertItemDTO item) {
@@ -1816,6 +1908,11 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return normalized.isEmpty() ? null : normalized;
     }
 
+    private String nullToEmpty(String value) {
+        String normalized = trimToNull(value);
+        return normalized == null ? "" : normalized;
+    }
+
     private String firstNonBlank(String... values) {
         if (values == null) {
             return null;
@@ -1937,9 +2034,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         item.setName(record.getName());
         item.setEnglishName(record.getEnglishName());
         item.setBrandName(record.getBrandName());
+        item.setBrandEnglishName(record.getBrandEnglishName());
         item.setSeriesName(record.getSeriesName());
+        item.setSeriesEnglishName(record.getSeriesEnglishName());
         item.setCategoryName(record.getCategoryName());
         item.setMakerName(record.getMakerName());
+        item.setMakerEnglishName(record.getMakerEnglishName());
         item.setDescription(record.getDescription());
         item.setIsHot(record.getIsHot() == null ? null : String.valueOf(record.getIsHot()));
         item.setSort(record.getSort());
@@ -1969,9 +2069,12 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         writeCell(row, column++, item.getName());
         writeCell(row, column++, item.getEnglishName());
         writeCell(row, column++, item.getBrandName());
+        writeCell(row, column++, item.getBrandEnglishName());
         writeCell(row, column++, item.getSeriesName());
+        writeCell(row, column++, item.getSeriesEnglishName());
         writeCell(row, column++, item.getCategoryName());
         writeCell(row, column++, item.getMakerName());
+        writeCell(row, column++, item.getMakerEnglishName());
         writeCell(row, column++, item.getSkuCode());
         writeCell(row, column++, item.getSkuName());
         writeCell(row, column++, item.getPrice());
@@ -2040,7 +2143,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             if (row == null) {
                 row = sheet.createRow(rowResult.getRowNo() - 1);
             }
-            writeCell(row, actionColumnIndex, rowResult.getAction());
+            writeCell(row, actionColumnIndex, importActionLabel(rowResult.getAction()));
             writeCell(row, messageColumnIndex, rowResult.getMessage());
             if (Boolean.FALSE.equals(rowResult.getSuccess())) {
                 int cellCount = Math.max(messageColumnIndex + 1, row.getLastCellNum());
@@ -2065,6 +2168,19 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
             return originalFileName + "_result" + defaultExtension;
         }
         return originalFileName.substring(0, dotIndex) + "_result" + originalFileName.substring(dotIndex);
+    }
+
+    private String importActionLabel(String action) {
+        if (GoodsBatchActionEnum.CREATED.getCode().equals(action)) {
+            return "登録";
+        }
+        if (GoodsBatchActionEnum.UPDATED.getCode().equals(action)) {
+            return "更新";
+        }
+        if (GoodsBatchActionEnum.FAILED.getCode().equals(action)) {
+            return "失敗";
+        }
+        return action;
     }
 
     private void writeWorkbookResponse(XSSFWorkbook workbook, HttpServletResponse response, String fileName)

@@ -60,13 +60,16 @@ class GoodsImportControllerIntegrationTest {
     private static final int TEMPLATE_COL_GOODS_NAME = 1;
     private static final int TEMPLATE_COL_ENGLISH_NAME = 2;
     private static final int TEMPLATE_COL_BRAND_NAME = 3;
-    private static final int TEMPLATE_COL_SERIES_NAME = 4;
-    private static final int TEMPLATE_COL_CATEGORY_NAME = 5;
-    private static final int TEMPLATE_COL_MAKER_NAME = 6;
-    private static final int TEMPLATE_COL_SKU_CODE = 7;
-    private static final int TEMPLATE_COL_SKU_NAME = 8;
-    private static final int TEMPLATE_COL_PRICE = 9;
-    private static final int TEMPLATE_COL_CURRENCY = 10;
+    private static final int TEMPLATE_COL_BRAND_ENGLISH_NAME = 4;
+    private static final int TEMPLATE_COL_SERIES_NAME = 5;
+    private static final int TEMPLATE_COL_SERIES_ENGLISH_NAME = 6;
+    private static final int TEMPLATE_COL_CATEGORY_NAME = 7;
+    private static final int TEMPLATE_COL_MAKER_NAME = 8;
+    private static final int TEMPLATE_COL_MAKER_ENGLISH_NAME = 9;
+    private static final int TEMPLATE_COL_SKU_CODE = 10;
+    private static final int TEMPLATE_COL_SKU_NAME = 11;
+    private static final int TEMPLATE_COL_PRICE = 12;
+    private static final int TEMPLATE_COL_CURRENCY = 13;
 
     @Autowired
     private MockMvc mockMvc;
@@ -125,16 +128,20 @@ class GoodsImportControllerIntegrationTest {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         String goodsName = "api-import-goods-" + suffix;
         String brandName = "api-import-brand-" + suffix;
+        String brandEnglishName = "api import brand en " + suffix;
         String seriesName = "api-import-series-" + suffix;
+        String seriesEnglishName = "api import series en " + suffix;
         String categoryName = "api-import-category-" + suffix;
         String makerName = "api-import-maker-" + suffix;
+        String makerEnglishName = "api import maker en " + suffix;
         String skuCode = "api-import-sku-" + suffix;
 
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "goods-import.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                buildImportWorkbook(goodsName, brandName, seriesName, categoryName, makerName, skuCode)
+                buildImportWorkbook(goodsName, brandName, brandEnglishName, seriesName,
+                        seriesEnglishName, categoryName, makerName, makerEnglishName, skuCode)
         );
 
         mockMvc.perform(multipart(API_CONTEXT_PATH + "/goods/import/upsert")
@@ -162,6 +169,9 @@ class GoodsImportControllerIntegrationTest {
         assertNotNull(maker);
         assertNotNull(goods);
         assertNotNull(sku);
+        assertEquals(brandEnglishName, brand.getEnglishName());
+        assertEquals(seriesEnglishName, series.getEnglishName());
+        assertEquals(makerEnglishName, maker.getEnglishName());
         assertEquals(brand.getId(), series.getBrandId());
         assertEquals(series.getId(), maker.getSeriesId());
         assertEquals(brand.getId(), goods.getBrandId());
@@ -174,9 +184,12 @@ class GoodsImportControllerIntegrationTest {
 
     private byte[] buildImportWorkbook(String goodsName,
                                        String brandName,
+                                       String brandEnglishName,
                                        String seriesName,
+                                       String seriesEnglishName,
                                        String categoryName,
                                        String makerName,
+                                       String makerEnglishName,
                                        String skuCode) throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
         goodsService.downloadBatchTemplate(null, response);
@@ -186,9 +199,12 @@ class GoodsImportControllerIntegrationTest {
             row.createCell(TEMPLATE_COL_GOODS_NAME).setCellValue(goodsName);
             row.createCell(TEMPLATE_COL_ENGLISH_NAME).setCellValue(goodsName);
             row.createCell(TEMPLATE_COL_BRAND_NAME).setCellValue(brandName);
+            row.createCell(TEMPLATE_COL_BRAND_ENGLISH_NAME).setCellValue(brandEnglishName);
             row.createCell(TEMPLATE_COL_SERIES_NAME).setCellValue(seriesName);
+            row.createCell(TEMPLATE_COL_SERIES_ENGLISH_NAME).setCellValue(seriesEnglishName);
             row.createCell(TEMPLATE_COL_CATEGORY_NAME).setCellValue(categoryName);
             row.createCell(TEMPLATE_COL_MAKER_NAME).setCellValue(makerName);
+            row.createCell(TEMPLATE_COL_MAKER_ENGLISH_NAME).setCellValue(makerEnglishName);
             row.createCell(TEMPLATE_COL_SKU_CODE).setCellValue(skuCode);
             row.createCell(TEMPLATE_COL_SKU_NAME).setCellValue(goodsName);
             row.createCell(TEMPLATE_COL_PRICE).setCellValue("1200.00");

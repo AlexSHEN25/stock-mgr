@@ -102,6 +102,7 @@ public class MainController {
     @FXML private Button stockOrderItemTabButton;
     @FXML private TableView<Map<String, Object>> dataTable;
     @FXML private FlowPane queryFieldsPane;
+    @FXML private VBox stockOrderCategoryMenu;
     @FXML private VBox requestCustomerMenu;
 
     private MainApp app;
@@ -117,6 +118,8 @@ public class MainController {
     private final UserAccountService userAccountService = new UserAccountService();
     private final Map<String, Integer> pageNumByModule = new HashMap<>();
     private final Map<String, String> fixedQueryParams = new LinkedHashMap<>();
+    private String currentStockCategory;
+    private String currentStockCategoryLabel;
     private Map<String, Object> inlineEditingRow;
     private Map<String, Object> inlineBackup;
     private String pendingStockOperation;
@@ -136,6 +139,7 @@ public class MainController {
         dataTable.setEditable(true);
         dataTable.setTableMenuButtonVisible(true);
         dataTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+        rebuildStockOrderCategoryMenu();
         rebuildRequestCustomerMenu();
         rebuildQueryFields();
         applyActionPolicy();
@@ -337,8 +341,8 @@ public class MainController {
             int failureCount = data.optInt("failureCount");
             if (failureCount > 0) {
                 messageLabel.setText(UiText.MSG_GOODS_IMPORT_FAILED
-                        + ": failed=" + failureCount
-                        + ", success=" + data.optInt("successCount"));
+                        + " 失敗=" + failureCount
+                        + "、成功=" + data.optInt("successCount"));
             } else {
                 messageLabel.setText(UiText.MSG_GOODS_IMPORT_SUCCESS);
             }
@@ -424,7 +428,14 @@ public class MainController {
                 return;
             }
             showCustomerImportResultDialog(data);
-            messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_SUCCESS);
+            int failureCount = data.optInt("failureCount");
+            if (failureCount > 0) {
+                messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_FAILED
+                        + " 失敗=" + failureCount
+                        + "、成功=" + data.optInt("successCount"));
+            } else {
+                messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_SUCCESS);
+            }
             loadData();
         } catch (Exception ex) {
             messageLabel.setText(UiText.MSG_CUSTOMER_IMPORT_FAILED + ": " + ex.getMessage());
@@ -664,12 +675,12 @@ public class MainController {
 
     @FXML
     private void onStockOrderTab() {
-        switchModule(Module.STOCK_ORDER, UiText.MENU_STOCK_ORDER);
+        switchToStockOrderCategoryModule(Module.STOCK_ORDER);
     }
 
     @FXML
     private void onStockOrderItemTab() {
-        switchModule(Module.STOCK_ORDER_ITEM, UiText.MENU_STOCK_ORDER_ITEM);
+        switchToStockOrderCategoryModule(Module.STOCK_ORDER_ITEM);
     }
 
     private void rebuildQueryFields() {
@@ -929,6 +940,60 @@ public class MainController {
         } catch (Exception ex) {
             LOGGER.log(Level.WARNING, "Load request customer menu failed.", ex);
         }
+    }
+
+    private void rebuildStockOrderCategoryMenu() {
+        if (stockOrderCategoryMenu == null) {
+            return;
+        }
+        stockOrderCategoryMenu.getChildren().clear();
+        VBox childMenu = new VBox(6);
+        childMenu.getChildren().add(createStockOrderCategoryButton(
+                UiText.byKey("main.menu.stockOrderCategoryA"), "A"));
+        childMenu.getChildren().add(createStockOrderCategoryButton(
+                UiText.byKey("main.menu.stockOrderCategoryB"), "B"));
+        childMenu.getChildren().add(createStockOrderCategoryButton(
+                UiText.byKey("main.menu.stockOrderCategoryC"), "C"));
+        childMenu.getChildren().add(createStockOrderCategoryButton(
+                UiText.byKey("main.menu.stockOrderCategoryHandle"), "柄"));
+        childMenu.getChildren().add(createStockOrderCategoryButton(
+                UiText.byKey("main.menu.stockOrderCategorySelf"), "自社"));
+        TitledPane pane = new TitledPane(UiText.MENU_STOCK_ORDER, childMenu);
+        pane.setExpanded(false);
+        stockOrderCategoryMenu.getChildren().add(pane);
+    }
+
+    private Button createStockOrderCategoryButton(String label, String stockCategory) {
+        Button button = new Button(label);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setOnAction(event -> switchStockOrderCategory(stockCategory, label, Module.STOCK_ORDER));
+        return button;
+    }
+
+    private void switchStockOrderCategory(String stockCategory, String categoryLabel, String module) {
+        currentStockCategory = stockCategory;
+        currentStockCategoryLabel = categoryLabel;
+        switchModule(module, buildStockOrderCategoryTitle(module, categoryLabel), Map.of("stockCategory", stockCategory));
+    }
+
+    private void switchToStockOrderCategoryModule(String module) {
+        if (currentStockCategory != null && !currentStockCategory.isBlank()) {
+            String categoryLabel = currentStockCategoryLabel == null || currentStockCategoryLabel.isBlank()
+                    ? currentStockCategory
+                    : currentStockCategoryLabel;
+            switchModule(module,
+                    buildStockOrderCategoryTitle(module, categoryLabel),
+                    Map.of("stockCategory", currentStockCategory));
+            return;
+        }
+        switchModule(module, Module.STOCK_ORDER.equals(module) ? UiText.MENU_STOCK_ORDER : UiText.MENU_STOCK_ORDER_ITEM);
+    }
+
+    private String buildStockOrderCategoryTitle(String module, String categoryLabel) {
+        String moduleLabel = Module.STOCK_ORDER_ITEM.equals(module)
+                ? UiText.MENU_STOCK_ORDER_ITEM
+                : UiText.MENU_STOCK_ORDER;
+        return UiText.byKey("main.group.stock") + " / " + UiText.MENU_STOCK_ORDER + " / " + categoryLabel + " / " + moduleLabel;
     }
 
     private TitledPane createRequestCustomerPane(String customerId, String customerName) {
@@ -2066,7 +2131,7 @@ public class MainController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(UiText.TITLE_GOODS_IMPORT_RESULT);
         alert.setHeaderText(String.format(
-                "total=%d, success=%d, created=%d, updated=%d, failed=%d",
+                "合計=%d、成功=%d、登録=%d、更新=%d、失敗=%d",
                 data.optInt("totalCount"),
                 data.optInt("successCount"),
                 data.optInt("createdCount"),
@@ -2091,7 +2156,7 @@ public class MainController {
         Alert prompt = new Alert(Alert.AlertType.CONFIRMATION);
         prompt.setTitle(UiText.TITLE_SAVE_FILE);
         prompt.setHeaderText(null);
-        prompt.setContentText("商品导入存在失败行，是否保存错误报告？");
+        prompt.setContentText("商品取込で失敗した行があります。エラー報告ファイルを保存しますか？");
         Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
         if (owner != null) {
             prompt.initOwner(owner);
@@ -2112,9 +2177,9 @@ public class MainController {
 
         try (FileOutputStream fos = new FileOutputStream(target)) {
             fos.write(Base64.getDecoder().decode(base64));
-            messageLabel.setText("商品导入完成，错误报告已保存。");
+            messageLabel.setText("商品取込が完了しました。エラー報告ファイルを保存しました。");
         } catch (Exception ex) {
-            messageLabel.setText("错误报告保存失败: " + ex.getMessage());
+            messageLabel.setText("エラー報告ファイルの保存に失敗しました: " + ex.getMessage());
         }
     }
 
@@ -2125,13 +2190,13 @@ public class MainController {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.getJSONObject(i);
-            builder.append("row=").append(row.optInt("rowNo"))
-                    .append(", action=").append(row.optString("action"))
-                    .append(", success=").append(row.optBoolean("success"))
-                    .append(", goodsId=").append(row.opt("goodsId"))
-                    .append(", skuId=").append(row.opt("skuId"))
-                    .append(", skuCode=").append(row.optString("skuCode"))
-                    .append(", message=").append(row.optString("message"))
+            builder.append("行=").append(row.optInt("rowNo"))
+                    .append("、処理=").append(importActionLabel(row.optString("action")))
+                    .append("、結果=").append(successLabel(row.optBoolean("success")))
+                    .append("、商品ID=").append(row.opt("goodsId"))
+                    .append("、SKU ID=").append(row.opt("skuId"))
+                    .append("、品番=").append(row.optString("skuCode"))
+                    .append("、メッセージ=").append(row.optString("message"))
                     .append(System.lineSeparator());
         }
         return builder.toString();
@@ -2141,7 +2206,7 @@ public class MainController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(UiText.byKey("main.menu.customer"));
         alert.setHeaderText(String.format(
-                "success=%d, failure=%d, created=%d, updated=%d",
+                "成功=%d、失敗=%d、登録=%d、更新=%d",
                 data.optInt("successCount"),
                 data.optInt("failureCount"),
                 data.optInt("createdCount"),
@@ -2167,15 +2232,28 @@ public class MainController {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < rows.length(); i++) {
             JSONObject row = rows.getJSONObject(i);
-            builder.append("row=").append(row.optInt("rowNo"))
-                    .append(", action=").append(row.optString("action"))
-                    .append(", success=").append(row.optBoolean("success"))
-                    .append(", customerId=").append(row.opt("customerId"))
-                    .append(", customerCode=").append(row.optString("customerCode"))
-                    .append(", message=").append(row.optString("message"))
+            builder.append("行=").append(row.optInt("rowNo"))
+                    .append("、処理=").append(importActionLabel(row.optString("action")))
+                    .append("、結果=").append(successLabel(row.optBoolean("success")))
+                    .append("、顧客ID=").append(row.opt("customerId"))
+                    .append("、顧客コード=").append(row.optString("customerCode"))
+                    .append("、メッセージ=").append(row.optString("message"))
                     .append(System.lineSeparator());
         }
         return builder.toString();
+    }
+
+    private String importActionLabel(String action) {
+        return switch (action) {
+            case "CREATED" -> "登録";
+            case "UPDATED" -> "更新";
+            case "FAILED" -> "失敗";
+            default -> action == null || action.isBlank() ? "-" : action;
+        };
+    }
+
+    private String successLabel(boolean success) {
+        return success ? "成功" : "失敗";
     }
 
     private File forceFileExtension(File file, String extension) {

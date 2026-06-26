@@ -257,7 +257,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_NO_PERMISSION,
                     "自社在庫の組別配分は管理者のみ実行できます");
         }
 
@@ -659,7 +659,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     .last("LIMIT 1"));
             if (requested == null) {
                 throw new co.handk.backend.exception.BusinessException(
-                        co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                        co.handk.backend.constant.MessageKeyConstant.ERROR_NO_PERMISSION,
                         "部署が設定されていません: " + groupCode);
             }
             if (!admin) {
@@ -920,7 +920,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Long approverId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(approverId)) {
             throw new co.handk.backend.exception.BusinessException(
-                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫伝票の承認は管理者のみ実行できます");
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_NO_PERMISSION, "在庫伝票の承認は管理者のみ実行できます");
         }
         StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
         if (order == null) {
@@ -1262,13 +1262,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "items is required");
         }
         String idempotencyKey = requireBatchInboundIdempotency(dto);
-        StockOrder existingOrder = findExistingSubmitOrder(StockBizConstant.ORDER_TYPE_INBOUND, idempotencyKey);
+        StockOrder existingOrder = findExistingBatchInboundOrder(idempotencyKey);
         if (existingOrder != null) {
             return existingOrder.getId();
         }
 
         Long firstOrderId = null;
-        for (StockBatchOperateItemDTO itemDTO : dto.getItems()) {
+        for (int itemIndex = 0; itemIndex < dto.getItems().size(); itemIndex++) {
+            StockBatchOperateItemDTO itemDTO = dto.getItems().get(itemIndex);
             StockOperateDTO inbound = new StockOperateDTO();
             inbound.setStockId(itemDTO.getStockId());
             inbound.setGoodsId(itemDTO.getGoodsId());
@@ -1279,7 +1280,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             inbound.setQuantity(itemDTO.getQuantity());
             inbound.setSaleDeadline(itemDTO.getSaleDeadline() == null ? dto.getSaleDeadline() : itemDTO.getSaleDeadline());
             inbound.setRemark(hasText(itemDTO.getRemark()) ? itemDTO.getRemark() : dto.getRemark());
-            Long orderId = submitBatchInboundItem(inbound, idempotencyKey);
+            Long orderId = submitBatchInboundItem(inbound, batchInboundItemIdempotencyKey(idempotencyKey, itemIndex));
             if (firstOrderId == null) {
                 firstOrderId = orderId;
             }
@@ -1783,7 +1784,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         String redisKey = RedisKey.IDEMPOTENCY_REQUEST + "stock:batch-inbound:" + userId + ":" + requestKey;
         Boolean accepted = stringRedisUtil.setIfAbsent(redisKey, "1", 300L, TimeUnit.SECONDS);
         if (!Boolean.TRUE.equals(accepted)) {
-            StockOrder existing = findExistingSubmitOrder(StockBizConstant.ORDER_TYPE_INBOUND, requestKey);
+            StockOrder existing = findExistingBatchInboundOrder(requestKey);
             if (existing != null) {
                 return requestKey;
             }
@@ -1792,6 +1793,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     "duplicate batch inbound request detected, please retry later");
         }
         return requestKey;
+    }
+
+    private String batchInboundItemIdempotencyKey(String batchIdempotencyKey, int itemIndex) {
+        return batchIdempotencyKey + ":ITEM:" + itemIndex;
     }
 
     private String canonicalBatchInboundPayload(StockBatchOperateDTO dto) {
@@ -1841,6 +1846,34 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 .last("LIMIT 1"));
     }
 
+    private StockOrder findExistingBatchInboundOrder(String batchIdempotencyKey) {
+        if (!hasText(batchIdempotencyKey)) {
+            return null;
+        }
+        Long userId = UserContext.getUserIdOrDefault();
+        return stockOrderService.getOne(new QueryWrapper<StockOrder>()
+                .eq("requester_id", userId)
+                .eq("order_type", StockBizConstant.ORDER_TYPE_INBOUND)
+                .and(wrapper -> wrapper
+                        .eq("idempotency_key", batchIdempotencyKey)
+                        .or()
+                        .apply("idempotency_key LIKE {0} ESCAPE '!'", escapeSqlLike(
+                                batchIdempotencyKey + ":ITEM:", '!') + "%"))
+                .orderByAsc("id")
+                .last("LIMIT 1"));
+    }
+
+    private String escapeSqlLike(String value, char escapeChar) {
+        if (value == null) {
+            return null;
+        }
+        String escape = String.valueOf(escapeChar);
+        return value
+                .replace(escape, escape + escape)
+                .replace("%", escape + "%")
+                .replace("_", escape + "_");
+    }
+
     private String currentIdempotencyKey() {
         ServletRequestAttributes attributes =
                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -1887,6 +1920,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         }
         StockVO vo = new StockVO();
         BeanUtils.copyProperties(entity, vo);
+        int lockedQty = stockBatchService.getSelfLockedQty(entity.getId());
+        vo.setLockQty(lockedQty);
+        vo.setCurrentQty(Math.max(0, safeInt(entity.getCurrentQty()) - lockedQty));
         vo.setStockTypeName(getStockTypeName(entity.getStockTypeId()));
         java.util.Map<String, Integer> groupQty = stockBatchService.getGroupQuantities(entity.getId());
         vo.setGroupAQty(groupQty.getOrDefault("A", 0));

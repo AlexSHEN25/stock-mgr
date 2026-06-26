@@ -7,3 +7,4 @@ public interface OperateLogConstant {
     int MAX_TEXT_LENGTH = 2000;
 }
 
+

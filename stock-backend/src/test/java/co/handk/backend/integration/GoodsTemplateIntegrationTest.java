@@ -51,12 +51,13 @@ class GoodsTemplateIntegrationTest {
     private static final Long ADMIN_USER_ID = 1L;
     private static final int TEMPLATE_COL_GOODS_NAME = 1;
     private static final int TEMPLATE_COL_BRAND_NAME = 3;
-    private static final int TEMPLATE_COL_SERIES_NAME = 4;
-    private static final int TEMPLATE_COL_CATEGORY_NAME = 5;
-    private static final int TEMPLATE_COL_MAKER_NAME = 6;
-    private static final int TEMPLATE_COL_SKU_CODE = 7;
-    private static final int TEMPLATE_COL_SKU_NAME = 8;
-    private static final int TEMPLATE_COL_CURRENCY = 10;
+    private static final int TEMPLATE_COL_SERIES_NAME = 5;
+    private static final int TEMPLATE_COL_CATEGORY_NAME = 7;
+    private static final int TEMPLATE_COL_MAKER_NAME = 8;
+    private static final int TEMPLATE_COL_SKU_CODE = 10;
+    private static final int TEMPLATE_COL_SKU_NAME = 11;
+    private static final int TEMPLATE_COL_PRICE = 12;
+    private static final int TEMPLATE_COL_CURRENCY = 13;
 
     @Autowired
     private GoodsService goodsService;
@@ -134,12 +135,15 @@ class GoodsTemplateIntegrationTest {
             assertNotNull(headerRow);
             assertNotNull(noteRow);
             assertTrue(response.getHeader("Content-Disposition").contains("goods-import-template.xlsx"));
-            assertEquals(12, headerRow.getLastCellNum());
-            assertEquals(12, noteRow.getLastCellNum());
-            assertEquals(List.of(
+            assertEquals(15, headerRow.getLastCellNum());
+            assertEquals(15, noteRow.getLastCellNum());
+            assertTrue(collectRowValues(headerRow).containsAll(List.of(
                     "id", "名称", "英文名称", "ブランド", "シリーズ", "カテゴリ",
                     "メーカー", "品番", "品名", "価格", "通貨", "説明"
-            ), collectRowValues(headerRow));
+            )));
+            assertTrue(collectRowValues(headerRow).contains("ブランド英語名"));
+            assertTrue(collectRowValues(headerRow).contains("シリーズ英語名"));
+            assertTrue(collectRowValues(headerRow).contains("メーカー英語名"));
         }
     }
 
@@ -151,11 +155,14 @@ class GoodsTemplateIntegrationTest {
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(response.getContentAsByteArray()))) {
             Row headerRow = workbook.getSheetAt(0).getRow(0);
             assertNotNull(headerRow);
-            assertEquals(12, headerRow.getLastCellNum());
-            assertEquals(List.of(
+            assertEquals(15, headerRow.getLastCellNum());
+            assertTrue(collectRowValues(headerRow).containsAll(List.of(
                     "id", "名称", "英文名称", "ブランド", "シリーズ", "カテゴリ",
                     "メーカー", "品番", "品名", "価格", "通貨", "説明"
-            ), collectRowValues(headerRow));
+            )));
+            assertTrue(collectRowValues(headerRow).contains("ブランド英語名"));
+            assertTrue(collectRowValues(headerRow).contains("シリーズ英語名"));
+            assertTrue(collectRowValues(headerRow).contains("メーカー英語名"));
         }
     }
 
@@ -283,7 +290,7 @@ class GoodsTemplateIntegrationTest {
         assertEquals(1, result.getFailureCount());
         assertEquals(1, result.getRows().size());
         assertFalse(result.getRows().get(0).getSuccess());
-        assertTrue(result.getRows().get(0).getMessage().contains("outside selected filter scope"));
+        assertTrue(result.getRows().get(0).getMessage().contains("選択された絞り込み条件の範囲外"));
         assertTrue(result.getErrorReportFileName().endsWith(".xlsx"));
         assertNotNull(result.getErrorReportBase64());
         assertFalse(result.getErrorReportBase64().isBlank());
@@ -292,15 +299,15 @@ class GoodsTemplateIntegrationTest {
                 new ByteArrayInputStream(Base64.getDecoder().decode(result.getErrorReportBase64())))) {
             Row headerRow = workbook.getSheetAt(0).getRow(0);
             Map<String, Integer> headerIndexes = resolveHeaderIndexes(headerRow);
-            Integer actionColumn = headerIndexes.get("Import Action");
-            Integer messageColumn = headerIndexes.get("Import Message");
+            Integer actionColumn = headerIndexes.get("取込結果");
+            Integer messageColumn = headerIndexes.get("メッセージ");
             assertNotNull(actionColumn);
             assertNotNull(messageColumn);
 
             Row failedRow = workbook.getSheetAt(0).getRow(2);
             assertNotNull(failedRow);
-            assertEquals("FAILED", failedRow.getCell(actionColumn).getStringCellValue());
-            assertTrue(failedRow.getCell(messageColumn).getStringCellValue().contains("outside selected filter scope"));
+            assertEquals("失敗", failedRow.getCell(actionColumn).getStringCellValue());
+            assertTrue(failedRow.getCell(messageColumn).getStringCellValue().contains("選択された絞り込み条件の範囲外"));
             assertEquals(IndexedColors.ROSE.getIndex(), failedRow.getCell(0).getCellStyle().getFillForegroundColor());
             assertEquals(IndexedColors.ROSE.getIndex(),
                     failedRow.getCell(messageColumn).getCellStyle().getFillForegroundColor());
@@ -420,7 +427,7 @@ class GoodsTemplateIntegrationTest {
             row.createCell(TEMPLATE_COL_CATEGORY_NAME).setCellValue(category.getName());
             row.createCell(TEMPLATE_COL_SKU_CODE).setCellValue(sku.getSkuCode());
             row.createCell(TEMPLATE_COL_SKU_NAME).setCellValue("preserve-sku-updated");
-            row.createCell(9).setCellValue("200.00");
+            row.createCell(TEMPLATE_COL_PRICE).setCellValue("200.00");
             row.createCell(TEMPLATE_COL_CURRENCY).setCellValue("JPY");
             workbook.write(outputStream);
             return outputStream.toByteArray();
