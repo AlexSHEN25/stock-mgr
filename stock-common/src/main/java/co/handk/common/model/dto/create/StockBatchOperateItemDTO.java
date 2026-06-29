@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -21,6 +22,8 @@ public class StockBatchOperateItemDTO {
 
     private Long stockTypeId;
 
+    private Long batchId;
+
     /**
      * Inbound only. Falls back to the batch-level source type when omitted.
      */
@@ -31,8 +34,11 @@ public class StockBatchOperateItemDTO {
     @Min(value = 1, message = "数量は1以上で入力してください")
     private Integer quantity;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime saleDeadline;
+
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "Asia/Tokyo")
+    private LocalDate bizDate;
 
     private String remark;
 }

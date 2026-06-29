@@ -5,6 +5,7 @@ import co.handk.client.constant.AppConstants;
 import co.handk.client.constant.AppConstants.ApiPath;
 import co.handk.client.constant.ModuleEndpointStrategy;
 import co.handk.client.util.ApiClient;
+import co.handk.client.util.JsonPayloadHelper;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -18,6 +19,7 @@ import java.security.MessageDigest;
 public class ModuleDataService {
     private static final String GOODS_SERIES_OPTIONS = "_goodsSeriesOptions";
     private static final String GOODS_MAKER_OPTIONS = "_goodsMakerOptions";
+    private static final String STOCK_BATCH_OPTIONS = "_stockBatchOptions";
 
     public JSONObject fetchPage(String module, int pageNum, int pageSize, Map<String, String> filters) throws Exception {
         if (AppConstants.Module.BRAND_HIERARCHY.equals(module)) {
@@ -113,13 +115,13 @@ public class ModuleDataService {
         row.put("goodsKinds", !"RECORD".equals(nodeType) ? node.opt("goodsKinds") : "");
         row.put("outboundDate", "RECORD".equals(nodeType) ? node.optString("outboundDate", "") : "");
         row.put("operatorName", "RECORD".equals(nodeType) ? node.optString("operatorName", "") : "");
-        putIfPresent(row, node, "recordId");
-        putIfPresent(row, node, "orderId");
-        putIfPresent(row, node, "orderItemId");
-        putIfPresent(row, node, "customerId");
-        putIfPresent(row, node, "goodsId");
-        putIfPresent(row, node, "skuId");
-        putIfPresent(row, node, "stockTypeId");
+        JsonPayloadHelper.putIfPresent(row, node, "recordId");
+        JsonPayloadHelper.putIfPresent(row, node, "orderId");
+        JsonPayloadHelper.putIfPresent(row, node, "orderItemId");
+        JsonPayloadHelper.putIfPresent(row, node, "customerId");
+        JsonPayloadHelper.putIfPresent(row, node, "goodsId");
+        JsonPayloadHelper.putIfPresent(row, node, "skuId");
+        JsonPayloadHelper.putIfPresent(row, node, "stockTypeId");
         rows.put(row);
 
         JSONArray children = node.optJSONArray("children");
@@ -128,12 +130,6 @@ public class ModuleDataService {
         }
         for (int i = 0; i < children.length(); i++) {
             appendDeliveryScheduleNode(rows, children.getJSONObject(i), level + 1);
-        }
-    }
-
-    private void putIfPresent(JSONObject target, JSONObject source, String key) {
-        if (source.has(key) && source.opt(key) != JSONObject.NULL) {
-            target.put(key, source.opt(key));
         }
     }
 
@@ -158,6 +154,10 @@ public class ModuleDataService {
 
     public JSONObject batchInboundStock(JSONObject dto) throws Exception {
         return new JSONObject(ApiClient.post(ApiPath.STOCK_INBOUND_BATCH, dto.toString()));
+    }
+
+    public JSONObject batchOutboundStock(JSONObject dto) throws Exception {
+        return new JSONObject(ApiClient.post(ApiPath.STOCK_OUTBOUND_BATCH, dto.toString()));
     }
 
     public JSONObject outboundStock(JSONObject dto) throws Exception {
@@ -190,16 +190,8 @@ public class ModuleDataService {
         return new JSONObject(ApiClient.post(path, body.toString()));
     }
 
-    public byte[] downloadGoodsTemplate() throws Exception {
-        return downloadGoodsTemplate(Map.of());
-    }
-
     public byte[] downloadGoodsTemplate(Map<String, String> filters) throws Exception {
         return ApiClient.getBytes(ApiPath.GOODS_IMPORT_TEMPLATE, filters == null ? Map.of() : filters);
-    }
-
-    public JSONObject importGoods(java.io.File file) throws Exception {
-        return importGoods(file, Map.of());
     }
 
     public JSONObject importGoods(java.io.File file, Map<String, String> filters) throws Exception {
@@ -254,6 +246,9 @@ public class ModuleDataService {
         if (GOODS_MAKER_OPTIONS.equals(relationModule)) {
             return fetchGoodsCascadeOptions("/goods/options/maker", extraFilters);
         }
+        if (STOCK_BATCH_OPTIONS.equals(relationModule)) {
+            return fetchStockBatchOptions(extraFilters);
+        }
         JSONObject page = fetchPage(relationModule, 1, 200, extraFilters == null ? Map.of() : extraFilters);
         JSONObject data = page.optJSONObject("data");
         if (data == null) {
@@ -292,6 +287,40 @@ public class ModuleDataService {
                     "label", row.optString("name", row.optString("label", "")),
                     "value", String.valueOf(row.opt("id"))
             ));
+        }
+        return options;
+    }
+
+    private List<Map<String, String>> fetchStockBatchOptions(Map<String, String> extraFilters) throws Exception {
+        if (extraFilters == null || !extraFilters.containsKey("stockId") || extraFilters.get("stockId").isBlank()) {
+            return List.of();
+        }
+        String stockId = extraFilters.get("stockId").trim();
+        Map<String, String> params = new LinkedHashMap<>();
+        String deptId = extraFilters.get("deptId");
+        if (deptId != null && !deptId.isBlank()) {
+            params.put("deptId", deptId.trim());
+        }
+        String body = ApiClient.get("/stock/" + stockId + AppConstants.ApiPath.STOCK_BATCH_OPTIONS_SUFFIX, params);
+        JSONObject json = new JSONObject(body);
+        JSONArray data = json.optJSONArray("data");
+        if (data == null) {
+            return List.of();
+        }
+        List<Map<String, String>> options = new ArrayList<>();
+        for (int i = 0; i < data.length(); i++) {
+            JSONObject row = data.getJSONObject(i);
+            String batchId = String.valueOf(row.opt("batchId"));
+            String bizDate = row.optString("bizDate", "");
+            String availableQty = String.valueOf(row.optInt("availableQty"));
+            String saleDeadline = row.optString("saleDeadline", "");
+            StringBuilder label = new StringBuilder();
+            label.append(bizDate.isBlank() ? "納品日未設定" : bizDate);
+            label.append(" / 在庫 ").append(availableQty);
+            if (!saleDeadline.isBlank()) {
+                label.append(" / 期限 ").append(saleDeadline);
+            }
+            options.add(Map.of("label", label.toString(), "value", batchId));
         }
         return options;
     }

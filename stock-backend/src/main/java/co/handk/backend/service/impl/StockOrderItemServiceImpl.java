@@ -4,6 +4,7 @@ import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
 import co.handk.backend.entity.StockRecord;
+import co.handk.backend.entity.Warehouse;
 import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.exception.BusinessException;
@@ -13,8 +14,10 @@ import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockOrderService;
 import co.handk.backend.service.StockOrderItemService;
 import co.handk.backend.service.StockRecordService;
+import co.handk.backend.service.WarehouseService;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.model.dto.query.StockOrderItemQueryDTO;
 import co.handk.common.model.vo.StockOrderItemVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -38,6 +41,8 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
     private final StockOrderService stockOrderService;
     private final StockRecordService stockRecordService;
     private final PermissionQueryService permissionQueryService;
+    private final WarehouseService warehouseService;
+    private static final String SELF_WAREHOUSE_CODE = "SELF";
 
     @Override
     protected StockOrderItemVO toVO(StockOrderItem entity) {
@@ -61,7 +66,12 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
 
     @Override
     protected <Q> QueryWrapper<StockOrderItem> buildWrapper(Q dto) {
-        QueryWrapper<StockOrderItem> wrapper = super.buildWrapper(dto);
+        QueryWrapper<StockOrderItem> wrapper = dto instanceof StockOrderItemQueryDTO query
+                ? super.buildWrapper(copyQueryWithoutStockCategory(query))
+                : super.buildWrapper(dto);
+        if (dto instanceof StockOrderItemQueryDTO query) {
+            applyStockCategoryFilter(wrapper, query.getStockCategory());
+        }
         Long userId = UserContext.getUserIdOrDefault();
         if (!permissionQueryService.isSuperAdmin(userId)) {
             wrapper.inSql("order_id",
@@ -70,6 +80,81 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
                             + userId + " OR operator_id = " + userId + ")");
         }
         return wrapper;
+    }
+
+    private StockOrderItemQueryDTO copyQueryWithoutStockCategory(StockOrderItemQueryDTO source) {
+        StockOrderItemQueryDTO copy = new StockOrderItemQueryDTO();
+        BeanUtils.copyProperties(source, copy);
+        copy.setStockCategory(null);
+        return copy;
+    }
+
+    private void applyStockCategoryFilter(QueryWrapper<StockOrderItem> wrapper, String stockCategory) {
+        String normalized = normalizeCategory(stockCategory);
+        if (normalized == null) {
+            return;
+        }
+        if ("SELF".equalsIgnoreCase(normalized) || "自社".equals(normalized)) {
+            Long selfWarehouseId = findWarehouseIdByCode(SELF_WAREHOUSE_CODE);
+            wrapper.inSql("order_id", "SELECT id FROM t_stock_order WHERE deleted = "
+                    + DeleteEnum.UNDELETED.getCode()
+                    + " AND warehouse_id = " + (selfWarehouseId == null ? -1L : selfWarehouseId));
+            return;
+        }
+        if ("HANDLE".equalsIgnoreCase(normalized) || "柄".equals(normalized)) {
+            List<Long> handleWarehouseIds = findHandleWarehouseIds();
+            if (handleWarehouseIds.isEmpty()) {
+                wrapper.inSql("order_id", "SELECT id FROM t_stock_order WHERE id = -1");
+                return;
+            }
+            String ids = String.join(",", handleWarehouseIds.stream().map(String::valueOf).toList());
+            wrapper.inSql("order_id", "SELECT id FROM t_stock_order WHERE deleted = "
+                    + DeleteEnum.UNDELETED.getCode()
+                    + " AND warehouse_id IN (" + ids + ")");
+            return;
+        }
+        wrapper.inSql("order_id", "SELECT id FROM t_stock_order WHERE deleted = "
+                + DeleteEnum.UNDELETED.getCode()
+                + " AND UPPER(TRIM(COALESCE(dept_code, ''))) = '"
+                + normalized.toUpperCase().replace("'", "''") + "'");
+    }
+
+    private Long findWarehouseIdByCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        Warehouse warehouse = warehouseService.getOne(new QueryWrapper<Warehouse>()
+                .eq("code", code.trim())
+                .last("LIMIT 1"));
+        return warehouse == null ? null : warehouse.getId();
+    }
+
+    private List<Long> findHandleWarehouseIds() {
+        List<Warehouse> warehouses = warehouseService.list(new QueryWrapper<Warehouse>());
+        return warehouses.stream()
+                .filter(warehouse -> warehouse != null && warehouse.getId() != null && isHandleWarehouse(warehouse))
+                .map(Warehouse::getId)
+                .toList();
+    }
+
+    private boolean isHandleWarehouse(Warehouse warehouse) {
+        if (warehouse == null) {
+            return false;
+        }
+        String code = warehouse.getCode() == null ? "" : warehouse.getCode().trim().toUpperCase();
+        String name = warehouse.getName() == null ? "" : warehouse.getName().trim();
+        return code.contains("HANDLE")
+                || code.contains("HAND")
+                || name.contains("柄")
+                || name.toUpperCase().contains("HANDLE");
+    }
+
+    private String normalizeCategory(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     @Override

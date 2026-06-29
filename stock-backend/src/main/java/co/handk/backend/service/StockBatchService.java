@@ -4,6 +4,7 @@ import co.handk.backend.entity.GroupStock;
 import co.handk.backend.entity.Stock;
 import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
+import co.handk.common.model.vo.StockBatchOptionVO;
 
 import java.util.Map;
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.List;
 public interface StockBatchService {
     void recordInbound(StockOrder order, StockOrderItem item, Stock stock);
 
-    void lockOutbound(StockOrder order, StockOrderItem item, Stock stock);
+    void lockOutbound(StockOrder order, StockOrderItem item, Stock stock, Long batchId);
 
     void confirmOutbound(StockOrder order, StockOrderItem item, Stock stock);
 
@@ -26,6 +27,10 @@ public interface StockBatchService {
     List<Long> getAvailableGroupDeptIds(Long stockId);
 
     Map<String, Integer> getGroupQuantities(Long stockId);
+
+    String getBizDateSummary(Long stockId, Long deptId);
+
+    List<StockBatchOptionVO> listOutboundBatchOptions(Long stockId, Long deptId);
 
     int reclaimExpiredGroupStock();
 }

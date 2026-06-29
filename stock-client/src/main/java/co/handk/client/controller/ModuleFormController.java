@@ -3,6 +3,7 @@ package co.handk.client.controller;
 import co.handk.client.constant.UiText;
 import co.handk.client.service.DependencyResolver;
 import co.handk.client.service.ModuleDataService;
+import co.handk.client.util.JsonPayloadHelper;
 import co.handk.client.util.ModuleMeta;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -63,6 +64,9 @@ public class ModuleFormController {
         }
         fallbackFields.addAll(this.sourceValues.keySet());
         this.formFields = ModuleMeta.resolvedFormFields(module, fallbackFields);
+        if ("stock".equals(module)) {
+            this.formFields = resolveStockOperationFields(this.formFields);
+        }
         this.titleLabel.setText(title);
 
         buildDynamicControls(module, editMode);
@@ -209,13 +213,56 @@ public class ModuleFormController {
             return options;
         }
         try {
-            for (Map<String, String> item : dataService.fetchSimpleRelationOptions(relationModule, extraFilters)) {
+            for (Map<String, String> item : dataService.fetchSimpleRelationOptions(
+                    relationModule,
+                    enrichRelationFilters(relationModule, extraFilters))) {
                 options.add(new Option(item.get("label"), item.get("value")));
             }
         } catch (Exception ex) {
             LOGGER.log(Level.WARNING, "Load relation options failed. module=" + module + ", relationModule=" + relationModule + ", filters=" + extraFilters, ex);
         }
         return options;
+    }
+
+    private List<String> resolveStockOperationFields(List<String> fields) {
+        List<String> resolved = new ArrayList<>(fields);
+        String operation = String.valueOf(sourceValues.getOrDefault("_stockOperation", ""));
+        if ("inbound".equalsIgnoreCase(operation)) {
+            resolved.remove("batchId");
+            if (!resolved.contains("bizDate")) {
+                resolved.add(resolved.indexOf("stockTypeId") + 1, "bizDate");
+            }
+            return resolved;
+        }
+        if ("outbound".equalsIgnoreCase(operation)) {
+            resolved.remove("bizDate");
+            if (!resolved.contains("batchId")) {
+                resolved.add(resolved.indexOf("stockTypeId") + 1, "batchId");
+            }
+        }
+        return resolved;
+    }
+
+    private Map<String, String> enrichRelationFilters(String relationModule, Map<String, String> extraFilters) {
+        Map<String, String> filters = new LinkedHashMap<>();
+        if (extraFilters != null) {
+            filters.putAll(extraFilters);
+        }
+        if (!"_stockBatchOptions".equals(relationModule)) {
+            return filters;
+        }
+        Object stockId = sourceValues.get("stockId");
+        if (stockId == null) {
+            stockId = sourceValues.get("id");
+        }
+        if (stockId != null && !String.valueOf(stockId).isBlank()) {
+            filters.putIfAbsent("stockId", String.valueOf(stockId));
+        }
+        Object deptId = sourceValues.get("deptId");
+        if (deptId != null && !String.valueOf(deptId).isBlank()) {
+            filters.putIfAbsent("deptId", String.valueOf(deptId));
+        }
+        return filters;
     }
 
     private void fillValues(Map<String, Object> source) {
@@ -323,7 +370,7 @@ public class ModuleFormController {
         if (dto == null) {
             return new JSONObject();
         }
-        if ("stock".equals(module) && isBlankJsonValue(dto.opt("stockId"))) {
+        if ("stock".equals(module) && JsonPayloadHelper.isBlank(dto.opt("stockId"))) {
             Object stockId = sourceValues.get("stockId");
             if (stockId == null) {
                 stockId = sourceValues.get("id");
@@ -344,7 +391,7 @@ public class ModuleFormController {
             copyFromSourceIfBlank(dto, "deptId");
             copyFromSourceIfBlank(dto, "groupCode");
             copyFromSourceIfBlank(dto, "deptCode", "groupCode");
-            if (isBlankJsonValue(dto.opt("outboundMode"))) {
+            if (JsonPayloadHelper.isBlank(dto.opt("outboundMode"))) {
                 if (hasSourceValue("groupCode") || hasSourceValue("deptId")) {
                     dto.put("outboundMode", "GROUP_CUSTOMER");
                 } else {
@@ -360,7 +407,7 @@ public class ModuleFormController {
     }
 
     private void copyFromSourceIfBlank(JSONObject dto, String targetField, String sourceField) {
-        if (!isBlankJsonValue(dto.opt(targetField))) {
+        if (!JsonPayloadHelper.isBlank(dto.opt(targetField))) {
             return;
         }
         Object value = sourceValues.get(sourceField);
@@ -370,13 +417,8 @@ public class ModuleFormController {
         dto.put(targetField, value);
     }
 
-    private boolean isBlankJsonValue(Object value) {
-        return value == null || String.valueOf(value).trim().isEmpty() || "null".equalsIgnoreCase(String.valueOf(value).trim());
-    }
-
     private boolean hasSourceValue(String key) {
-        Object value = sourceValues.get(key);
-        return value != null && !String.valueOf(value).trim().isEmpty() && !"null".equalsIgnoreCase(String.valueOf(value).trim());
+        return !JsonPayloadHelper.isBlank(sourceValues.get(key));
     }
 
     private Object extractValue(Control c) {

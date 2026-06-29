@@ -100,7 +100,7 @@ import java.util.concurrent.ConcurrentMap;
 @RequiredArgsConstructor
 public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsVO>
         implements GoodsService {
-
+    private static final ZoneId TOKYO_ZONE_ID = ZoneId.of("Asia/Tokyo");
     private static final ConcurrentMap<String, Object> MASTER_DATA_LOCKS = new ConcurrentHashMap<>();
     private static final String TEMPLATE_SHEET_NAME = GoodsImportConstant.SHEET_TEMPLATE;
     private static final String INSTRUCTION_SHEET_NAME = GoodsImportConstant.SHEET_INSTRUCTION;
@@ -1348,7 +1348,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         }
         if (DateUtil.isCellDateFormatted(cell)) {
             return Instant.ofEpochMilli(cell.getDateCellValue().getTime())
-                    .atZone(ZoneId.systemDefault())
+                    .atZone(TOKYO_ZONE_ID)
                     .toLocalDateTime();
         }
         String value = trimToNull(formatter.formatCellValue(cell));

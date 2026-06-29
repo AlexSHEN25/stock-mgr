@@ -1,6 +1,7 @@
 package co.handk.backend.controller;
 
 import co.handk.backend.service.StockService;
+import co.handk.backend.service.StockBatchService;
 import co.handk.backend.service.RequestFormService;
 import co.handk.backend.exception.BusinessException;
 import co.handk.common.constant.NumberConstant;
@@ -20,6 +21,7 @@ import co.handk.common.model.vo.CustomerGoodsStockVO;
 import co.handk.common.model.vo.CustomerGoodsMatrixVO;
 import co.handk.common.model.vo.CustomerOutboundTreeNodeVO;
 import co.handk.common.model.vo.CustomerStockSummaryVO;
+import co.handk.common.model.vo.StockBatchOptionVO;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -47,6 +49,7 @@ import java.util.List;
 public class StockController {
 
     private final StockService stockService;
+    private final StockBatchService stockBatchService;
     private final RequestFormService requestFormService;
 
     @GetMapping("/{id}")
@@ -186,6 +189,12 @@ public class StockController {
                 goodsId, skuId, warehouseId, stockTypeId, deptId, groupCode);
     }
 
+    @GetMapping("/{stockId}/batch-options")
+    public List<StockBatchOptionVO> batchOptions(@PathVariable("stockId") @NotNull Long stockId,
+                                                 @RequestParam(value = "deptId", required = false) Long deptId) {
+        return stockBatchService.listOutboundBatchOptions(stockId, deptId);
+    }
+
     @GetMapping("/customer/page")
     public PageResult<CustomerStockSummaryVO> customerPage(@Valid CustomerStockQueryDTO query) {
         return stockService.pageCustomerStock(query);
@@ -282,7 +291,9 @@ public class StockController {
         target.setDeptId(source.getDeptId());
         target.setGroupCode(source.getGroupCode());
         target.setDeptCode(source.getDeptCode());
+        target.setBatchId(source.getBatchId());
         target.setSaleDeadline(source.getSaleDeadline());
+        target.setBizDate(source.getBizDate());
         target.setRemark(source.getRemark());
         return target;
     }

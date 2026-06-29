@@ -34,7 +34,7 @@ public class StockRecordVO extends BaseVO {
     private Integer sourceType;
     private BigDecimal price;
     private String currency;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime priceUpdateTime;
     private Long customerId;
     private String customerName;

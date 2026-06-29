@@ -71,6 +71,8 @@ public final class AppConstants {
         public static final String STOCK_INBOUND = "/stock/inbound";
         public static final String STOCK_OUTBOUND = "/stock/outbound";
         public static final String STOCK_INBOUND_BATCH = "/stock/inbound/batch";
+        public static final String STOCK_OUTBOUND_BATCH = "/stock/outbound/batch";
+        public static final String STOCK_BATCH_OPTIONS_SUFFIX = "/batch-options";
         public static final String GOODS_IMPORT_TEMPLATE = "/goods/import/template";
         public static final String GOODS_IMPORT_UPSERT = "/goods/import/upsert";
         public static final String CUSTOMER_EXPORT = "/customer/export";

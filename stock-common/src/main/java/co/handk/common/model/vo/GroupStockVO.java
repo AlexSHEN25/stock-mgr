@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -23,6 +24,8 @@ public class GroupStockVO extends BaseVO {
     private String stockTypeName;
     private Integer allocatedQty;
     private Integer currentQty;
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "Asia/Tokyo")
+    private LocalDate bizDate;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime saleDeadline;
     private Integer state;

@@ -16,6 +16,7 @@ import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockBatchService;
 import co.handk.common.constant.StockBizConstant;
 import co.handk.common.enums.DeleteEnum;
+import co.handk.common.model.vo.StockBatchOptionVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +36,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class StockBatchServiceImpl implements StockBatchService {
     private static final long LEGACY_BATCH_ID_BASE = 9_000_000_000_000_000_000L;
+    private static final DateTimeFormatter BIZ_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final StockBatchMapper stockBatchMapper;
     private final GroupStockMapper groupStockMapper;
@@ -62,6 +66,7 @@ public class StockBatchServiceImpl implements StockBatchService {
         batch.setAvailableQty(item.getChangeQty());
         batch.setAllocatedQty(0);
         batch.setCustomerOutQty(0);
+        batch.setBizDate(order.getBizDate());
         batch.setSaleDeadline(order.getSaleDeadline());
         batch.setState(activeState(item.getChangeQty()));
         batch.setVersion(0L);
@@ -70,12 +75,12 @@ public class StockBatchServiceImpl implements StockBatchService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void lockOutbound(StockOrder order, StockOrderItem item, Stock stock) {
+    public void lockOutbound(StockOrder order, StockOrderItem item, Stock stock, Long batchId) {
         if (StockBizConstant.OUTBOUND_MODE_GROUP_CUSTOMER.equals(order.getOutboundMode())) {
-            lockGroupStock(order, item, stock);
+            lockGroupStock(order, item, stock, batchId);
             return;
         }
-        lockSelfStock(order, item, stock);
+        lockSelfStock(order, item, stock, batchId);
     }
 
     @Override
@@ -176,6 +181,61 @@ public class StockBatchServiceImpl implements StockBatchService {
     }
 
     @Override
+    public String getBizDateSummary(Long stockId, Long deptId) {
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        if (deptId == null) {
+            for (StockBatch batch : activeBatches(stockId)) {
+                if (batch.getBizDate() != null) {
+                    values.add(batch.getBizDate().format(BIZ_DATE_FORMATTER));
+                }
+            }
+        } else {
+            for (GroupStock row : activeGroupRows(stockId, deptId)) {
+                if (row.getBizDate() != null) {
+                    values.add(row.getBizDate().format(BIZ_DATE_FORMATTER));
+                }
+            }
+        }
+        return String.join(", ", values);
+    }
+
+    @Override
+    public List<StockBatchOptionVO> listOutboundBatchOptions(Long stockId, Long deptId) {
+        List<StockBatchOptionVO> options = new ArrayList<>();
+        if (stockId == null) {
+            return options;
+        }
+        if (deptId == null) {
+            for (StockBatch batch : activeBatches(stockId)) {
+                int availableQty = Math.max(0, safeInt(batch.getAvailableQty()) - getLockedQtyForBatch(batch.getId()));
+                if (availableQty <= 0) {
+                    continue;
+                }
+                StockBatchOptionVO option = new StockBatchOptionVO();
+                option.setBatchId(batch.getId());
+                option.setBizDate(batch.getBizDate());
+                option.setAvailableQty(availableQty);
+                option.setSaleDeadline(batch.getSaleDeadline());
+                options.add(option);
+            }
+            return options;
+        }
+        for (GroupStock row : activeGroupRows(stockId, deptId)) {
+            int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
+            if (availableQty <= 0) {
+                continue;
+            }
+            StockBatchOptionVO option = new StockBatchOptionVO();
+            option.setBatchId(row.getBatchId());
+            option.setBizDate(row.getBizDate());
+            option.setAvailableQty(availableQty);
+            option.setSaleDeadline(row.getSaleDeadline());
+            options.add(option);
+        }
+        return options;
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public int reclaimExpiredGroupStock() {
         List<GroupStock> expired = groupStockMapper.selectList(new QueryWrapper<GroupStock>()
@@ -220,9 +280,21 @@ public class StockBatchServiceImpl implements StockBatchService {
         return reclaimed;
     }
 
-    private void lockSelfStock(StockOrder order, StockOrderItem item, Stock stock) {
+    private void lockSelfStock(StockOrder order, StockOrderItem item, Stock stock, Long batchId) {
         int remaining = safeInt(item.getChangeQty());
         reconcileSelfStockBatch(stock);
+        if (batchId != null) {
+            StockBatch batch = requireBatch(batchId);
+            if (!stock.getId().equals(batch.getStockId())) {
+                throw new IllegalStateException("selected batch does not belong to requested stock");
+            }
+            int availableQty = Math.max(0, safeInt(batch.getAvailableQty()) - getLockedQtyForBatch(batch.getId()));
+            if (availableQty < remaining) {
+                throw new IllegalStateException("selected inbound batch quantity is insufficient");
+            }
+            insertLockRow(order, item, stock, batch, null, null, StockBizConstant.RESERVATION_SCOPE_SELF, remaining);
+            return;
+        }
         List<StockBatch> batches = activeBatches(stock.getId());
         if (batches.isEmpty()) {
             throw new IllegalStateException("available inbound batch quantity is insufficient");
@@ -244,9 +316,26 @@ public class StockBatchServiceImpl implements StockBatchService {
         }
     }
 
-    private void lockGroupStock(StockOrder order, StockOrderItem item, Stock stock) {
+    private void lockGroupStock(StockOrder order, StockOrderItem item, Stock stock, Long batchId) {
         Dept dept = requireGroupDept(order.getDeptId());
         int remaining = safeInt(item.getChangeQty());
+        if (batchId != null) {
+            GroupStock row = groupStockMapper.selectOne(new QueryWrapper<GroupStock>()
+                    .eq("stock_id", stock.getId())
+                    .eq("dept_id", dept.getId())
+                    .eq("batch_id", batchId)
+                    .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
+                    .last("LIMIT 1"));
+            if (row == null) {
+                throw new IllegalStateException("selected group batch does not exist");
+            }
+            int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
+            if (availableQty < remaining) {
+                throw new IllegalStateException("selected group batch quantity is insufficient");
+            }
+            insertLockRow(order, item, stock, null, row, dept, StockBizConstant.RESERVATION_SCOPE_GROUP, remaining);
+            return;
+        }
         List<GroupStock> rows = activeGroupRows(stock.getId(), dept.getId());
         for (GroupStock row : rows) {
             if (remaining <= 0) {
@@ -368,6 +457,7 @@ public class StockBatchServiceImpl implements StockBatchService {
             group.setStockTypeId(batch.getStockTypeId());
             group.setAllocatedQty(quantity);
             group.setCurrentQty(quantity);
+            group.setBizDate(batch.getBizDate());
             group.setSaleDeadline(order.getSaleDeadline());
             group.setState(activeState(quantity));
             group.setVersion(0L);
@@ -381,6 +471,7 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq(GroupStock::getVersion, group.getVersion())
                 .set(GroupStock::getAllocatedQty, safeInt(group.getAllocatedQty()) + quantity)
                 .set(GroupStock::getCurrentQty, nextCurrent)
+                .set(GroupStock::getBizDate, batch.getBizDate())
                 .set(GroupStock::getSaleDeadline, order.getSaleDeadline())
                 .set(GroupStock::getState, activeState(nextCurrent))
                 .set(GroupStock::getVersion, group.getVersion() + 1));
@@ -394,7 +485,7 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("stock_id", stockId)
                 .gt("available_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
-                .orderByAsc("sale_deadline", "id"));
+                .orderByAsc("biz_date", "sale_deadline", "id"));
     }
 
     private List<GroupStock> activeGroupRows(Long stockId, Long deptId) {
@@ -404,7 +495,7 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .gt("current_qty", 0)
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE)
                 .and(w -> w.isNull("sale_deadline").or().ge("sale_deadline", LocalDateTime.now()))
-                .orderByAsc("sale_deadline", "id"));
+                .orderByAsc("biz_date", "sale_deadline", "id"));
     }
 
     private List<GroupStock> matchingGroupRows(Long deptId, Long goodsId, Long skuId, Long warehouseId, Long stockTypeId) {
@@ -544,6 +635,7 @@ public class StockBatchServiceImpl implements StockBatchService {
             legacy.setAvailableQty(missingQty);
             legacy.setAllocatedQty(0);
             legacy.setCustomerOutQty(0);
+            legacy.setBizDate(null);
             legacy.setSaleDeadline(null);
             legacy.setState(StockBizConstant.BATCH_STATE_ACTIVE);
             legacy.setVersion(0L);

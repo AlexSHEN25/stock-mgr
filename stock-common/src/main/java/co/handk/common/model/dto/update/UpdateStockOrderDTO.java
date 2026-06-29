@@ -36,16 +36,16 @@ public class UpdateStockOrderDTO {
     private String remark;
     private Long approverId;
     private String approverName;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime approveTime;
     private LocalDate bizDate;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime finishTime;
     private String outboundMode;
     private Long customerId;
     private String customerName;
     private Long deptId;
     private String deptCode;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime saleDeadline;
 }

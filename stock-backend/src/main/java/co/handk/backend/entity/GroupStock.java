@@ -3,6 +3,7 @@ package co.handk.backend.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,6 +19,7 @@ public class GroupStock extends BaseEntity {
     private Long stockTypeId;
     private Integer allocatedQty;
     private Integer currentQty;
+    private LocalDate bizDate;
     private LocalDateTime saleDeadline;
     private Integer state;
     private Long version;

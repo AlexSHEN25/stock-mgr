@@ -3,6 +3,7 @@ package co.handk.backend.entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -20,6 +21,7 @@ public class StockBatch extends BaseEntity {
     private Integer availableQty;
     private Integer allocatedQty;
     private Integer customerOutQty;
+    private LocalDate bizDate;
     private LocalDateTime saleDeadline;
     private Integer state;
     private Long version;

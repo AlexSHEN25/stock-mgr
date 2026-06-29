@@ -232,7 +232,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         StockOrder order = saveStockOrder(stock, dto, StockBizConstant.ORDER_TYPE_OUTBOUND,
                 StockBizConstant.SOURCE_TYPE_MANUAL, StockBizConstant.ORDER_STATE_APPROVING, idempotencyKey);
         StockOrderItem item = saveOrderItem(order.getId(), goods, sku, stock, stockTypeName, dto, beforeQty, afterQty);
-        stockBatchService.lockOutbound(order, item, stock);
+        stockBatchService.lockOutbound(order, item, stock, dto.getBatchId());
         if (permissionQueryService.isSuperAdmin(UserContext.getUserIdOrDefault())) {
             approveOrder(order.getId(), true, dto.getRemark());
         }
@@ -722,6 +722,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 vo.getSkuId(),
                 Long.valueOf(vo.getWarehouseId()),
                 vo.getStockTypeId()));
+        vo.setBizDateSummary(stockBatchService.getBizDateSummary(vo.getId(), deptId));
     }
 
     private void fillStockJoins(List<StockVO> records) {
@@ -1095,7 +1096,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Long warehouseId = null;
         Long stockTypeId = null;
         String orderRemark = dto.getRemark();
-        LocalDate bizDate = LocalDate.now();
+        LocalDate bizDate = dto.getBizDate() == null ? LocalDate.now() : dto.getBizDate();
 
         for (StockOrderSubmitItemDTO itemDTO : dto.getItems()) {
             Stock stock = requireStock(itemDTO.getStockId());
@@ -1136,6 +1137,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             working.goods = goods;
             working.sku = sku;
             working.stockTypeName = stockTypeName;
+            working.batchId = itemDTO.getBatchId();
             working.changeQty = qty;
             working.beforeQty = beforeQty;
             working.afterQty = afterQty;
@@ -1202,6 +1204,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫明細の保存に失敗しました");
             }
 
+            if (orderType == StockBizConstant.ORDER_TYPE_OUTBOUND) {
+                stockBatchService.lockOutbound(order, item, working.stock, working.batchId);
+            }
             if (needApprove) {
                 continue;
             }
@@ -1279,6 +1284,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             inbound.setSourceType(itemDTO.getSourceType() == null ? dto.getSourceType() : itemDTO.getSourceType());
             inbound.setQuantity(itemDTO.getQuantity());
             inbound.setSaleDeadline(itemDTO.getSaleDeadline() == null ? dto.getSaleDeadline() : itemDTO.getSaleDeadline());
+            inbound.setBizDate(itemDTO.getBizDate() == null ? dto.getBizDate() : itemDTO.getBizDate());
             inbound.setRemark(hasText(itemDTO.getRemark()) ? itemDTO.getRemark() : dto.getRemark());
             Long orderId = submitBatchInboundItem(inbound, batchInboundItemIdempotencyKey(idempotencyKey, itemIndex));
             if (firstOrderId == null) {
@@ -1327,11 +1333,13 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         submitDTO.setOrderType(orderType);
         submitDTO.setSourceType(dto.getSourceType());
         submitDTO.setSaleDeadline(dto.getSaleDeadline());
+        submitDTO.setBizDate(dto.getBizDate());
         submitDTO.setRemark(dto.getRemark());
         List<StockOrderSubmitItemDTO> submitItems = new ArrayList<>();
         for (StockBatchOperateItemDTO itemDTO : dto.getItems()) {
             StockOrderSubmitItemDTO submitItem = new StockOrderSubmitItemDTO();
             submitItem.setQuantity(itemDTO.getQuantity());
+            submitItem.setBatchId(itemDTO.getBatchId());
             submitItem.setRemark(itemDTO.getRemark());
             if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
                 if (itemDTO.getStockId() != null) {
@@ -1513,7 +1521,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             Dept dept = deptService.getByIdNotDeleted(targetDeptId);
             order.setDeptCode(dept == null ? null : dept.getCode());
         }
-        order.setBizDate(LocalDate.now());
+        order.setBizDate(dto.getBizDate() == null ? LocalDate.now() : dto.getBizDate());
         if (state == StockBizConstant.ORDER_STATE_FINISHED) {
             applyAutoApproval(order, userId, user == null ? null : user.getUsername());
         }
@@ -1576,7 +1584,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         item.setPrice(stock.getPrice());
         item.setCurrency(stock.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : stock.getCurrency());
         item.setRemark(dto.getRemark());
-        item.setBizDate(LocalDate.now());
+        item.setBizDate(dto.getBizDate() == null ? LocalDate.now() : dto.getBizDate());
         if (!stockOrderItemService.save(item)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫明細の保存に失敗しました");
@@ -1680,6 +1688,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         private Goods goods;
         private GoodsSku sku;
         private String stockTypeName;
+        private Long batchId;
         private int changeQty;
         private int beforeQty;
         private int afterQty;
@@ -1803,6 +1812,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         StringBuilder builder = new StringBuilder();
         builder.append("source=").append(dto.getSourceType()).append('|');
         builder.append("deadline=").append(dto.getSaleDeadline()).append('|');
+        builder.append("bizDate=").append(dto.getBizDate()).append('|');
         builder.append("remark=").append(dto.getRemark()).append('|');
         for (StockBatchOperateItemDTO item : dto.getItems()) {
             builder.append("item:")
@@ -1814,6 +1824,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     .append(item.getSourceType()).append(',')
                     .append(item.getQuantity()).append(',')
                     .append(item.getSaleDeadline()).append(',')
+                    .append(item.getBizDate()).append(',')
                     .append(item.getRemark()).append(';');
         }
         return builder.toString();
@@ -1924,6 +1935,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         vo.setLockQty(lockedQty);
         vo.setCurrentQty(Math.max(0, safeInt(entity.getCurrentQty()) - lockedQty));
         vo.setStockTypeName(getStockTypeName(entity.getStockTypeId()));
+        vo.setBizDateSummary(stockBatchService.getBizDateSummary(entity.getId(), null));
         java.util.Map<String, Integer> groupQty = stockBatchService.getGroupQuantities(entity.getId());
         vo.setGroupAQty(groupQty.getOrDefault("A", 0));
         vo.setGroupBQty(groupQty.getOrDefault("B", 0));

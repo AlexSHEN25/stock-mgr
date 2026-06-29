@@ -9,6 +9,7 @@ import co.handk.client.service.TableActionService;
 import co.handk.client.service.TableRowService;
 import co.handk.client.service.UiFeedbackService;
 import co.handk.client.service.UserAccountService;
+import co.handk.client.util.JsonPayloadHelper;
 import co.handk.client.util.ModuleMeta;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -84,6 +85,7 @@ public class MainController {
     @FXML private Button stockInboundButton;
     @FXML private Button stockBatchInboundButton;
     @FXML private Button stockOutboundButton;
+    @FXML private Button stockBatchFlowButton;
     @FXML private Button goodsTemplateButton;
     @FXML private Button goodsImportButton;
     @FXML private Button customerExportButton;
@@ -129,6 +131,9 @@ public class MainController {
         public String toString() {
             return label == null || label.isBlank() ? value : label;
         }
+    }
+
+    private record BatchFlowRow(Map<String, Object> data, CheckBox selected, TextField quantity) {
     }
 
     public void setApp(MainApp app) {
@@ -211,7 +216,7 @@ public class MainController {
             return;
         }
         pendingStockOperation = "inbound";
-        openFormDialog(UiText.byKey("main.btn.stockInbound"), false, Module.STOCK, selected);
+        openFormDialog(UiText.byKey("main.btn.stockInbound"), false, Module.STOCK, withStockOperationSource(selected, "inbound"));
     }
 
     @FXML
@@ -234,7 +239,7 @@ public class MainController {
             for (Map<String, Object> row : rows) {
                 Object goodsId = row.get("goodsId");
                 Object skuId = row.get("skuId");
-                if (isBlankValue(goodsId) || isBlankValue(skuId)) {
+                if (JsonPayloadHelper.isBlank(goodsId) || JsonPayloadHelper.isBlank(skuId)) {
                     messageLabel.setText(UiText.byKey("msg.stockBatchInboundMissingSku"));
                     return;
                 }
@@ -274,7 +279,35 @@ public class MainController {
             return;
         }
         pendingStockOperation = "outbound";
-        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false, Module.STOCK, withDefaultOutboundQuantity(selected));
+        openFormDialog(UiText.byKey("main.btn.stockOutbound"), false, Module.STOCK,
+                withStockOperationSource(withDefaultOutboundQuantity(selected), "outbound"));
+    }
+
+    @FXML
+    private void onStockBatchFlow() {
+        if (!isStockOperationModule()) {
+            return;
+        }
+        Optional<JSONObject> payload = showStockBatchFlowDialog();
+        if (payload.isEmpty()) {
+            return;
+        }
+        JSONObject dto = payload.get();
+        String mode = dto.optString("_mode", "inbound");
+        dto.remove("_mode");
+        try {
+            JSONObject json = "outbound".equals(mode)
+                    ? dataService.batchOutboundStock(dto)
+                    : dataService.batchInboundStock(dto);
+            if (uiFeedback.isSuccess(json)) {
+                messageLabel.setText("一括入出庫を登録しました。");
+                loadData();
+            } else {
+                messageLabel.setText(uiFeedback.resolveMessage(json, UiText.MSG_SAVE_FAILED));
+            }
+        } catch (Exception ex) {
+            messageLabel.setText(uiFeedback.saveFailed(ex));
+        }
     }
 
     @FXML
@@ -722,9 +755,12 @@ public class MainController {
         stockBatchInboundButton.setManaged(stockModule);
         stockOutboundButton.setVisible(stockModule);
         stockOutboundButton.setManaged(stockModule);
+        stockBatchFlowButton.setVisible(stockModule);
+        stockBatchFlowButton.setManaged(stockModule);
         stockInboundButton.setDisable(!stockOperationAllowed);
         stockBatchInboundButton.setDisable(!stockOperationAllowed);
         stockOutboundButton.setDisable(!stockOperationAllowed);
+        stockBatchFlowButton.setDisable(!stockOperationAllowed);
         goodsTemplateButton.setVisible(goodsModule && superAdmin);
         goodsTemplateButton.setManaged(goodsModule && superAdmin);
         goodsImportButton.setVisible(goodsModule && superAdmin);
@@ -955,9 +991,9 @@ public class MainController {
         childMenu.getChildren().add(createStockOrderCategoryButton(
                 UiText.byKey("main.menu.stockOrderCategoryC"), "C"));
         childMenu.getChildren().add(createStockOrderCategoryButton(
-                UiText.byKey("main.menu.stockOrderCategoryHandle"), "柄"));
+                UiText.byKey("main.menu.stockOrderCategoryHandle"), "HANDLE"));
         childMenu.getChildren().add(createStockOrderCategoryButton(
-                UiText.byKey("main.menu.stockOrderCategorySelf"), "自社"));
+                UiText.byKey("main.menu.stockOrderCategorySelf"), "SELF"));
         TitledPane pane = new TitledPane(UiText.MENU_STOCK_ORDER, childMenu);
         pane.setExpanded(false);
         stockOrderCategoryMenu.getChildren().add(pane);
@@ -1924,11 +1960,225 @@ public class MainController {
 
     private Map<String, Object> withDefaultOutboundQuantity(Map<String, Object> selected) {
         Map<String, Object> defaults = new LinkedHashMap<>(selected);
-        Number submittedQuantity = coerceNumber(new JSONObject(defaults), "quantity");
+        Number submittedQuantity = JsonPayloadHelper.coerceNumber(new JSONObject(defaults), "quantity");
         if (submittedQuantity == null || submittedQuantity.intValue() <= 0) {
             defaults.put("quantity", 1);
         }
         return defaults;
+    }
+
+    private Optional<JSONObject> showStockBatchFlowDialog() {
+        Dialog<JSONObject> dialog = new Dialog<>();
+        dialog.setTitle(UiText.byKey("main.btn.stockBatchFlow"));
+        dialog.setHeaderText("商品を選択して入庫または出庫を登録してください。");
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        ComboBox<RelationOption> operationCombo = new ComboBox<>();
+        operationCombo.getItems().addAll(
+                new RelationOption("入庫", "inbound"),
+                new RelationOption("出庫", "outbound")
+        );
+        operationCombo.setValue(operationCombo.getItems().get(0));
+        operationCombo.setPrefWidth(140);
+
+        ComboBox<RelationOption> warehouseCombo = new ComboBox<>();
+        warehouseCombo.getItems().addAll(loadRelationOptions("warehouse"));
+        if (!warehouseCombo.getItems().isEmpty()) {
+            warehouseCombo.setValue(warehouseCombo.getItems().get(0));
+        }
+        warehouseCombo.setPrefWidth(240);
+
+        ComboBox<RelationOption> stockTypeCombo = new ComboBox<>();
+        stockTypeCombo.getItems().addAll(loadRelationOptions("stockType"));
+        if (!stockTypeCombo.getItems().isEmpty()) {
+            stockTypeCombo.setValue(stockTypeCombo.getItems().get(0));
+        }
+        stockTypeCombo.setPrefWidth(220);
+
+        DatePicker bizDatePicker = new DatePicker();
+        TextArea remarkArea = new TextArea();
+        remarkArea.setPrefRowCount(2);
+
+        GridPane header = new GridPane();
+        header.setHgap(10);
+        header.setVgap(10);
+        header.setPadding(new Insets(12));
+        header.add(new Label("操作"), 0, 0);
+        header.add(operationCombo, 1, 0);
+        header.add(new Label(ModuleMeta.normalizeTitle("warehouseId")), 2, 0);
+        header.add(warehouseCombo, 3, 0);
+        header.add(new Label(ModuleMeta.normalizeTitle("stockTypeId")), 0, 1);
+        header.add(stockTypeCombo, 1, 1);
+        header.add(new Label("納品日"), 2, 1);
+        header.add(bizDatePicker, 3, 1);
+        header.add(new Label(ModuleMeta.normalizeTitle("remark")), 0, 2);
+        header.add(remarkArea, 1, 2, 3, 1);
+
+        GridPane rowsGrid = new GridPane();
+        rowsGrid.setHgap(10);
+        rowsGrid.setVgap(8);
+        rowsGrid.setPadding(new Insets(12));
+        List<BatchFlowRow> batchRows = new ArrayList<>();
+        Runnable reloadRows = () -> populateBatchFlowRows(
+                rowsGrid,
+                batchRows,
+                operationCombo.getValue() == null ? "inbound" : operationCombo.getValue().value()
+        );
+        reloadRows.run();
+        operationCombo.valueProperty().addListener((obs, oldValue, newValue) -> reloadRows.run());
+
+        ScrollPane scroll = new ScrollPane(rowsGrid);
+        scroll.setFitToWidth(true);
+        scroll.setPrefViewportWidth(880);
+        scroll.setPrefViewportHeight(420);
+
+        VBox content = new VBox(8, header, scroll);
+        dialog.getDialogPane().setContent(content);
+
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.addEventFilter(ActionEvent.ACTION, event -> {
+            String mode = operationCombo.getValue() == null ? "inbound" : operationCombo.getValue().value();
+            boolean inbound = "inbound".equals(mode);
+            if ((inbound && (warehouseCombo.getValue() == null || stockTypeCombo.getValue() == null))
+                    || bizDatePicker.getValue() == null) {
+                messageLabel.setText(inbound ? "倉庫、在庫分類、納品日を入力してください。" : "納品日を入力してください。");
+                event.consume();
+                return;
+            }
+            boolean hasSelected = batchRows.stream().anyMatch(row -> row.selected().isSelected());
+            if (!hasSelected) {
+                messageLabel.setText("対象商品を選択してください。");
+                event.consume();
+                return;
+            }
+            try {
+                for (BatchFlowRow row : batchRows) {
+                    if (row.selected().isSelected()) {
+                        parsePositiveInt(row.quantity().getText(), "quantity");
+                    }
+                }
+            } catch (Exception ex) {
+                messageLabel.setText(ModuleMeta.normalizeTitle("quantity") + UiText.MSG_REQUIRED_SUFFIX);
+                event.consume();
+            }
+        });
+
+        dialog.setResultConverter(button -> {
+            if (button != ButtonType.OK) {
+                return null;
+            }
+            String mode = operationCombo.getValue() == null ? "inbound" : operationCombo.getValue().value();
+            JSONObject dto = new JSONObject();
+            dto.put("_mode", mode);
+            dto.put("bizDate", bizDatePicker.getValue().toString());
+            dto.put("remark", remarkArea.getText() == null || remarkArea.getText().isBlank()
+                    ? ("outbound".equals(mode) ? "一括出庫" : "一括入庫")
+                    : remarkArea.getText().trim());
+            if ("inbound".equals(mode)) {
+                dto.put("sourceType", 1);
+            }
+            JSONArray items = new JSONArray();
+            for (BatchFlowRow row : batchRows) {
+                if (!row.selected().isSelected()) {
+                    continue;
+                }
+                JSONObject item = new JSONObject();
+                int quantity = parsePositiveInt(row.quantity().getText(), "quantity");
+                if ("outbound".equals(mode)) {
+                    item.put("stockId", parseLongValue(firstPresent(row.data(), "stockId", "id"), "stockId"));
+                } else {
+                    item.put("goodsId", parseLongValue(firstPresent(row.data(), "goodsId", "id"), "goodsId").intValue());
+                    item.put("skuId", parseLongValue(row.data().get("skuId"), "skuId"));
+                    item.put("warehouseId", Integer.parseInt(warehouseCombo.getValue().value()));
+                    item.put("stockTypeId", Long.parseLong(stockTypeCombo.getValue().value()));
+                }
+                item.put("quantity", quantity);
+                item.put("bizDate", bizDatePicker.getValue().toString());
+                items.put(item);
+            }
+            dto.put("items", items);
+            return dto;
+        });
+        Window owner = dataTable != null && dataTable.getScene() != null ? dataTable.getScene().getWindow() : null;
+        if (owner != null) {
+            dialog.initOwner(owner);
+        }
+        return dialog.showAndWait();
+    }
+
+    private void populateBatchFlowRows(GridPane grid, List<BatchFlowRow> batchRows, String mode) {
+        grid.getChildren().clear();
+        batchRows.clear();
+        grid.add(new Label(UiText.FIELD_SELECT), 0, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("goodsName")), 1, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("skuCode")), 2, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("brandName")), 3, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("seriesName")), 4, 0);
+        if ("outbound".equals(mode)) {
+            grid.add(new Label(ModuleMeta.normalizeTitle("currentQty")), 5, 0);
+        }
+        grid.add(new Label(ModuleMeta.normalizeTitle("quantity")), "outbound".equals(mode) ? 6 : 5, 0);
+        List<Map<String, Object>> rows = loadBatchFlowCandidates(mode);
+        for (int index = 0; index < rows.size(); index++) {
+            Map<String, Object> row = rows.get(index);
+            int gridRow = index + 1;
+            CheckBox selected = new CheckBox();
+            TextField quantity = new TextField("1");
+            quantity.setPrefWidth(80);
+            quantity.setDisable(!selected.isSelected());
+            selected.selectedProperty().addListener((obs, oldValue, newValue) -> quantity.setDisable(!newValue));
+            grid.add(selected, 0, gridRow);
+            grid.add(new Label(stringValue(row.getOrDefault("goodsName", row.get("name")))), 1, gridRow);
+            grid.add(new Label(stringValue(row.get("skuCode"))), 2, gridRow);
+            grid.add(new Label(stringValue(row.get("brandName"))), 3, gridRow);
+            grid.add(new Label(stringValue(row.get("seriesName"))), 4, gridRow);
+            int quantityColumn = 5;
+            if ("outbound".equals(mode)) {
+                grid.add(new Label(stringValue(row.get("currentQty"))), 5, gridRow);
+                quantityColumn = 6;
+            }
+            grid.add(quantity, quantityColumn, gridRow);
+            batchRows.add(new BatchFlowRow(row, selected, quantity));
+        }
+    }
+
+    private List<Map<String, Object>> loadBatchFlowCandidates(String mode) {
+        try {
+            Map<String, String> filters = new LinkedHashMap<>();
+            if ("outbound".equals(mode)) {
+                filters.put("stockScope", "self");
+            }
+            JSONObject wrapper = dataService.fetchPage("outbound".equals(mode) ? Module.STOCK : Module.GOODS, 1, 200, filters);
+            JSONObject data = wrapper.optJSONObject("data");
+            JSONArray records = data == null ? null : data.optJSONArray("records");
+            List<Map<String, Object>> rows = new ArrayList<>();
+            if (records == null) {
+                return rows;
+            }
+            for (int i = 0; i < records.length(); i++) {
+                JSONObject record = records.getJSONObject(i);
+                Map<String, Object> row = new LinkedHashMap<>();
+                for (String key : record.keySet()) {
+                    row.put(key, record.opt(key));
+                }
+                rows.add(row);
+            }
+            return rows;
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load batch stock candidates failed. mode=" + mode, ex);
+            messageLabel.setText("商品一覧の取得に失敗しました: " + ex.getMessage());
+            return List.of();
+        }
+    }
+
+    private Object firstPresent(Map<String, Object> row, String... keys) {
+        for (String key : keys) {
+            Object value = row.get(key);
+            if (!JsonPayloadHelper.isBlank(value)) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private Optional<JSONObject> showStockBatchInboundDialog(int rowCount) {
@@ -2017,30 +2267,34 @@ public class MainController {
 
     private JSONObject sanitizeStockOperationPayload(JSONObject dto) {
         JSONObject clean = new JSONObject();
-        putIfPresent(clean, dto, "stockId");
-        putIntegerIfPresent(clean, dto, "goodsId");
-        putLongIfPresent(clean, dto, "skuId");
-        putIntegerIfPresent(clean, dto, "warehouseId");
-        putLongIfPresent(clean, dto, "stockTypeId");
-        putIntegerIfPresent(clean, dto, "quantity");
-        putIntegerIfPresent(clean, dto, "sourceType");
-        putLongIfPresent(clean, dto, "customerId");
-        putIfPresent(clean, dto, "customerName");
-        putLongIfPresent(clean, dto, "deptId");
-        putIfPresent(clean, dto, "groupCode");
-        putIfPresent(clean, dto, "deptCode");
-        putIntegerIfPresent(clean, dto, "groupAQty");
-        putIntegerIfPresent(clean, dto, "groupBQty");
-        putIntegerIfPresent(clean, dto, "groupCQty");
-        putIfPresent(clean, dto, "allocations");
-        putIfPresent(clean, dto, "outboundMode");
-        putIfPresent(clean, dto, "saleDeadline");
-        putIfPresent(clean, dto, "remark");
+        JsonPayloadHelper.putIfPresent(clean, dto, "stockId");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "goodsId");
+        JsonPayloadHelper.putLongIfPresent(clean, dto, "skuId");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "warehouseId");
+        JsonPayloadHelper.putLongIfPresent(clean, dto, "stockTypeId");
+        JsonPayloadHelper.putLongIfPresent(clean, dto, "batchId");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "quantity");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "sourceType");
+        JsonPayloadHelper.putLongIfPresent(clean, dto, "customerId");
+        JsonPayloadHelper.putIfPresent(clean, dto, "customerName");
+        JsonPayloadHelper.putLongIfPresent(clean, dto, "deptId");
+        JsonPayloadHelper.putIfPresent(clean, dto, "groupCode");
+        JsonPayloadHelper.putIfPresent(clean, dto, "deptCode");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "groupAQty");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "groupBQty");
+        JsonPayloadHelper.putIntegerIfPresent(clean, dto, "groupCQty");
+        JsonPayloadHelper.putIfPresent(clean, dto, "allocations");
+        JsonPayloadHelper.putIfPresent(clean, dto, "outboundMode");
+        JsonPayloadHelper.putIfPresent(clean, dto, "saleDeadline");
+        JsonPayloadHelper.putIfPresent(clean, dto, "bizDate");
+        JsonPayloadHelper.putIfPresent(clean, dto, "remark");
         return clean;
     }
 
-    private boolean isBlankValue(Object value) {
-        return value == null || value == JSONObject.NULL || String.valueOf(value).isBlank();
+    private Map<String, Object> withStockOperationSource(Map<String, Object> source, String operation) {
+        Map<String, Object> values = new LinkedHashMap<>(source == null ? Map.of() : source);
+        values.put("_stockOperation", operation);
+        return values;
     }
 
     private Long parseLongValue(Object value, String label) {
@@ -2051,63 +2305,6 @@ public class MainController {
         }
     }
 
-    private void putIfPresent(JSONObject target, JSONObject source, String key) {
-        if (source == null || !source.has(key)) {
-            return;
-        }
-        Object value = source.opt(key);
-        if (value == null || value == JSONObject.NULL) {
-            return;
-        }
-        if (value instanceof Boolean) {
-            return;
-        }
-        if (value instanceof String text && text.isBlank()) {
-            return;
-        }
-        target.put(key, value);
-    }
-
-    private void putIntegerIfPresent(JSONObject target, JSONObject source, String key) {
-        Number number = coerceNumber(source, key);
-        if (number == null) {
-            return;
-        }
-        target.put(key, number.intValue());
-    }
-
-    private void putLongIfPresent(JSONObject target, JSONObject source, String key) {
-        Number number = coerceNumber(source, key);
-        if (number == null) {
-            return;
-        }
-        target.put(key, number.longValue());
-    }
-
-    private Number coerceNumber(JSONObject source, String key) {
-        if (source == null || !source.has(key)) {
-            return null;
-        }
-        Object value = source.opt(key);
-        if (value == null || value == JSONObject.NULL || value instanceof Boolean) {
-            return null;
-        }
-        if (value instanceof Number number) {
-            return number;
-        }
-        String text = String.valueOf(value).trim();
-        if (text.isEmpty()) {
-            return null;
-        }
-        try {
-            if (text.contains(".")) {
-                return Double.parseDouble(text);
-            }
-            return Long.parseLong(text);
-        } catch (NumberFormatException ex) {
-            return null;
-        }
-    }
 
     private void focusFirstQueryField() {
         for (Control control : queryControls.values()) {

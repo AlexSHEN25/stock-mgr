@@ -10,6 +10,8 @@ public class StockOrderSubmitItemDTO {
     @NotNull(message = "在庫IDは必須です")
     private Long stockId;
 
+    private Long batchId;
+
     @NotNull(message = "数量は必須です")
     @Min(value = 1, message = "数量は1以上で入力してください")
     private Integer quantity;

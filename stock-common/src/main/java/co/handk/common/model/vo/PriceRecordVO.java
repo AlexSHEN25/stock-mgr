@@ -17,7 +17,7 @@ public class PriceRecordVO extends BaseVO {
     private BigDecimal newPrice;
     private String currency;
     private BigDecimal discount;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime priceUpdateTime;
     private Long operatorId;
     private String operatorName;

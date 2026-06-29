@@ -25,7 +25,7 @@ public class StockGroupAllocateDTO {
     @NotEmpty(message = "allocations are required")
     private List<StockGroupAllocationItemDTO> allocations;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Tokyo")
     private LocalDateTime saleDeadline;
 
     private String remark;
