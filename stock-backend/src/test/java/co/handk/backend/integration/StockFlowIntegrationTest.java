@@ -37,6 +37,8 @@ import co.handk.common.model.dto.create.StockBatchOperateDTO;
 import co.handk.common.model.dto.create.StockBatchOperateItemDTO;
 import co.handk.common.model.dto.create.StockGroupAllocateDTO;
 import co.handk.common.model.dto.create.StockGroupAllocationItemDTO;
+import co.handk.common.model.dto.create.StockOrderSubmitDTO;
+import co.handk.common.model.dto.create.StockOrderSubmitItemDTO;
 import co.handk.common.model.dto.create.StockOperateDTO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.junit.jupiter.api.AfterEach;
@@ -199,6 +201,48 @@ class StockFlowIntegrationTest {
         assertEquals(3, batch.getCustomerOutQty());
         assertTrue(confirmedRows.stream().allMatch(row -> row.getState() == StockBizConstant.RESERVATION_STATE_CONFIRMED));
         assertTrue(confirmedRows.stream().allMatch(row -> row.getConfirmTime() != null));
+    }
+
+    @Test
+    void outboundApprovalRejectRestoresBlockedStock() {
+        TestFixture fixture = createFixture();
+        seedInboundStock(fixture, 9);
+        Stock stock = findStock(fixture);
+
+        StockOrderSubmitItemDTO item = new StockOrderSubmitItemDTO();
+        item.setStockId(stock.getId());
+        item.setQuantity(4);
+
+        StockOrderSubmitDTO submit = new StockOrderSubmitDTO();
+        submit.setOrderType(StockBizConstant.ORDER_TYPE_OUTBOUND);
+        submit.setItems(List.of(item));
+
+        Long orderId = stockService.submitOrder(submit);
+
+        Stock blockedStock = findStock(fixture);
+        StockBatch blockedBatch = findSingleBatchByStockId(blockedStock.getId());
+        List<StockReservation> lockedRows = findReservationsByOrderId(orderId);
+        StockOrder order = stockOrderService.getByIdNotDeleted(orderId);
+
+        assertEquals(StockBizConstant.ORDER_STATE_APPROVING, order.getState());
+        assertEquals(5, blockedStock.getCurrentQty());
+        assertEquals(5, blockedBatch.getAvailableQty());
+        assertEquals(1, lockedRows.size());
+        assertEquals(StockBizConstant.RESERVATION_STATE_LOCKED, lockedRows.get(0).getState());
+
+        assertTrue(stockService.approveOrder(orderId, false, "reject"));
+        assertTrue(stockService.approveOrder(orderId, false, "reject again"));
+
+        Stock restoredStock = findStock(fixture);
+        StockBatch restoredBatch = findSingleBatchByStockId(restoredStock.getId());
+        List<StockReservation> releasedRows = findReservationsByOrderId(orderId);
+        StockOrder rejectedOrder = stockOrderService.getByIdNotDeleted(orderId);
+
+        assertEquals(StockBizConstant.ORDER_STATE_CANCELED, rejectedOrder.getState());
+        assertEquals(9, restoredStock.getCurrentQty());
+        assertEquals(9, restoredBatch.getAvailableQty());
+        assertEquals(StockBizConstant.RESERVATION_STATE_RELEASED, releasedRows.get(0).getState());
+        assertNotNull(releasedRows.get(0).getReleaseTime());
     }
 
     @Test

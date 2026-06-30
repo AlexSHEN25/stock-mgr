@@ -9,6 +9,7 @@ import co.handk.common.model.dto.update.RequestCartMoveDTO;
 import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.vo.RequestCandidateItemVO;
+import co.handk.common.model.vo.RequestFormCartPreviewVO;
 import co.handk.common.model.vo.RequestFormVO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,8 @@ public interface RequestFormService extends BaseService<RequestForm, RequestForm
     java.util.List<RequestCandidateItemVO> listCandidateItems(Long requestId);
 
     PageResult<RequestCandidateItemVO> pageCartItems(RequestItemCartQueryDTO query);
+
+    RequestFormCartPreviewVO previewCartItems(RequestItemCartQueryDTO query);
 
     Boolean addItemsToCart(RequestCartMoveDTO dto);
 

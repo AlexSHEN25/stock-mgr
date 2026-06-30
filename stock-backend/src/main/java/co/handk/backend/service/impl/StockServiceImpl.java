@@ -221,7 +221,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         int beforeQty = groupCustomer
                 ? stockBatchService.getGroupAvailableQty(dto.getDeptId(), Long.valueOf(stock.getGoodsId()),
                 stock.getSkuId(), Long.valueOf(stock.getWarehouseId()), stock.getStockTypeId())
-                : safeInt(stock.getCurrentQty()) - stockBatchService.getSelfLockedQty(stock.getId());
+                : safeInt(stock.getCurrentQty());
         if (beforeQty < dto.getQuantity()) {
             notifyInsufficientStock(sku.getSkuCode(), dto.getQuantity(), beforeQty, stock.getId());
             throw new co.handk.backend.exception.BusinessException(
@@ -934,6 +934,14 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入庫伝票ではありません");
         }
         if (!Integer.valueOf(StockBizConstant.ORDER_STATE_APPROVING).equals(order.getState())) {
+            if (Boolean.TRUE.equals(approved)
+                    && Integer.valueOf(StockBizConstant.ORDER_STATE_FINISHED).equals(order.getState())) {
+                return true;
+            }
+            if (Boolean.FALSE.equals(approved)
+                    && Integer.valueOf(StockBizConstant.ORDER_STATE_CANCELED).equals(order.getState())) {
+                return true;
+            }
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "承認待ち状態ではありません");
         }
@@ -1933,7 +1941,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         BeanUtils.copyProperties(entity, vo);
         int lockedQty = stockBatchService.getSelfLockedQty(entity.getId());
         vo.setLockQty(lockedQty);
-        vo.setCurrentQty(Math.max(0, safeInt(entity.getCurrentQty()) - lockedQty));
+        vo.setCurrentQty(Math.max(0, safeInt(entity.getCurrentQty())));
         vo.setStockTypeName(getStockTypeName(entity.getStockTypeId()));
         vo.setBizDateSummary(stockBatchService.getBizDateSummary(entity.getId(), null));
         java.util.Map<String, Integer> groupQty = stockBatchService.getGroupQuantities(entity.getId());

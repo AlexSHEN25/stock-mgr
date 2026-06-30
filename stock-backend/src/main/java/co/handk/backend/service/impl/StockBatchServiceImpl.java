@@ -102,6 +102,7 @@ public class StockBatchServiceImpl implements StockBatchService {
     public void releaseOutbound(StockOrder order, StockOrderItem item, Stock stock) {
         List<StockReservation> locks = findLockedRows(item.getId());
         for (StockReservation lock : locks) {
+            releaseLockedQuantity(lock, stock);
             updateLockState(lock, StockBizConstant.RESERVATION_STATE_RELEASED);
         }
     }
@@ -119,8 +120,7 @@ public class StockBatchServiceImpl implements StockBatchService {
         List<GroupStock> rows = matchingGroupRows(deptId, goodsId, skuId, warehouseId, stockTypeId);
         int total = 0;
         for (GroupStock row : rows) {
-            int locked = getLockedQtyForGroupRow(row.getId());
-            total += Math.max(0, safeInt(row.getCurrentQty()) - locked);
+            total += Math.max(0, safeInt(row.getCurrentQty()));
         }
         return total;
     }
@@ -171,7 +171,7 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("state", StockBizConstant.BATCH_STATE_ACTIVE));
         Map<String, Integer> result = new HashMap<>();
         for (GroupStock row : rows) {
-            int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
+            int availableQty = Math.max(0, safeInt(row.getCurrentQty()));
             if (availableQty <= 0) {
                 continue;
             }
@@ -207,7 +207,7 @@ public class StockBatchServiceImpl implements StockBatchService {
         }
         if (deptId == null) {
             for (StockBatch batch : activeBatches(stockId)) {
-                int availableQty = Math.max(0, safeInt(batch.getAvailableQty()) - getLockedQtyForBatch(batch.getId()));
+                int availableQty = Math.max(0, safeInt(batch.getAvailableQty()));
                 if (availableQty <= 0) {
                     continue;
                 }
@@ -221,7 +221,7 @@ public class StockBatchServiceImpl implements StockBatchService {
             return options;
         }
         for (GroupStock row : activeGroupRows(stockId, deptId)) {
-            int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
+            int availableQty = Math.max(0, safeInt(row.getCurrentQty()));
             if (availableQty <= 0) {
                 continue;
             }
@@ -288,10 +288,11 @@ public class StockBatchServiceImpl implements StockBatchService {
             if (!stock.getId().equals(batch.getStockId())) {
                 throw new IllegalStateException("selected batch does not belong to requested stock");
             }
-            int availableQty = Math.max(0, safeInt(batch.getAvailableQty()) - getLockedQtyForBatch(batch.getId()));
+            int availableQty = Math.max(0, safeInt(batch.getAvailableQty()));
             if (availableQty < remaining) {
                 throw new IllegalStateException("selected inbound batch quantity is insufficient");
             }
+            blockSelfQuantity(stock, batch, remaining);
             insertLockRow(order, item, stock, batch, null, null, StockBizConstant.RESERVATION_SCOPE_SELF, remaining);
             return;
         }
@@ -303,11 +304,12 @@ public class StockBatchServiceImpl implements StockBatchService {
             if (remaining <= 0) {
                 break;
             }
-            int availableQty = Math.max(0, safeInt(batch.getAvailableQty()) - getLockedQtyForBatch(batch.getId()));
+            int availableQty = Math.max(0, safeInt(batch.getAvailableQty()));
             if (availableQty <= 0) {
                 continue;
             }
             int locked = Math.min(remaining, availableQty);
+            blockSelfQuantity(stock, batch, locked);
             insertLockRow(order, item, stock, batch, null, null, StockBizConstant.RESERVATION_SCOPE_SELF, locked);
             remaining -= locked;
         }
@@ -329,10 +331,11 @@ public class StockBatchServiceImpl implements StockBatchService {
             if (row == null) {
                 throw new IllegalStateException("selected group batch does not exist");
             }
-            int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
+            int availableQty = Math.max(0, safeInt(row.getCurrentQty()));
             if (availableQty < remaining) {
                 throw new IllegalStateException("selected group batch quantity is insufficient");
             }
+            blockGroupQuantity(row, remaining);
             insertLockRow(order, item, stock, null, row, dept, StockBizConstant.RESERVATION_SCOPE_GROUP, remaining);
             return;
         }
@@ -341,11 +344,12 @@ public class StockBatchServiceImpl implements StockBatchService {
             if (remaining <= 0) {
                 break;
             }
-            int availableQty = Math.max(0, safeInt(row.getCurrentQty()) - getLockedQtyForGroupRow(row.getId()));
+            int availableQty = Math.max(0, safeInt(row.getCurrentQty()));
             if (availableQty <= 0) {
                 continue;
             }
             int locked = Math.min(remaining, availableQty);
+            blockGroupQuantity(row, locked);
             insertLockRow(order, item, stock, null, row, dept, StockBizConstant.RESERVATION_SCOPE_GROUP, locked);
             remaining -= locked;
         }
@@ -354,23 +358,130 @@ public class StockBatchServiceImpl implements StockBatchService {
         }
     }
 
-    private void confirmSelfLocks(StockOrder order, Stock stock, List<StockReservation> locks) {
-        int total = locks.stream().mapToInt(lock -> safeInt(lock.getReservationQty())).sum();
-        int afterQty = safeInt(stock.getCurrentQty()) - total;
-        if (afterQty < 0) {
+    private void blockSelfQuantity(Stock stock, StockBatch batch, int quantity) {
+        if (quantity <= 0) {
+            return;
+        }
+        int nextStockQty = safeInt(stock.getCurrentQty()) - quantity;
+        if (nextStockQty < 0) {
             throw new IllegalStateException("stock quantity became negative");
         }
-        int updated = stockMapper.update(null, new LambdaUpdateWrapper<Stock>()
+        int stockUpdated = stockMapper.update(null, new LambdaUpdateWrapper<Stock>()
                 .eq(Stock::getId, stock.getId())
                 .eq(Stock::getVersion, stock.getVersion())
-                .set(Stock::getCurrentQty, afterQty)
+                .ge(Stock::getCurrentQty, quantity)
+                .set(Stock::getCurrentQty, nextStockQty)
                 .set(Stock::getVersion, stock.getVersion() + 1));
+        if (stockUpdated != 1) {
+            throw changed();
+        }
+        stock.setCurrentQty(nextStockQty);
+        stock.setVersion(stock.getVersion() + 1);
+
+        int nextBatchQty = safeInt(batch.getAvailableQty()) - quantity;
+        if (nextBatchQty < 0) {
+            throw new IllegalStateException("stock batch available quantity became negative");
+        }
+        int batchUpdated = stockBatchMapper.update(null, new LambdaUpdateWrapper<StockBatch>()
+                .eq(StockBatch::getId, batch.getId())
+                .eq(StockBatch::getVersion, batch.getVersion())
+                .ge(StockBatch::getAvailableQty, quantity)
+                .set(StockBatch::getCurrentQty, nextBatchQty)
+                .set(StockBatch::getAvailableQty, nextBatchQty)
+                .set(StockBatch::getState, activeState(nextBatchQty))
+                .set(StockBatch::getVersion, batch.getVersion() + 1));
+        if (batchUpdated != 1) {
+            throw changed();
+        }
+        batch.setCurrentQty(nextBatchQty);
+        batch.setAvailableQty(nextBatchQty);
+        batch.setState(activeState(nextBatchQty));
+        batch.setVersion(batch.getVersion() + 1);
+    }
+
+    private void blockGroupQuantity(GroupStock row, int quantity) {
+        if (quantity <= 0) {
+            return;
+        }
+        int nextCurrent = safeInt(row.getCurrentQty()) - quantity;
+        if (nextCurrent < 0) {
+            throw new IllegalStateException("group stock became negative");
+        }
+        int updated = groupStockMapper.update(null, new LambdaUpdateWrapper<GroupStock>()
+                .eq(GroupStock::getId, row.getId())
+                .eq(GroupStock::getVersion, row.getVersion())
+                .ge(GroupStock::getCurrentQty, quantity)
+                .set(GroupStock::getCurrentQty, nextCurrent)
+                .set(GroupStock::getState, activeState(nextCurrent))
+                .set(GroupStock::getVersion, row.getVersion() + 1));
         if (updated != 1) {
             throw changed();
         }
-        stock.setCurrentQty(afterQty);
-        stock.setVersion(stock.getVersion() + 1);
+        row.setCurrentQty(nextCurrent);
+        row.setState(activeState(nextCurrent));
+        row.setVersion(row.getVersion() + 1);
+    }
 
+    private void releaseLockedQuantity(StockReservation lock, Stock stock) {
+        int quantity = safeInt(lock.getReservationQty());
+        if (quantity <= 0) {
+            return;
+        }
+        if (StockBizConstant.RESERVATION_SCOPE_GROUP.equals(lock.getReservationScope())) {
+            restoreGroupQuantity(lock, quantity);
+            return;
+        }
+        restoreSelfQuantity(lock, stock, quantity);
+    }
+
+    private void restoreSelfQuantity(StockReservation lock, Stock stock, int quantity) {
+        Stock targetStock = stock != null && stock.getId().equals(lock.getStockId())
+                ? stock
+                : stockMapper.selectById(lock.getStockId());
+        if (targetStock == null || targetStock.getDeleted() != DeleteEnum.UNDELETED.getCode()) {
+            throw new IllegalStateException("stock row is missing");
+        }
+        int nextStockQty = safeInt(targetStock.getCurrentQty()) + quantity;
+        int stockUpdated = stockMapper.update(null, new LambdaUpdateWrapper<Stock>()
+                .eq(Stock::getId, targetStock.getId())
+                .eq(Stock::getVersion, targetStock.getVersion())
+                .set(Stock::getCurrentQty, nextStockQty)
+                .set(Stock::getVersion, targetStock.getVersion() + 1));
+        if (stockUpdated != 1) {
+            throw changed();
+        }
+        targetStock.setCurrentQty(nextStockQty);
+        targetStock.setVersion(targetStock.getVersion() + 1);
+
+        StockBatch batch = requireBatch(lock.getBatchId());
+        int nextBatchQty = safeInt(batch.getAvailableQty()) + quantity;
+        int batchUpdated = stockBatchMapper.update(null, new LambdaUpdateWrapper<StockBatch>()
+                .eq(StockBatch::getId, batch.getId())
+                .eq(StockBatch::getVersion, batch.getVersion())
+                .set(StockBatch::getCurrentQty, nextBatchQty)
+                .set(StockBatch::getAvailableQty, nextBatchQty)
+                .set(StockBatch::getState, activeState(nextBatchQty))
+                .set(StockBatch::getVersion, batch.getVersion() + 1));
+        if (batchUpdated != 1) {
+            throw changed();
+        }
+    }
+
+    private void restoreGroupQuantity(StockReservation lock, int quantity) {
+        GroupStock row = requireGroupStock(lock.getGroupStockId());
+        int nextCurrent = safeInt(row.getCurrentQty()) + quantity;
+        int updated = groupStockMapper.update(null, new LambdaUpdateWrapper<GroupStock>()
+                .eq(GroupStock::getId, row.getId())
+                .eq(GroupStock::getVersion, row.getVersion())
+                .set(GroupStock::getCurrentQty, nextCurrent)
+                .set(GroupStock::getState, activeState(nextCurrent))
+                .set(GroupStock::getVersion, row.getVersion() + 1));
+        if (updated != 1) {
+            throw changed();
+        }
+    }
+
+    private void confirmSelfLocks(StockOrder order, Stock stock, List<StockReservation> locks) {
         Dept dept = StockBizConstant.OUTBOUND_MODE_GROUP_ALLOCATE.equals(order.getOutboundMode())
                 ? requireGroupDept(order.getDeptId()) : null;
         for (StockReservation lock : locks) {
@@ -387,37 +498,15 @@ public class StockBatchServiceImpl implements StockBatchService {
 
     private void confirmGroupCustomerLocks(List<StockReservation> locks) {
         for (StockReservation lock : locks) {
-            GroupStock row = requireGroupStock(lock.getGroupStockId());
-            int quantity = safeInt(lock.getReservationQty());
-            int nextCurrent = safeInt(row.getCurrentQty()) - quantity;
-            if (nextCurrent < 0) {
-                throw new IllegalStateException("group stock became negative");
-            }
-            int updated = groupStockMapper.update(null, new LambdaUpdateWrapper<GroupStock>()
-                    .eq(GroupStock::getId, row.getId())
-                    .eq(GroupStock::getVersion, row.getVersion())
-                    .set(GroupStock::getCurrentQty, nextCurrent)
-                    .set(GroupStock::getState, activeState(nextCurrent))
-                    .set(GroupStock::getVersion, row.getVersion() + 1));
-            if (updated != 1) {
-                throw changed();
-            }
             updateLockState(lock, StockBizConstant.RESERVATION_STATE_CONFIRMED);
         }
     }
 
     private void confirmBatchCustomerOutbound(StockBatch batch, int quantity) {
-        int nextAvailable = safeInt(batch.getAvailableQty()) - quantity;
-        if (nextAvailable < 0) {
-            throw new IllegalStateException("stock batch available quantity became negative");
-        }
         int updated = stockBatchMapper.update(null, new LambdaUpdateWrapper<StockBatch>()
                 .eq(StockBatch::getId, batch.getId())
                 .eq(StockBatch::getVersion, batch.getVersion())
-                .set(StockBatch::getCurrentQty, nextAvailable)
-                .set(StockBatch::getAvailableQty, nextAvailable)
                 .set(StockBatch::getCustomerOutQty, safeInt(batch.getCustomerOutQty()) + quantity)
-                .set(StockBatch::getState, activeState(nextAvailable))
                 .set(StockBatch::getVersion, batch.getVersion() + 1));
         if (updated != 1) {
             throw changed();
@@ -425,17 +514,10 @@ public class StockBatchServiceImpl implements StockBatchService {
     }
 
     private void confirmBatchAllocation(StockOrder order, StockBatch batch, Dept dept, Stock stock, int quantity) {
-        int nextAvailable = safeInt(batch.getAvailableQty()) - quantity;
-        if (nextAvailable < 0) {
-            throw new IllegalStateException("stock batch available quantity became negative");
-        }
         int updated = stockBatchMapper.update(null, new LambdaUpdateWrapper<StockBatch>()
                 .eq(StockBatch::getId, batch.getId())
                 .eq(StockBatch::getVersion, batch.getVersion())
-                .set(StockBatch::getCurrentQty, nextAvailable)
-                .set(StockBatch::getAvailableQty, nextAvailable)
                 .set(StockBatch::getAllocatedQty, safeInt(batch.getAllocatedQty()) + quantity)
-                .set(StockBatch::getState, activeState(nextAvailable))
                 .set(StockBatch::getVersion, batch.getVersion() + 1));
         if (updated != 1) {
             throw changed();

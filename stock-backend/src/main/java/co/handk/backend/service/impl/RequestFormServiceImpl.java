@@ -19,6 +19,7 @@ import co.handk.common.model.dto.update.RequestFormItemBatchDTO;
 import co.handk.common.model.dto.update.RequestFormWithItemsDTO;
 import co.handk.common.model.dto.update.UpdateRequestFormDTO;
 import co.handk.common.model.vo.RequestCandidateItemVO;
+import co.handk.common.model.vo.RequestFormCartPreviewVO;
 import co.handk.common.model.vo.RequestFormVO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -1019,6 +1020,52 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
 
     @Override
     public PageResult<RequestCandidateItemVO> pageCartItems(RequestItemCartQueryDTO query) {
+        List<RequestCandidateItemVO> candidates = listMergedCartCandidates(query);
+        long total = candidates.size();
+        long pageNum = query.getPageNum();
+        long pageSize = query.getPageSize();
+        int from = (int) Math.min(total, Math.max(0, (pageNum - 1) * pageSize));
+        int to = (int) Math.min(total, from + pageSize);
+        return PageResult.build(total, pageNum, pageSize, candidates.subList(from, to));
+    }
+
+    @Override
+    public RequestFormCartPreviewVO previewCartItems(RequestItemCartQueryDTO query) {
+        List<RequestCandidateItemVO> candidates = listMergedCartCandidates(query);
+        Customer customer = resolvePreviewCustomer(query, candidates);
+        String templateCode = resolveCartPreviewTemplateCode(query, candidates);
+
+        RequestFormCartPreviewVO preview = new RequestFormCartPreviewVO();
+        preview.setTemplateCode(templateCode);
+        preview.setInvoiceDate(LocalDate.now());
+        preview.setCompany(buildPreviewCompany());
+        preview.setCustomer(buildPreviewCustomer(customer, query, candidates));
+        preview.setShipping(buildPreviewShipping());
+        preview.setBank(buildPreviewBank());
+        preview.setColumns(List.of("No.", "Brand", "Item", "Qty", "Unit price", "Price", "Remark", "HS Code"));
+
+        int totalQty = 0;
+        BigDecimal totalAmt = BigDecimal.ZERO;
+        String currency = null;
+        List<RequestFormCartPreviewVO.Item> items = new ArrayList<>();
+        for (int i = 0; i < candidates.size(); i++) {
+            RequestCandidateItemVO candidate = candidates.get(i);
+            RequestFormCartPreviewVO.Item item = buildPreviewItem(i + 1, candidate);
+            items.add(item);
+            totalQty += safeQty(item.getQty());
+            totalAmt = totalAmt.add(safeAmount(item.getPrice()));
+            if (currency == null || currency.isBlank()) {
+                currency = item.getCurrency();
+            }
+        }
+        preview.setItems(items);
+        preview.setTotalQty(totalQty);
+        preview.setTotalAmt(totalAmt);
+        preview.setCurrency(currency == null || currency.isBlank() ? CommonConstant.DEFAULT_CURRENCY_JPY : currency);
+        return preview;
+    }
+
+    private List<RequestCandidateItemVO> listMergedCartCandidates(RequestItemCartQueryDTO query) {
         List<StockRecord> records = listCartOutboundRecords(query);
         List<RequestCandidateItemVO> candidates = new ArrayList<>();
         for (StockRecord record : records) {
@@ -1027,13 +1074,133 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 candidates.add(candidate);
             }
         }
-        candidates = mergeCartCandidates(candidates);
-        long total = candidates.size();
-        long pageNum = query.getPageNum();
-        long pageSize = query.getPageSize();
-        int from = (int) Math.min(total, Math.max(0, (pageNum - 1) * pageSize));
-        int to = (int) Math.min(total, from + pageSize);
-        return PageResult.build(total, pageNum, pageSize, candidates.subList(from, to));
+        return mergeCartCandidates(candidates);
+    }
+
+    private Customer resolvePreviewCustomer(RequestItemCartQueryDTO query, List<RequestCandidateItemVO> candidates) {
+        Long customerId = query == null ? null : query.getCustomerId();
+        if (customerId == null && !candidates.isEmpty()) {
+            customerId = candidates.get(0).getCustomerId();
+        }
+        if (customerId == null) {
+            return null;
+        }
+        validateCustomerOwnership(customerId, UserContext.getUserIdOrDefault());
+        return customerService.getByIdNotDeleted(customerId);
+    }
+
+    private String resolveCartPreviewTemplateCode(RequestItemCartQueryDTO query, List<RequestCandidateItemVO> candidates) {
+        String groupCode = query == null ? null : query.getGroupCode();
+        if ((groupCode == null || groupCode.isBlank()) && !candidates.isEmpty()) {
+            groupCode = candidates.get(0).getGroupCode();
+        }
+        String code = normalizeTemplateCode(groupCode);
+        if (TEMPLATE_CODE_B.equals(code)) {
+            return TEMPLATE_CODE_B;
+        }
+        if (TEMPLATE_CODE_C.equals(code)) {
+            return TEMPLATE_CODE_C;
+        }
+        return TEMPLATE_CODE_A;
+    }
+
+    private RequestFormCartPreviewVO.CompanyInfo buildPreviewCompany() {
+        RequestFormCartPreviewVO.CompanyInfo company = new RequestFormCartPreviewVO.CompanyInfo();
+        company.setName("H&K CO., LTD.(カブシキガイシャ エイチアンドケー)");
+        company.setTel("(06)6439-6361");
+        company.setEmail("cho@handk.co");
+        company.setAddress("Amagasaki K.R Bld.1F, 3-90-1, Showadori, Amagasaki City, Hyogo Prefecture, 660-0881, Japan");
+        return company;
+    }
+
+    private RequestFormCartPreviewVO.CustomerInfo buildPreviewCustomer(Customer customer,
+                                                                       RequestItemCartQueryDTO query,
+                                                                       List<RequestCandidateItemVO> candidates) {
+        RequestFormCartPreviewVO.CustomerInfo info = new RequestFormCartPreviewVO.CustomerInfo();
+        if (customer != null) {
+            info.setId(customer.getId());
+            info.setCode(customer.getCustomerCode());
+            info.setName(customer.getName());
+            info.setEnglishName(customer.getEnglishName());
+            info.setContactPerson(customer.getContactPerson());
+            info.setPhone(customer.getPhone());
+            info.setEmail(customer.getEmail());
+            info.setCountry(customer.getCountry());
+            info.setCity(customer.getCity());
+            info.setAddress(customer.getAddress());
+            return info;
+        }
+        if (query != null) {
+            info.setId(query.getCustomerId());
+            info.setName(query.getCustomerName());
+        }
+        if ((info.getId() == null || info.getName() == null) && !candidates.isEmpty()) {
+            RequestCandidateItemVO first = candidates.get(0);
+            info.setId(first.getCustomerId());
+            info.setName(first.getCustomerName());
+            info.setCountry(first.getCountry());
+        }
+        return info;
+    }
+
+    private RequestFormCartPreviewVO.ShippingInfo buildPreviewShipping() {
+        RequestFormCartPreviewVO.ShippingInfo shipping = new RequestFormCartPreviewVO.ShippingInfo();
+        shipping.setTerm("FOB");
+        shipping.setCountryOfOrigin("Japan");
+        shipping.setTransportedFrom("Osaka JAPAN");
+        return shipping;
+    }
+
+    private RequestFormCartPreviewVO.BankInfo buildPreviewBank() {
+        RequestFormCartPreviewVO.BankInfo bank = new RequestFormCartPreviewVO.BankInfo();
+        bank.setTitle("Bank information");
+        bank.setBankName("Resona Bank, Ltd.");
+        bank.setBankAddress("1-5-25 KIBA KOTO TOKYO JAPAN");
+        bank.setSwiftCode("DIWAJPJT");
+        bank.setAccountNo("(IBAN) 1532589");
+        bank.setAccountType("Savings account(Futsu)");
+        bank.setBranchNo("528");
+        bank.setBranchName("NISHINOMIYAKITAGUCHI Branch");
+        bank.setBeneficiaryName("H AND K CO.,LTD");
+        bank.setBeneficiaryAddress("Amagasaki K.R Bld.1F, 3-90-1, Showadori, Amagasaki City, Hyogo Prefecture, 660-0881, Japan");
+        bank.setNotice("When total amount of order is less than 1 million yen,the bank transfer fee will be borne by the customer.");
+        return bank;
+    }
+
+    private RequestFormCartPreviewVO.Item buildPreviewItem(int no, RequestCandidateItemVO candidate) {
+        RequestFormCartPreviewVO.Item item = new RequestFormCartPreviewVO.Item();
+        item.setNo(no);
+        item.setBrandName(candidate.getBrandName());
+        item.setGoodsName(candidate.getGoodsName());
+        item.setSkuCode(candidate.getSkuCode());
+        item.setSeriesName(candidate.getSeriesName());
+        item.setMakerName(candidate.getMakerName());
+        item.setCategoryName(candidate.getCategoryName());
+        item.setStockTypeName(candidate.getStockTypeName());
+        item.setBizDate(candidate.getBizDate());
+        item.setItemName(buildCandidateItemDescription(candidate));
+        item.setQty(safeQty(candidate.getRequestQty()));
+        item.setUnitPrice(candidate.getPrice() == null ? BigDecimal.ZERO : candidate.getPrice());
+        item.setPrice(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQty())));
+        item.setCurrency(candidate.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : candidate.getCurrency());
+        item.setRemark("");
+        item.setHsCode("");
+        item.setStockRecordId(candidate.getStockRecordId());
+        item.setStockRecordIds(candidate.getStockRecordIds());
+        item.setStockOrderItemId(candidate.getStockOrderItemId());
+        item.setStockOrderItemIds(candidate.getStockOrderItemIds());
+        return item;
+    }
+
+    private String buildCandidateItemDescription(RequestCandidateItemVO candidate) {
+        List<String> parts = new ArrayList<>();
+        addPart(parts, candidate.getGoodsName());
+        addPart(parts, candidate.getSkuCode());
+        addPart(parts, candidate.getSeriesName());
+        addPart(parts, candidate.getCategoryName());
+        addPart(parts, candidate.getMakerName());
+        addPart(parts, candidate.getStockTypeName());
+        return String.join(" / ", parts);
     }
 
     private List<StockRecord> listCartOutboundRecords(RequestItemCartQueryDTO query) {
@@ -1047,6 +1214,9 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         }
         if (query.getCustomerName() != null && !query.getCustomerName().isBlank()) {
             wrapper.like("customer_name", query.getCustomerName().trim());
+        }
+        if (query.getGroupCode() != null && !query.getGroupCode().isBlank()) {
+            wrapper.apply("UPPER(dept_code) = {0}", query.getGroupCode().trim().toUpperCase(Locale.ROOT));
         }
         if (query.getGoodsId() != null) {
             wrapper.eq("goods_id", query.getGoodsId());
@@ -1185,6 +1355,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
     private String cartMergeKey(RequestCandidateItemVO item) {
         return String.join("|",
                 String.valueOf(item.getCustomerId()),
+                String.valueOf(item.getBizDate()),
                 String.valueOf(item.getGoodsId()),
                 String.valueOf(item.getSkuId()),
                 String.valueOf(item.getStockTypeName()),
@@ -1806,12 +1977,13 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         for (int i = 0; i < limit; i++) {
             RequestItem item = items.get(i);
             int row = layout.startRow() + i;
+            String description = buildItemDescriptionWithBizDate(item);
             if (TEMPLATE_CODE_A.equals(templateCode) || TEMPLATE_CODE_C.equals(templateCode)) {
-                setCellText(sheet, row, layout.itemCol(), (i + 1) + ". " + buildItemDescription(item));
+                setCellText(sheet, row, layout.itemCol(), (i + 1) + ". " + description);
             } else {
                 setCellText(sheet, row, layout.noCol(), String.valueOf(i + 1));
                 setCellText(sheet, row, layout.brandCol(), safe(item.getBrandName()));
-                setCellText(sheet, row, layout.itemCol(), buildItemDescription(item));
+                setCellText(sheet, row, layout.itemCol(), description);
             }
             setCellNumber(sheet, row, layout.qtyCol(), item.getRequestQty() == null ? 0 : item.getRequestQty());
             setCellNumber(sheet, row, layout.unitPriceCol(), itemUnitPrice(item));
@@ -1898,6 +2070,23 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         addPart(parts, item.getMakerName());
         addPart(parts, item.getStockTypeName());
         return String.join(" / ", parts);
+    }
+
+    private String buildItemDescriptionWithBizDate(RequestItem item) {
+        String description = buildItemDescription(item);
+        String bizDate = requestItemBizDateText(item);
+        if (bizDate.isBlank()) {
+            return description;
+        }
+        return description.isBlank() ? "出庫日: " + bizDate : description + " / 出庫日: " + bizDate;
+    }
+
+    private String requestItemBizDateText(RequestItem item) {
+        if (item == null || item.getStockRecordId() == null) {
+            return "";
+        }
+        StockRecord record = stockRecordService.getByIdNotDeleted(item.getStockRecordId());
+        return record == null || record.getBizDate() == null ? "" : record.getBizDate().toString();
     }
 
     private void addPart(List<String> parts, String value) {
@@ -1998,12 +2187,13 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
             Set<Long> explicitStockRecordIds = new HashSet<>();
             for (RequestFormItemBatchDTO.Item item : dto.getItems()) {
-                if (item != null && item.getStockRecordId() != null && item.getStockRecordId() > 0) {
-                    explicitStockRecordIds.add(item.getStockRecordId());
+                for (Long stockRecordId : batchItemStockRecordIds(item)) {
+                    explicitStockRecordIds.add(stockRecordId);
                 }
             }
             for (RequestFormItemBatchDTO.Item item : dto.getItems()) {
-                if (item == null || item.getStockRecordId() == null || item.getStockRecordId() <= 0) {
+                List<Long> stockRecordIds = batchItemStockRecordIds(item);
+                if (item == null || stockRecordIds.isEmpty()) {
                     continue;
                 }
                 int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
@@ -2011,7 +2201,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                     throw fail("requested qty must be >= 0");
                 }
                 if (qty > 0) {
-                    quantities.merge(item.getStockRecordId(), qty, Integer::sum);
+                    mergeRequestedQuantities(quantities, stockRecordIds, qty);
                     for (Long handleStockRecordId : resolveMatchedHandleStockRecordIds(item)) {
                         if (!explicitStockRecordIds.contains(handleStockRecordId)) {
                             quantities.merge(handleStockRecordId, qty, Integer::sum);
@@ -2031,6 +2221,44 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             }
         }
         return quantities;
+    }
+
+    private void mergeRequestedQuantities(Map<Long, Integer> quantities, List<Long> stockRecordIds, int requestQty) {
+        int remainingQty = requestQty;
+        for (Long stockRecordId : stockRecordIds) {
+            if (remainingQty <= 0) {
+                break;
+            }
+            StockRecord record = requireAvailableOutboundRecord(stockRecordId);
+            int availableQty = availableOutboundQty(record);
+            if (availableQty <= 0) {
+                continue;
+            }
+            int allocatedQty = stockRecordIds.size() == 1 ? remainingQty : Math.min(remainingQty, availableQty);
+            quantities.merge(stockRecordId, allocatedQty, Integer::sum);
+            remainingQty -= allocatedQty;
+        }
+        if (remainingQty > 0) {
+            throw fail("requested qty cannot exceed available outbound qty");
+        }
+    }
+
+    private List<Long> batchItemStockRecordIds(RequestFormItemBatchDTO.Item item) {
+        LinkedHashSet<Long> ids = new LinkedHashSet<>();
+        if (item == null) {
+            return List.of();
+        }
+        if (item.getStockRecordIds() != null) {
+            for (Long id : item.getStockRecordIds()) {
+                if (id != null && id > 0) {
+                    ids.add(id);
+                }
+            }
+        }
+        if (item.getStockRecordId() != null && item.getStockRecordId() > 0) {
+            ids.add(item.getStockRecordId());
+        }
+        return new ArrayList<>(ids);
     }
 
     private List<Long> resolveMatchedHandleStockRecordIds(RequestFormItemBatchDTO.Item item) {

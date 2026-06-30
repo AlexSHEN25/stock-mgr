@@ -26,8 +26,13 @@ public class RequestFormItemBatchDTO {
 
     @Data
     public static class Item {
-        @NotNull(message = "在庫履歴IDは必須です")
         private Long stockRecordId;
+
+        private List<Long> stockRecordIds;
+
+        private Long stockOrderItemId;
+
+        private List<Long> stockOrderItemIds;
 
         /**
          * Optional matched handle stock record selected for a knife row.

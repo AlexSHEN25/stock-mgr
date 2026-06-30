@@ -35,7 +35,7 @@ public class RequestFormController {
         return requestFormService.saveByDto(dto);
     }
 
-    @PostMapping("/withItems")
+    @PostMapping({"/withItems", "/withItem"})
     public Long createWithItems(@RequestBody @NotNull @Valid RequestFormWithItemsDTO dto) {
         return requestFormService.saveWithItems(dto);
     }
@@ -63,6 +63,11 @@ public class RequestFormController {
     @GetMapping("/items/cart/page")
     public PageResult<RequestCandidateItemVO> cartItems(@Valid RequestItemCartQueryDTO query) {
         return requestFormService.pageCartItems(query);
+    }
+
+    @GetMapping("/items/cart/preview")
+    public RequestFormCartPreviewVO previewCartItems(@Valid RequestItemCartQueryDTO query) {
+        return requestFormService.previewCartItems(query);
     }
 
     @PostMapping("/items/cart/add")

@@ -9,6 +9,7 @@ import java.time.LocalDate;
 public class RequestItemCartQueryDTO extends PageQuery {
     private Long customerId;
     private String customerName;
+    private String groupCode;
     private Long goodsId;
     private String goodsName;
     private Long skuId;
