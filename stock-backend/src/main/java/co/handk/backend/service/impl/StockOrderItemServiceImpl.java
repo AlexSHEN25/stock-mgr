@@ -5,11 +5,15 @@ import co.handk.backend.entity.StockOrder;
 import co.handk.backend.entity.StockOrderItem;
 import co.handk.backend.entity.StockRecord;
 import co.handk.backend.entity.Warehouse;
+import co.handk.backend.entity.Goods;
+import co.handk.backend.entity.GoodsSku;
 import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.constant.MessageKeyConstant;
 import co.handk.backend.exception.BusinessException;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.mapper.StockOrderItemMapper;
+import co.handk.backend.service.GoodsService;
+import co.handk.backend.service.GoodsSkuService;
 import co.handk.backend.service.PermissionQueryService;
 import co.handk.backend.service.StockOrderService;
 import co.handk.backend.service.StockOrderItemService;
@@ -42,6 +46,8 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
     private final StockRecordService stockRecordService;
     private final PermissionQueryService permissionQueryService;
     private final WarehouseService warehouseService;
+    private final GoodsService goodsService;
+    private final GoodsSkuService goodsSkuService;
     private static final String SELF_WAREHOUSE_CODE = "SELF";
 
     @Override
@@ -51,6 +57,7 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         }
         StockOrderItemVO vo = new StockOrderItemVO();
         BeanUtils.copyProperties(entity, vo);
+        fillGoodsSnapshot(vo);
         return vo;
     }
 
@@ -155,6 +162,33 @@ public class StockOrderItemServiceImpl extends BaseServiceImpl<StockOrderItemMap
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private void fillGoodsSnapshot(StockOrderItemVO vo) {
+        if (vo == null) {
+            return;
+        }
+        if ((!hasText(vo.getGoodsName()) || !hasText(vo.getEnglishName())) && vo.getGoodsId() != null) {
+            Goods goods = goodsService.getByIdNotDeleted(vo.getGoodsId());
+            if (goods != null) {
+                if (!hasText(vo.getGoodsName())) {
+                    vo.setGoodsName(goods.getName());
+                }
+                if (!hasText(vo.getEnglishName())) {
+                    vo.setEnglishName(goods.getEnglishName());
+                }
+            }
+        }
+        if (!hasText(vo.getSkuCode()) && vo.getSkuId() != null) {
+            GoodsSku sku = goodsSkuService.getByIdNotDeleted(vo.getSkuId());
+            if (sku != null) {
+                vo.setSkuCode(sku.getSkuCode());
+            }
+        }
     }
 
     @Override

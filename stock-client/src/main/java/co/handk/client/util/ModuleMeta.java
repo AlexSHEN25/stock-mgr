@@ -374,6 +374,9 @@ public final class ModuleMeta {
                 new RowAction(RowActionType.APPROVE_ORDER, "action.approve", null, null),
                 new RowAction(RowActionType.REJECT_ORDER, "action.reject", null, null)
         ));
+        ROW_ACTIONS.put(MODULE_STOCK, List.of(
+                new RowAction(RowActionType.DETAIL, "main.menu.stockRecord", MODULE_STOCK_RECORD, "stockId")
+        ));
         ROW_ACTIONS.put(REQUEST_FORM, List.of(
                 new RowAction(RowActionType.DETAIL, "action.requestDetail", REQUEST_ITEM, "requestId"),
                 new RowAction(RowActionType.MATCH_REQUEST_ITEMS, "action.matchRequestItems", null, null),

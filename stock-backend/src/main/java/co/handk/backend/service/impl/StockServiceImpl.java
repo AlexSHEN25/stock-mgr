@@ -4,6 +4,7 @@ import co.handk.backend.annotation.context.UserContext;
 import co.handk.backend.entity.*;
 import co.handk.backend.mapper.StockMapper;
 import co.handk.backend.mapper.StockRecordMapper;
+import co.handk.backend.mapper.StockReservationMapper;
 import co.handk.backend.service.*;
 import co.handk.backend.util.StringRedisUtil;
 import co.handk.common.constant.CommonConstant;
@@ -119,6 +120,8 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     private StringRedisUtil stringRedisUtil;
     @Autowired
     private StockRecordMapper stockRecordMapper;
+    @Autowired
+    private StockReservationMapper stockReservationMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -1043,6 +1046,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             record.setBeforeQty(beforeQty);
             record.setChangeQty(item.getChangeQty());
             record.setAfterQty(afterQty);
+            record.setBatchId(resolveSingleReservationBatchId(item.getId()));
             record.setOrderType(order.getOrderType());
             record.setSourceType(order.getSourceType());
             record.setPrice(item.getPrice());
@@ -1244,6 +1248,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             record.setBeforeQty(working.beforeQty);
             record.setChangeQty(working.changeQty);
             record.setAfterQty(working.afterQty);
+            record.setBatchId(working.batchId);
             record.setOrderType(order.getOrderType());
             record.setSourceType(order.getSourceType());
             record.setPrice(item.getPrice());
@@ -1632,6 +1637,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         record.setBeforeQty(beforeQty);
         record.setChangeQty(item.getChangeQty());
         record.setAfterQty(afterQty);
+        record.setBatchId(resolveSingleReservationBatchId(item.getId()));
         record.setOrderType(order.getOrderType());
         record.setSourceType(order.getSourceType());
         record.setPrice(item.getPrice());
@@ -1647,6 +1653,27 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫履歴保存に失敗しました");
         }
+    }
+
+    private Long resolveSingleReservationBatchId(Long orderItemId) {
+        if (orderItemId == null) {
+            return null;
+        }
+        List<StockReservation> reservations = stockReservationMapper.selectList(new QueryWrapper<StockReservation>()
+                .eq("order_item_id", orderItemId)
+                .in("state", StockBizConstant.RESERVATION_STATE_LOCKED, StockBizConstant.RESERVATION_STATE_CONFIRMED));
+        Long batchId = null;
+        for (StockReservation reservation : reservations) {
+            Long current = reservation.getBatchId();
+            if (current == null) {
+                continue;
+            }
+            if (batchId != null && !batchId.equals(current)) {
+                return null;
+            }
+            batchId = current;
+        }
+        return batchId;
     }
 
     private String generateOrderNo(int orderType) {

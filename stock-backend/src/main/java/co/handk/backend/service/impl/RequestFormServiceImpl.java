@@ -2230,7 +2230,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
                 break;
             }
             StockRecord record = requireAvailableOutboundRecord(stockRecordId);
-            int availableQty = availableOutboundQty(record);
+            int availableQty = Math.max(availableOutboundQty(record), cartAddedQty(record));
             if (availableQty <= 0) {
                 continue;
             }

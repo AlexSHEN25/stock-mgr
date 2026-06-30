@@ -133,7 +133,8 @@ public class MainController {
         }
     }
 
-    private record BatchFlowRow(Map<String, Object> data, CheckBox selected, TextField quantity) {
+    private record BatchFlowRow(Map<String, Object> data, CheckBox selected, TextField quantity,
+                                ComboBox<RelationOption> batch) {
     }
 
     public void setApp(MainApp app) {
@@ -2055,6 +2056,11 @@ public class MainController {
                 for (BatchFlowRow row : batchRows) {
                     if (row.selected().isSelected()) {
                         parsePositiveInt(row.quantity().getText(), "quantity");
+                        if (!inbound && (row.batch() == null || row.batch().getValue() == null)) {
+                            messageLabel.setText("納品日を選択してください。");
+                            event.consume();
+                            return;
+                        }
                     }
                 }
             } catch (Exception ex) {
@@ -2086,6 +2092,7 @@ public class MainController {
                 int quantity = parsePositiveInt(row.quantity().getText(), "quantity");
                 if ("outbound".equals(mode)) {
                     item.put("stockId", parseLongValue(firstPresent(row.data(), "stockId", "id"), "stockId"));
+                    item.put("batchId", Long.parseLong(row.batch().getValue().value()));
                 } else {
                     item.put("goodsId", parseLongValue(firstPresent(row.data(), "goodsId", "id"), "goodsId").intValue());
                     item.put("skuId", parseLongValue(row.data().get("skuId"), "skuId"));
@@ -2116,8 +2123,9 @@ public class MainController {
         grid.add(new Label(ModuleMeta.normalizeTitle("seriesName")), 4, 0);
         if ("outbound".equals(mode)) {
             grid.add(new Label(ModuleMeta.normalizeTitle("currentQty")), 5, 0);
+            grid.add(new Label("納品日"), 6, 0);
         }
-        grid.add(new Label(ModuleMeta.normalizeTitle("quantity")), "outbound".equals(mode) ? 6 : 5, 0);
+        grid.add(new Label(ModuleMeta.normalizeTitle("quantity")), "outbound".equals(mode) ? 7 : 5, 0);
         List<Map<String, Object>> rows = loadBatchFlowCandidates(mode);
         for (int index = 0; index < rows.size(); index++) {
             Map<String, Object> row = rows.get(index);
@@ -2127,6 +2135,7 @@ public class MainController {
             quantity.setPrefWidth(80);
             quantity.setDisable(!selected.isSelected());
             selected.selectedProperty().addListener((obs, oldValue, newValue) -> quantity.setDisable(!newValue));
+            ComboBox<RelationOption> batchCombo = null;
             grid.add(selected, 0, gridRow);
             grid.add(new Label(stringValue(row.getOrDefault("goodsName", row.get("name")))), 1, gridRow);
             grid.add(new Label(stringValue(row.get("skuCode"))), 2, gridRow);
@@ -2135,10 +2144,20 @@ public class MainController {
             int quantityColumn = 5;
             if ("outbound".equals(mode)) {
                 grid.add(new Label(stringValue(row.get("currentQty"))), 5, gridRow);
-                quantityColumn = 6;
+                batchCombo = new ComboBox<>();
+                batchCombo.getItems().addAll(loadStockBatchOptions(row));
+                if (!batchCombo.getItems().isEmpty()) {
+                    batchCombo.setValue(batchCombo.getItems().get(0));
+                }
+                batchCombo.setPrefWidth(260);
+                batchCombo.setDisable(!selected.isSelected());
+                ComboBox<RelationOption> finalBatchCombo = batchCombo;
+                selected.selectedProperty().addListener((obs, oldValue, newValue) -> finalBatchCombo.setDisable(!newValue));
+                grid.add(batchCombo, 6, gridRow);
+                quantityColumn = 7;
             }
             grid.add(quantity, quantityColumn, gridRow);
-            batchRows.add(new BatchFlowRow(row, selected, quantity));
+            batchRows.add(new BatchFlowRow(row, selected, quantity, batchCombo));
         }
     }
 
@@ -2169,6 +2188,27 @@ public class MainController {
             messageLabel.setText("商品一覧の取得に失敗しました: " + ex.getMessage());
             return List.of();
         }
+    }
+
+    private List<RelationOption> loadStockBatchOptions(Map<String, Object> stockRow) {
+        Map<String, String> filters = new LinkedHashMap<>();
+        Object stockId = firstPresent(stockRow, "stockId", "id");
+        if (stockId != null && !String.valueOf(stockId).isBlank()) {
+            filters.put("stockId", String.valueOf(stockId));
+        }
+        Object deptId = stockRow.get("deptId");
+        if (deptId != null && !String.valueOf(deptId).isBlank()) {
+            filters.put("deptId", String.valueOf(deptId));
+        }
+        List<RelationOption> options = new ArrayList<>();
+        try {
+            for (Map<String, String> item : dataService.fetchSimpleRelationOptions("_stockBatchOptions", filters)) {
+                options.add(new RelationOption(item.get("label"), item.get("value")));
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Load stock batch options failed. stockId=" + stockId, ex);
+        }
+        return options;
     }
 
     private Object firstPresent(Map<String, Object> row, String... keys) {
