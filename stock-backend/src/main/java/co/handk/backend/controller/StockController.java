@@ -88,6 +88,11 @@ public class StockController {
         return stockService.batchOutbound(dto);
     }
 
+    @PostMapping("/inout/batch")
+    public Long batchInOut(@RequestBody @NotNull @Valid StockBatchOperateDTO dto) {
+        return stockService.batchInOut(dto);
+    }
+
     /**
      * Customer-dimension outbound entry from self stock / goods management.
      */

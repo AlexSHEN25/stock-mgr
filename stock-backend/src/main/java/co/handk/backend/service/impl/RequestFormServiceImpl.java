@@ -1005,6 +1005,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             vo.setOperatorName(record.getOperatorName());
             vo.setSelected(selected != null);
             vo.setRequestQty(selectedQty);
+            vo.setAmount(safeAmount(record.getPrice()).multiply(BigDecimal.valueOf(selectedQty)));
             vo.setRequestItemState(selected == null ? null : selected.getState());
             vo.setRequestItemId(selected == null ? null : selected.getId());
             StockOrder inboundOrder = findDeliveryInboundOrder(record.getId());
@@ -1307,6 +1308,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         vo.setOperatorName(record.getOperatorName());
         vo.setSelected(false);
         vo.setRequestQty(addedQty);
+        vo.setAmount(safeAmount(record.getPrice()).multiply(BigDecimal.valueOf(addedQty)));
         vo.setKnife(isKnifeCategory(record.getCategoryName()));
         vo.setHandle(isHandleCategory(record.getCategoryName()));
         return vo;
@@ -1328,6 +1330,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             existing.setAvailableQty(availableQty);
             existing.setChangeQty(safeQty(existing.getChangeQty()) + safeQty(candidate.getChangeQty()));
             existing.setRequestQty(availableQty);
+            existing.setAmount(safeAmount(existing.getAmount()).add(safeAmount(candidate.getAmount())));
             List<Long> stockRecordIds = new ArrayList<>(existing.getStockRecordIds() == null
                     ? List.of(existing.getStockRecordId())
                     : existing.getStockRecordIds());
@@ -1402,24 +1405,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return true;
     }
 
-    private Map<Long, Integer> resolveCartMoveQuantities(RequestCartMoveDTO dto) {
-        Map<Long, Integer> quantities = new LinkedHashMap<>();
-        if (dto == null || dto.getItems() == null) {
-            return quantities;
-        }
-        for (RequestCartMoveDTO.Item item : dto.getItems()) {
-            if (item == null || item.getStockRecordId() == null) {
-                continue;
-            }
-            int qty = item.getRequestQty() == null ? 0 : item.getRequestQty();
-            if (qty <= 0) {
-                throw fail("request qty must be greater than zero");
-            }
-            quantities.merge(item.getStockRecordId(), qty, Integer::sum);
-        }
-        return quantities;
-    }
-
     private void allocateCartMove(RequestCartMoveDTO dto, RequestCartMoveDTO.Item item, boolean addToCart) {
         if (item == null) {
             return;
@@ -1443,6 +1428,7 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             }
             int allocatedQty = Math.min(remainingQty, movableQty);
             applyOutboundRemainderDelta(record, addToCart ? allocatedQty : -allocatedQty);
+            validateCartMoveBalance(record);
             remainingQty -= allocatedQty;
         }
         if (remainingQty > 0) {
@@ -2027,14 +2013,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         setCellNumber(sheet, rowIndex, colIndex, BigDecimal.valueOf(value));
     }
 
-    private String formatCurrency(String currency, BigDecimal amount) {
-        if (amount == null) {
-            return "";
-        }
-        String code = (currency == null || currency.isBlank()) ? CommonConstant.DEFAULT_CURRENCY_JPY : currency;
-        return code + " " + amount.setScale(0, RoundingMode.HALF_UP).toPlainString();
-    }
-
     private String safe(String value) {
         return value == null ? "" : value;
     }
@@ -2297,15 +2275,6 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         return order;
     }
 
-    private StockRecord requireSourceStockRecord(RequestForm form, Long stockRecordId) {
-        StockRecord record = stockRecordService.getByIdNotDeleted(stockRecordId);
-        if (record == null || !form.getSourceOrderId().equals(record.getOrderId())
-                || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(record.getOrderType())) {
-            throw fail("selected stock record is not available");
-        }
-        return record;
-    }
-
     private StockRecord requireAvailableOutboundRecord(Long stockRecordId) {
         StockRecord record = stockRecordService.getByIdNotDeleted(stockRecordId);
         if (record == null || !Integer.valueOf(StockBizConstant.ORDER_TYPE_OUTBOUND).equals(record.getOrderType())) {
@@ -2365,20 +2334,8 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
         if (affected <= 0) {
             throw fail("source outbound item changed concurrently, please retry");
         }
-        StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
-        if (order != null) {
-            int totalQty = order.getTotalQty() == null ? 0 : order.getTotalQty();
-            int orderAffected = stockOrderService.getBaseMapper().update(
-                    null,
-                    new LambdaUpdateWrapper<StockOrder>()
-                            .eq(StockOrder::getId, order.getId())
-                            .eq(StockOrder::getTotalQty, totalQty)
-                            .set(StockOrder::getTotalQty, totalQty - deltaQty)
-            );
-            if (orderAffected <= 0) {
-                throw fail("source outbound order changed concurrently, please retry");
-            }
-        }
+        // Cart moves only change the remaining delivery-schedule qty of the item.
+        // The source outbound order total is historical and must stay immutable.
     }
 
     private void applyOutboundRemainderByRequested(StockRecord record, int requestedQty, int currentRequestQty) {
@@ -2426,20 +2383,33 @@ public class RequestFormServiceImpl extends BaseServiceImpl<RequestFormMapper, R
             throw fail("source outbound item changed concurrently, please retry");
         }
 
-        StockOrder order = stockOrderService.getByIdNotDeleted(record.getOrderId());
-        if (order != null) {
-            int totalQty = order.getTotalQty() == null ? 0 : order.getTotalQty();
-            int delta = targetRemainingQty - currentRemainingQty;
-            int orderAffected = stockOrderService.getBaseMapper().update(
-                    null,
-                    new LambdaUpdateWrapper<StockOrder>()
-                            .eq(StockOrder::getId, order.getId())
-                            .eq(StockOrder::getTotalQty, totalQty)
-                            .set(StockOrder::getTotalQty, Math.max(0, totalQty + delta))
-            );
-            if (orderAffected <= 0) {
-                throw fail("source outbound order changed concurrently, please retry");
-            }
+        validateCartMoveBalance(record);
+        // Keep t_stock_order.total_qty as the approved outbound total.
+    }
+
+    private void validateCartMoveBalance(StockRecord record) {
+        if (record == null) {
+            return;
+        }
+        StockOrderItem orderItem = stockOrderItemService.getByIdNotDeleted(record.getOrderItemId());
+        if (orderItem == null) {
+            throw fail("source outbound item not found");
+        }
+        int originalQty = record.getChangeQty() == null ? 0 : Math.abs(record.getChangeQty());
+        int remainingQty = orderItem.getChangeQty() == null ? 0 : Math.abs(orderItem.getChangeQty());
+        if (remainingQty > originalQty) {
+            throw fail("delivery schedule qty exceeds source outbound qty"
+                    + ", stockRecordId=" + record.getId()
+                    + ", source=" + originalQty
+                    + ", remaining=" + remainingQty);
+        }
+        int cartQty = originalQty - remainingQty;
+        if (remainingQty + cartQty != originalQty) {
+            throw fail("delivery schedule/request item qty is inconsistent"
+                    + ", stockRecordId=" + record.getId()
+                    + ", source=" + originalQty
+                    + ", remaining=" + remainingQty
+                    + ", requestItem=" + cartQty);
         }
     }
     private void validateSourceBalance(RequestForm form) {

@@ -178,6 +178,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long inbound(StockOperateDTO dto) {
+        requireInboundBizDate(dto.getBizDate());
         Stock stock = resolveInboundStock(dto);
         Goods goods = requireGoods(stock.getGoodsId());
         GoodsSku sku = requireSku(stock.getSkuId(), goods.getId());
@@ -199,7 +200,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             updateStockQuantityWithVersion(stock, afterQty);
             saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
             stockBatchService.recordInbound(order, item, stock);
-            notifyInbound(sku.getSkuCode(), dto.getQuantity(), afterQty, order.getId());
+            notifyInbound(sku.getSkuCode(), goods.getName(), dto.getQuantity(), afterQty, order.getId());
         }
         return order.getId();
     }
@@ -226,7 +227,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 stock.getSkuId(), Long.valueOf(stock.getWarehouseId()), stock.getStockTypeId())
                 : safeInt(stock.getCurrentQty());
         if (beforeQty < dto.getQuantity()) {
-            notifyInsufficientStock(sku.getSkuCode(), dto.getQuantity(), beforeQty, stock.getId());
+            notifyInsufficientStock(sku.getSkuCode(), goods.getName(), dto.getQuantity(), beforeQty, stock.getId());
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "在庫数量が不足しています");
         }
@@ -252,6 +253,54 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
     @Transactional(rollbackFor = Exception.class)
     public Long batchOutbound(StockBatchOperateDTO dto) {
         return submitBatchOrder(dto, StockBizConstant.ORDER_TYPE_OUTBOUND);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long batchInOut(StockBatchOperateDTO dto) {
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "items is required");
+        }
+        String idempotencyKey = requireBatchInOutIdempotency(dto);
+        String outboundKey = idempotencyKey + ":OUT";
+        StockOrder existingOutbound = findExistingSubmitOrder(StockBizConstant.ORDER_TYPE_OUTBOUND, outboundKey);
+        if (existingOutbound != null) {
+            return existingOutbound.getId();
+        }
+
+        StockBatchOperateDTO outbound = new StockBatchOperateDTO();
+        LocalDate inOutBizDate = requireBatchBizDate(dto);
+        outbound.setBizDate(inOutBizDate);
+        outbound.setRemark(hasText(dto.getRemark()) ? dto.getRemark() : "\u4e00\u62ec\u5165\u51fa\u5eab");
+        List<StockBatchOperateItemDTO> outboundItems = new ArrayList<>();
+
+        for (int itemIndex = 0; itemIndex < dto.getItems().size(); itemIndex++) {
+            StockBatchOperateItemDTO itemDTO = dto.getItems().get(itemIndex);
+            StockOperateDTO inbound = new StockOperateDTO();
+            inbound.setStockId(itemDTO.getStockId());
+            inbound.setGoodsId(itemDTO.getGoodsId());
+            inbound.setSkuId(itemDTO.getSkuId());
+            inbound.setWarehouseId(itemDTO.getWarehouseId());
+            inbound.setStockTypeId(itemDTO.getStockTypeId());
+            inbound.setSourceType(itemDTO.getSourceType() == null ? dto.getSourceType() : itemDTO.getSourceType());
+            inbound.setQuantity(itemDTO.getQuantity());
+            inbound.setSaleDeadline(itemDTO.getSaleDeadline() == null ? dto.getSaleDeadline() : itemDTO.getSaleDeadline());
+            inbound.setBizDate(itemDTO.getBizDate() == null ? inOutBizDate : itemDTO.getBizDate());
+            inbound.setRemark(hasText(itemDTO.getRemark()) ? itemDTO.getRemark() : outbound.getRemark());
+            submitBatchInboundItem(inbound, idempotencyKey + ":IN:" + itemIndex);
+
+            Stock stock = resolveInboundStock(inbound);
+            StockBatchOperateItemDTO outboundItem = new StockBatchOperateItemDTO();
+            outboundItem.setStockId(stock.getId());
+            outboundItem.setQuantity(itemDTO.getQuantity());
+            outboundItem.setBizDate(inbound.getBizDate());
+            outboundItem.setRemark(hasText(itemDTO.getRemark()) ? itemDTO.getRemark() : outbound.getRemark());
+            outboundItems.add(outboundItem);
+        }
+
+        outbound.setItems(outboundItems);
+        return submitBatchOrderWithIdempotency(outbound, StockBizConstant.ORDER_TYPE_OUTBOUND, outboundKey);
     }
 
     @Override
@@ -1005,7 +1054,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 afterQty = beforeQty + changeQty;
             }
             if (afterQty < 0) {
-                notifyInsufficientStock(item.getSkuCode(), changeQty, beforeQty, stock.getId());
+                notifyInsufficientStock(item.getSkuCode(), item.getGoodsName(), changeQty, beforeQty, stock.getId());
                 throw new co.handk.backend.exception.BusinessException(
                         co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                         "承認済みの出庫伝票に対する在庫が不足しているため、出庫処理を実行できません: 品番[" + item.getSkuCode() + "]");
@@ -1070,9 +1119,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
 
             if (Integer.valueOf(StockBizConstant.ORDER_TYPE_INBOUND).equals(order.getOrderType())) {
                 stockBatchService.recordInbound(order, item, stock);
-                notifyInbound(item.getSkuCode(), changeQty, afterQty, order.getId());
+                notifyInbound(item.getSkuCode(), item.getGoodsName(), changeQty, afterQty, order.getId());
             } else {
-                notifyLowStock(item.getSkuCode(), afterQty, order.getId());
+                notifyLowStock(item.getSkuCode(), item.getGoodsName(), afterQty, order.getId());
             }
         }
 
@@ -1093,6 +1142,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         if (existingOrder != null) {
             return existingOrder.getId();
         }
+        return submitOrderWithIdempotency(dto, idempotencyKey);
+    }
+
+    private Long submitOrderWithIdempotency(StockOrderSubmitDTO dto, String idempotencyKey) {
         int orderType = dto.getOrderType() == null ? StockBizConstant.ORDER_TYPE_INBOUND : dto.getOrderType();
         if (orderType != StockBizConstant.ORDER_TYPE_INBOUND && orderType != StockBizConstant.ORDER_TYPE_OUTBOUND) {
             throw new co.handk.backend.exception.BusinessException(
@@ -1108,7 +1161,12 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         Long warehouseId = null;
         Long stockTypeId = null;
         String orderRemark = dto.getRemark();
-        LocalDate bizDate = dto.getBizDate() == null ? LocalDate.now() : dto.getBizDate();
+        LocalDate bizDate = dto.getBizDate();
+        if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
+            requireInboundBizDate(bizDate);
+        } else if (bizDate == null) {
+            bizDate = LocalDate.now();
+        }
 
         for (StockOrderSubmitItemDTO itemDTO : dto.getItems()) {
             Stock stock = requireStock(itemDTO.getStockId());
@@ -1136,7 +1194,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                 afterQty = beforeQty + qty;
             } else {
                 if (beforeQty < qty) {
-                    notifyInsufficientStock(sku.getSkuCode(), qty, beforeQty, stock.getId());
+                    notifyInsufficientStock(sku.getSkuCode(), goods.getName(), qty, beforeQty, stock.getId());
                     throw new co.handk.backend.exception.BusinessException(
                             co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
                             "在庫数量が不足しています: SKU[" + sku.getSkuCode() + "]");
@@ -1266,9 +1324,9 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             }
 
             if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
-                notifyInbound(item.getSkuCode(), working.changeQty, working.afterQty, order.getId());
+                notifyInbound(item.getSkuCode(), item.getGoodsName(), working.changeQty, working.afterQty, order.getId());
             } else {
-                notifyLowStock(item.getSkuCode(), working.afterQty, order.getId());
+                notifyLowStock(item.getSkuCode(), item.getGoodsName(), working.afterQty, order.getId());
             }
         }
         return order.getId();
@@ -1279,6 +1337,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "items is required");
         }
+        requireBatchBizDate(dto);
         String idempotencyKey = requireBatchInboundIdempotency(dto);
         StockOrder existingOrder = findExistingBatchInboundOrder(idempotencyKey);
         if (existingOrder != null) {
@@ -1336,12 +1395,25 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             updateStockQuantityWithVersion(stock, afterQty);
             saveStockRecord(order, stock, dto.getRemark(), beforeQty, afterQty);
             stockBatchService.recordInbound(order, item, stock);
-            notifyInbound(sku.getSkuCode(), dto.getQuantity(), afterQty, order.getId());
+            notifyInbound(sku.getSkuCode(), goods.getName(), dto.getQuantity(), afterQty, order.getId());
         }
         return order.getId();
     }
 
     private Long submitBatchOrder(StockBatchOperateDTO dto, int orderType) {
+        StockOrderSubmitDTO submitDTO = buildBatchSubmitDTO(dto, orderType);
+        return submitOrder(submitDTO);
+    }
+
+    private Long submitBatchOrderWithIdempotency(StockBatchOperateDTO dto, int orderType, String idempotencyKey) {
+        StockOrder existingOrder = findExistingSubmitOrder(orderType, idempotencyKey);
+        if (existingOrder != null) {
+            return existingOrder.getId();
+        }
+        return submitOrderWithIdempotency(buildBatchSubmitDTO(dto, orderType), idempotencyKey);
+    }
+
+    private StockOrderSubmitDTO buildBatchSubmitDTO(StockBatchOperateDTO dto, int orderType) {
         StockOrderSubmitDTO submitDTO = new StockOrderSubmitDTO();
         submitDTO.setOrderType(orderType);
         submitDTO.setSourceType(dto.getSourceType());
@@ -1376,7 +1448,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             submitItems.add(submitItem);
         }
         submitDTO.setItems(submitItems);
-        return submitOrder(submitDTO);
+        return submitDTO;
     }
 
     private Stock requireStock(Long stockId) {
@@ -1534,7 +1606,13 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
             Dept dept = deptService.getByIdNotDeleted(targetDeptId);
             order.setDeptCode(dept == null ? null : dept.getCode());
         }
-        order.setBizDate(dto.getBizDate() == null ? LocalDate.now() : dto.getBizDate());
+        LocalDate bizDate = dto.getBizDate();
+        if (orderType == StockBizConstant.ORDER_TYPE_INBOUND) {
+            requireInboundBizDate(bizDate);
+        } else if (bizDate == null) {
+            bizDate = LocalDate.now();
+        }
+        order.setBizDate(bizDate);
         if (state == StockBizConstant.ORDER_STATE_FINISHED) {
             applyAutoApproval(order, userId, user == null ? null : user.getUsername());
         }
@@ -1570,6 +1648,37 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return value != null && !value.isBlank();
     }
 
+    private void requireInboundBizDate(LocalDate bizDate) {
+        if (bizDate == null) {
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "\u7d0d\u54c1\u65e5\u306f\u5fc5\u9808\u3067\u3059");
+        }
+    }
+
+    private LocalDate requireBatchBizDate(StockBatchOperateDTO dto) {
+        LocalDate bizDate = dto == null ? null : dto.getBizDate();
+        if (bizDate != null) {
+            return bizDate;
+        }
+        if (dto != null && dto.getItems() != null) {
+            LocalDate firstItemBizDate = null;
+            for (StockBatchOperateItemDTO item : dto.getItems()) {
+                if (item == null || item.getBizDate() == null) {
+                    requireInboundBizDate(null);
+                }
+                if (firstItemBizDate == null) {
+                    firstItemBizDate = item.getBizDate();
+                }
+            }
+            if (firstItemBizDate != null) {
+                return firstItemBizDate;
+            }
+        }
+        requireInboundBizDate(null);
+        return null;
+    }
+
     private StockOrderItem saveOrderItem(Long orderId,
                                          Goods goods,
                                          GoodsSku sku,
@@ -1597,7 +1706,7 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         item.setPrice(stock.getPrice());
         item.setCurrency(stock.getCurrency() == null ? CommonConstant.DEFAULT_CURRENCY_JPY : stock.getCurrency());
         item.setRemark(dto.getRemark());
-        item.setBizDate(dto.getBizDate() == null ? LocalDate.now() : dto.getBizDate());
+        item.setBizDate(dto.getBizDate());
         if (!stockOrderItemService.save(item)) {
             throw new co.handk.backend.exception.BusinessException(
                     co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME, "入出庫明細の保存に失敗しました");
@@ -1730,13 +1839,15 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         private String remark;
     }
 
-    private void notifyInbound(String skuCode, int qty, int afterQty, Long sourceId) {
-        String text = String.format("入庫完了: SKU[%s] 数量=%d, 在庫残=%d", skuCode, qty, afterQty);
+    private void notifyInbound(String skuCode, String goodsName, int qty, int afterQty, Long sourceId) {
+        String text = String.format("\u5165\u5eab\u5b8c\u4e86: SKU[%s] \u5546\u54c1\u540d[%s] \u6570\u91cf=%d, \u5728\u5eab\u6b8b=%d",
+                safeMessageValue(skuCode), safeMessageValue(goodsName), qty, afterQty);
         saveMessage(MESSAGE_TYPE_INBOUND, text, sourceId);
     }
 
-    private void notifyInsufficientStock(String skuCode, int requestQty, int currentQty, Long sourceId) {
-        String text = String.format("在庫不足: SKU[%s] 要求=%d, 現在庫=%d", skuCode, requestQty, currentQty);
+    private void notifyInsufficientStock(String skuCode, String goodsName, int requestQty, int currentQty, Long sourceId) {
+        String text = String.format("\u5728\u5eab\u4e0d\u8db3: SKU[%s] \u5546\u54c1\u540d[%s] \u8981\u6c42=%d, \u73fe\u5728\u5eab=%d",
+                safeMessageValue(skuCode), safeMessageValue(goodsName), requestQty, currentQty);
         saveMessage(MESSAGE_TYPE_WARNING, text, sourceId);
     }
 
@@ -1839,6 +1950,26 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return requestKey;
     }
 
+    private String requireBatchInOutIdempotency(StockBatchOperateDTO dto) {
+        String headerKey = currentIdempotencyKey();
+        String requestKey = hasText(headerKey)
+                ? "INOUT_BATCH:" + headerKey.trim()
+                : "INOUT_BATCH:AUTO:" + sha256Hex(canonicalBatchInOutPayload(dto));
+        Long userId = UserContext.getUserIdOrDefault();
+        String redisKey = RedisKey.IDEMPOTENCY_REQUEST + "stock:batch-inout:" + userId + ":" + requestKey;
+        Boolean accepted = stringRedisUtil.setIfAbsent(redisKey, "1", 300L, TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(accepted)) {
+            StockOrder existing = findExistingSubmitOrder(StockBizConstant.ORDER_TYPE_OUTBOUND, requestKey + ":OUT");
+            if (existing != null) {
+                return requestKey;
+            }
+            throw new co.handk.backend.exception.BusinessException(
+                    co.handk.backend.constant.MessageKeyConstant.ERROR_RUNTIME,
+                    "duplicate batch inout request detected, please retry later");
+        }
+        return requestKey;
+    }
+
     private String batchInboundItemIdempotencyKey(String batchIdempotencyKey, int itemIndex) {
         return batchIdempotencyKey + ":ITEM:" + itemIndex;
     }
@@ -1863,6 +1994,10 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
                     .append(item.getRemark()).append(';');
         }
         return builder.toString();
+    }
+
+    private String canonicalBatchInOutPayload(StockBatchOperateDTO dto) {
+        return "inout|" + canonicalBatchInboundPayload(dto);
     }
 
     private String sha256Hex(String value) {
@@ -1930,12 +2065,17 @@ public class StockServiceImpl extends BaseServiceImpl<StockMapper, Stock, StockV
         return request == null ? null : request.getHeader("Idempotency-Key");
     }
 
-    private void notifyLowStock(String skuCode, int afterQty, Long sourceId) {
+    private void notifyLowStock(String skuCode, String goodsName, int afterQty, Long sourceId) {
         if (afterQty > LOW_STOCK_THRESHOLD) {
             return;
         }
-        String text = String.format("低在庫警告: SKU[%s] 在庫残=%d (閾値=%d)", skuCode, afterQty, LOW_STOCK_THRESHOLD);
+        String text = String.format("\u4f4e\u5728\u5eab\u8b66\u544a: SKU[%s] \u5546\u54c1\u540d[%s] \u5728\u5eab\u6b8b=%d (\u95be\u5024=%d)",
+                safeMessageValue(skuCode), safeMessageValue(goodsName), afterQty, LOW_STOCK_THRESHOLD);
         saveMessage(MESSAGE_TYPE_WARNING, text, sourceId);
+    }
+
+    private String safeMessageValue(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 
     private void saveMessage(int type, String messageText, Long sourceId) {

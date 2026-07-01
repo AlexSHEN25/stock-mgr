@@ -27,7 +27,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -182,21 +181,26 @@ public class StockBatchServiceImpl implements StockBatchService {
 
     @Override
     public String getBizDateSummary(Long stockId, Long deptId) {
-        LinkedHashSet<String> values = new LinkedHashSet<>();
+        Map<String, Integer> values = new java.util.LinkedHashMap<>();
         if (deptId == null) {
             for (StockBatch batch : activeBatches(stockId)) {
-                if (batch.getBizDate() != null) {
-                    values.add(batch.getBizDate().format(BIZ_DATE_FORMATTER));
-                }
+                String key = formatBizDate(batch.getBizDate());
+                values.merge(key, Math.max(0, safeInt(batch.getAvailableQty())), Integer::sum);
             }
         } else {
             for (GroupStock row : activeGroupRows(stockId, deptId)) {
-                if (row.getBizDate() != null) {
-                    values.add(row.getBizDate().format(BIZ_DATE_FORMATTER));
-                }
+                String key = formatBizDate(row.getBizDate());
+                values.merge(key, Math.max(0, safeInt(row.getCurrentQty())), Integer::sum);
             }
         }
-        return String.join(", ", values);
+        return values.entrySet().stream()
+                .filter(entry -> entry.getValue() != null && entry.getValue() > 0)
+                .map(entry -> entry.getKey() + ":" + entry.getValue())
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private String formatBizDate(java.time.LocalDate bizDate) {
+        return bizDate == null ? "\u672a\u8a2d\u5b9a" : bizDate.format(BIZ_DATE_FORMATTER);
     }
 
     @Override
@@ -604,13 +608,6 @@ public class StockBatchServiceImpl implements StockBatchService {
                 .eq("order_item_id", orderItemId)
                 .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED)
                 .orderByAsc("id"));
-    }
-
-    private int getLockedQtyForBatch(Long batchId) {
-        return sumLockedQty(new QueryWrapper<StockReservation>()
-                .eq("batch_id", batchId)
-                .eq("reservation_scope", StockBizConstant.RESERVATION_SCOPE_SELF)
-                .eq("state", StockBizConstant.RESERVATION_STATE_LOCKED));
     }
 
     private int getLockedQtyForGroupRow(Long groupStockId) {

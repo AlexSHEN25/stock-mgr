@@ -41,6 +41,7 @@ public class RequestCandidateItemVO {
     private String operatorName;
     private Boolean selected;
     private Integer requestQty;
+    private BigDecimal amount;
     private Integer requestItemState;
     private Long requestItemId;
     private Boolean inboundApplied;

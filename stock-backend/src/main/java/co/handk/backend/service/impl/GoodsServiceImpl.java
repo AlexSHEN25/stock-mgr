@@ -47,7 +47,6 @@ import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.DataValidationConstraint;
 import org.apache.poi.ss.usermodel.DataValidationHelper;
 import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -78,7 +77,6 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -489,13 +487,6 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
 
     private void cleanupCascadingRelations(Long brandId, Long seriesId, Long makerId) {
         // Legacy relation cleanup is intentionally disabled after the hierarchy switch.
-    }
-
-    private boolean existsGoodsWithRelation(Long brandId, Long seriesId, Long makerId) {
-        return this.count(new QueryWrapper<Goods>()
-                .eq("brand_id", brandId)
-                .eq("series_id", seriesId)
-                .eq("maker_id", makerId)) > 0;
     }
 
     private GoodsBatchUpsertResultVO batchUpsertItems(List<GoodsBatchUpsertItemDTO> items) {
@@ -1328,37 +1319,9 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
         return value == null ? null : Long.valueOf(normalizeIntegerString(value));
     }
 
-    private Integer readInteger(Row row, Integer columnIndex, DataFormatter formatter) {
-        String value = readString(row, columnIndex, formatter);
-        return value == null ? null : Integer.valueOf(normalizeIntegerString(value));
-    }
-
     private BigDecimal readDecimal(Row row, Integer columnIndex, DataFormatter formatter) {
         String value = readString(row, columnIndex, formatter);
         return value == null ? null : new BigDecimal(value.replace(",", ""));
-    }
-
-    private LocalDateTime readDateTime(Row row, Integer columnIndex, DataFormatter formatter) {
-        if (columnIndex == null) {
-            return null;
-        }
-        Cell cell = row.getCell(columnIndex);
-        if (cell == null) {
-            return null;
-        }
-        if (DateUtil.isCellDateFormatted(cell)) {
-            return Instant.ofEpochMilli(cell.getDateCellValue().getTime())
-                    .atZone(TOKYO_ZONE_ID)
-                    .toLocalDateTime();
-        }
-        String value = trimToNull(formatter.formatCellValue(cell));
-        if (value == null) {
-            return null;
-        }
-        if (value.length() == 10) {
-            return LocalDate.parse(value).atStartOfDay();
-        }
-        return LocalDateTime.parse(value, TEMPLATE_DATE_TIME_FORMATTER);
     }
 
     private Long resolveBrandId(GoodsBatchUpsertItemDTO item) {
@@ -1871,7 +1834,7 @@ public class GoodsServiceImpl extends BaseServiceImpl<GoodsMapper, Goods, GoodsV
     private Integer parseFlag(String value, boolean allowNull) {
         String normalized = trimToNull(value);
         if (normalized == null) {
-            return allowNull ? null : null;
+            return null;
         }
         String lower = normalized.toLowerCase(Locale.ROOT);
         if ("1".equals(lower) || "true".equals(lower) || "yes".equals(lower)

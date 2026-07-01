@@ -63,6 +63,7 @@ public class IdempotencyInterceptor implements HandlerInterceptor {
         return uri.endsWith("/outbound")
                 || uri.endsWith("/outbound/batch")
                 || uri.endsWith("/inbound/batch")
+                || uri.endsWith("/inout/batch")
                 || uri.endsWith("/submit");
     }
 }

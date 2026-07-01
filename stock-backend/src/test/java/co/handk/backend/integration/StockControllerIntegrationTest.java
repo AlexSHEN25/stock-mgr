@@ -153,13 +153,15 @@ class StockControllerIntegrationTest {
                   "warehouseId": %d,
                   "stockTypeId": %d,
                   "quantity": 9,
+                  "bizDate": "%s",
                   "sourceType": 1
                 }
                 """.formatted(
                 fixture.goods().getId(),
                 fixture.sku().getId(),
                 fixture.warehouse().getId(),
-                fixture.stockType().getId());
+                fixture.stockType().getId(),
+                java.time.LocalDate.now());
 
         String response = mockMvc.perform(apiPost("/stock/inbound")
                         .header("Authorization", "Bearer " + ADMIN_TOKEN)
@@ -194,13 +196,15 @@ class StockControllerIntegrationTest {
                   "warehouseId": %d,
                   "stockTypeId": %d,
                   "quantity": 9,
+                  "bizDate": "%s",
                   "sourceType": 2
                 }
                 """.formatted(
                 fixture.goods().getId(),
                 fixture.sku().getId(),
                 fixture.warehouse().getId(),
-                fixture.stockType().getId());
+                fixture.stockType().getId(),
+                java.time.LocalDate.now());
 
         mockMvc.perform(apiPost("/stock/inbound")
                         .header("Authorization", "Bearer " + ADMIN_TOKEN)
@@ -454,6 +458,7 @@ class StockControllerIntegrationTest {
                   "warehouseId": %d,
                   "stockTypeId": %d,
                   "quantity": %d,
+                  "bizDate": "%s",
                   "sourceType": 1
                 }
                 """.formatted(
@@ -461,7 +466,8 @@ class StockControllerIntegrationTest {
                 fixture.sku().getId(),
                 fixture.warehouse().getId(),
                 fixture.stockType().getId(),
-                quantity);
+                quantity,
+                java.time.LocalDate.now());
         try {
             mockMvc.perform(apiPost("/stock/inbound")
                             .header("Authorization", "Bearer " + ADMIN_TOKEN)

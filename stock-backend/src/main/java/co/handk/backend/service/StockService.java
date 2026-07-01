@@ -30,6 +30,8 @@ public interface StockService extends BaseService<Stock, StockVO> {
 
     Long batchOutbound(StockBatchOperateDTO dto);
 
+    Long batchInOut(StockBatchOperateDTO dto);
+
     java.util.List<Long> allocateToGroups(StockGroupAllocateDTO dto);
 
     Long submitOrder(StockOrderSubmitDTO dto);

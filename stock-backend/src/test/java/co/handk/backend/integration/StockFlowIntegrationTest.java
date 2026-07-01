@@ -55,6 +55,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -494,6 +495,7 @@ class StockFlowIntegrationTest {
         dto.setWarehouseId(fixture.warehouse().getId().intValue());
         dto.setStockTypeId(fixture.stockType().getId());
         dto.setQuantity(quantity);
+        dto.setBizDate(LocalDate.now());
         return dto;
     }
 
@@ -504,6 +506,7 @@ class StockFlowIntegrationTest {
         item.setWarehouseId(fixture.warehouse().getId().intValue());
         item.setStockTypeId(fixture.stockType().getId());
         item.setQuantity(quantity);
+        item.setBizDate(LocalDate.now());
         return item;
     }
 
